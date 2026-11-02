@@ -2,6 +2,7 @@
 // validateItem trả danh sách vấn đề [{ level: 'error' | 'warn', field, msg }]; item có 'error' bị bỏ qua khi học.
 
 import { imageRefs } from './deckmodel.js';
+import { kindOf, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
 
 export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
@@ -13,8 +14,8 @@ const MAX_IMG_SIZE = 5 * 1024 * 1024;
 const MD_IMG_WITH_ALT = /!\[([^\]]*)\]\(\s*([^)\s]+)[^)]*\)/g;
 
 const TYPE_LABEL = {
-  single: 'trắc nghiệm 1 đáp án', multi: 'trắc nghiệm nhiều đáp án',
-  fill: 'điền đáp án', command: 'gõ lệnh', card: 'thẻ lật', vocab: 'từ vựng',
+  single: 'Trắc nghiệm', multi: 'Trắc nghiệm',
+  fill: 'Điền', command: 'Lệnh', card: 'Thẻ', vocab: 'Từ vựng',
 };
 
 const isStr = v => typeof v === 'string';
@@ -243,12 +244,17 @@ export function validateDeck(deck, { assets } = {}) {
     }
     if (meta.title !== undefined && !isStr(meta.title)) warnings.push('meta.title phải là chuỗi.');
     else if (!nonEmpty(meta.title)) warnings.push('Bộ thẻ chưa có tiêu đề (meta.title).');
-    if (meta.kind !== undefined && !DECK_KINDS.includes(meta.kind))
-      warnings.push(`Loại bộ thẻ "${meta.kind}" không hợp lệ (dùng: ${DECK_KINDS.join(', ')}).`);
+    if (meta.description !== undefined) {
+      if (!isStr(meta.description)) warnings.push('meta.description phải là chuỗi.');
+      else if (meta.description.length > 200) warnings.push('Mô tả bộ thẻ (meta.description) không nên vượt quá 200 ký tự.');
+    }
   }
   if (!Array.isArray(deck.items)) { errors.push('Thiếu danh sách "items" (các câu hỏi / thẻ).'); return { errors, warnings, items }; }
 
-  const deckKind = isObj(meta) ? meta.kind : undefined;
+  const effectiveKind = kindOf(deck);
+  const deckKind = (isObj(meta) && DECK_KINDS.includes(meta.kind))
+    ? meta.kind
+    : (effectiveKind === 'vocab' ? 'vocab' : undefined);
   const firstIndex = new Map(), dups = new Map();
   deck.items.forEach((it, index) => {
     const id = isObj(it) && nonEmpty(it.id) ? it.id : null;
@@ -260,6 +266,11 @@ export function validateDeck(deck, { assets } = {}) {
   for (const [id, idx] of dups)
     errors.push(`Trùng id "${id}" ở các mục thứ ${idx.map(i => i + 1).join(', ')} — mỗi mục phải có id riêng.`);
   if (deck.items.length === 0) warnings.push('Bộ thẻ chưa có mục nào.');
+
+  const mismatched = mismatchedItems(deck.items, effectiveKind);
+  if (mismatched.length > 0) {
+    warnings.push(formatMismatchWarning(deck.items, effectiveKind));
+  }
   return { errors, warnings, items };
 }
 

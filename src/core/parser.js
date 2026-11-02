@@ -2,8 +2,9 @@
 // Lỗi cấp bộ thẻ (JSON hỏng, thiếu meta.id/items, id trùng, formatVersion quá mới) → ok:false + error tiếng Việt.
 // Lỗi cấp item → bỏ qua item đó, ghi vào issues (kèm id, vị trí, lý do); các item còn lại vẫn học được.
 // GĐ2B: kiểm tra ảnh tham chiếu (![..](path), image, answerImage, choices[].image) → cảnh báo nếu thiếu/sai đuôi/>5MB.
-import { validateDeck, itemType, hasError } from './validate.js';
+import { validateDeck, hasError } from './validate.js';
 import { imageRefs } from './deckmodel.js';
+import { inferKind, isValidKind, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
 
 const IMG_EXT = /\.(png|jpe?g|gif|webp|svg)$/i;
 const MAX_IMG_SIZE = 5 * 1024 * 1024;
@@ -38,7 +39,10 @@ export function parseDeck(deckText, { assets } = {}) {
   const v = validateDeck(raw);
   if (v.errors.length) return { ok: false, error: v.errors.join('\n'), issues: v.errors.map(msg => ({ level: 'error', msg })) };
 
-  const issues = v.warnings.map(msg => ({ level: 'warn', msg }));
+  // Lọc tạm cảnh báo lệch loại cấp raw để tính lại chính xác trên danh sách mục hợp lệ sau khi lọc
+  const issues = v.warnings
+    .filter(msg => !msg.includes('nằm trong bộ'))
+    .map(msg => ({ level: 'warn', msg }));
   const items = [];
   for (const { index, id, issues: its } of v.items) {
     const where = { index, itemId: id };
@@ -85,8 +89,26 @@ export function parseDeck(deckText, { assets } = {}) {
 
   const meta = { ...raw.meta };
   if (typeof meta.title !== 'string' || !meta.title.trim()) meta.title = meta.id;
-  if (!['vocab', 'qa', 'quiz'].includes(meta.kind))
-    meta.kind = raw.items.length && raw.items.every(it => itemType(it) === 'vocab') ? 'vocab' : 'quiz';
+  if (typeof meta.description === 'string') {
+    meta.description = meta.description.trim();
+  } else if (meta.description !== undefined) {
+    delete meta.description;
+  }
+  if (!isValidKind(meta.kind)) {
+    meta.kind = inferKind(items.length ? items : raw.items);
+  }
+
+  // Cảnh báo nhẹ khi có mục hợp lệ lệch loại với meta.kind (không bỏ qua mục)
+  const mismatched = mismatchedItems(items, meta.kind);
+  if (mismatched.length > 0) {
+    issues.push({
+      level: 'warn',
+      mismatch: true,
+      count: mismatched.length,
+      itemIds: mismatched.map(it => it.id),
+      msg: formatMismatchWarning(items, meta.kind),
+    });
+  }
 
   return {
     ok: true,

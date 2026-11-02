@@ -2,6 +2,7 @@
 import { h } from '../dom.js';
 import { validateItem, friendlyIssue } from '../../core/validate.js';
 import { isBlankNewItem } from '../../core/deckmodel.js';
+import { kindOf, allowedTypes, detectItemType, kindLabel, itemTypeLabel } from '../../core/deckkinds.js';
 import { createMarkdownField } from './fields/mdfield.js';
 import { createImageSlot } from './fields/imageslot.js';
 import { createChoicesSection } from './fields/choices.js';
@@ -313,25 +314,38 @@ export function createFormPane({
 
     renderHeader();
 
-    const t = item.type || 'single';
+    const t = detectItemType(item) || 'single';
     const isMC = t === 'single' || t === 'multi';
+    const deckKind = kindOf(deck);
+    const allowedSet = new Set(allowedTypes(deckKind));
+    const isCurrentMismatched = !allowedSet.has(t);
 
-    // Thanh chọn dạng 4 nút (§6.1)
+    // Thanh chọn dạng theo allowedTypes của loại bộ thẻ, cộng thêm dạng của mục đang chọn nếu nó lệch loại (§6.1, GĐ3B §2.2 quy tắc 4)
+    const allTypeOptions = [
+      { key: 'single', types: ['single', 'multi'], active: isMC, label: 'Trắc nghiệm' },
+      { key: 'fill', types: ['fill'], active: t === 'fill', label: 'Điền' },
+      { key: 'command', types: ['command'], active: t === 'command', label: 'Lệnh' },
+      { key: 'card', types: ['card'], active: t === 'card', label: 'Thẻ' },
+      { key: 'vocab', types: ['vocab'], active: t === 'vocab', label: 'Từ vựng' },
+    ];
+    const visibleTypeOptions = allTypeOptions.filter(
+      opt => opt.types.some(tp => allowedSet.has(tp)) || opt.active
+    );
+
     const typeSeg = h('div', { class: 'form-field' },
       h('div', { class: 'ux-segmented', style: 'width: 100%;' },
-        [
-          { key: 'single', active: isMC, label: 'Trắc nghiệm' },
-          { key: 'fill', active: t === 'fill', label: 'Điền' },
-          { key: 'command', active: t === 'command', label: 'Lệnh' },
-          { key: 'card', active: t === 'card', label: 'Thẻ' },
-        ].map(opt => h('button', {
+        visibleTypeOptions.map(opt => h('button', {
           type: 'button',
           class: `ux-seg-btn ${opt.active ? 'active' : ''}`,
           style: 'flex: 1;',
           onclick: () => {
             if (!opt.active) onChangeType(opt.key);
           },
-        }, opt.label))));
+        }, opt.active && isCurrentMismatched ? `${opt.label} ⚠` : opt.label))),
+      isCurrentMismatched
+        ? h('div', { class: 'ux-field-msg warn' },
+            `⚠ Mục này có dạng "${itemTypeLabel(t)}", lệch với loại bộ thẻ "${kindLabel(deckKind)}". Bạn vẫn sửa được hoặc bấm dạng khác ở trên để chuyển đổi.`)
+        : null);
 
     const mainNodes = [typeSeg];
 

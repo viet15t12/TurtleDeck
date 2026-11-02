@@ -5,7 +5,8 @@ import { renderDeck } from './views/deck.js';
 import { renderSession } from './views/session.js';
 import { renderEditor } from './views/editor.js';
 import { renderSettings } from './views/settings.js';
-import { newDeck, newItem, newItemId, addItem, newDeckId } from './core/deckmodel.js';
+import { newDeck, newItem, newItemId, newItemLike, addItem, newDeckId } from './core/deckmodel.js';
+import { KINDS, kindOf, kindLabel, mismatchedItems, formatMismatchWarning } from './core/deckkinds.js';
 import { setLearnSteps, recordReview, DEFAULT_LEARN_STEPS } from './core/srs.js';
 import { DEFAULT_NEW_CARDS_PER_DAY } from './core/planner.js';
 
@@ -152,15 +153,15 @@ const actions = {
 
   openNewDeckModal() {
     state.modal = renderNewDeckModal(
-      async ({ title, kind, lang }) => {
+      async ({ title, kind, description, lang }) => {
         state.modal = null;
         const r = await api.newDeck();
         if (!r?.ok) {
           notify('Không tạo được bộ thẻ: ' + (r?.error || 'Lỗi'), 'error');
           return;
         }
-        let d = newDeck({ title, kind, lang });
-        const firstItem = newItem('single', newItemId(d));
+        let d = newDeck({ title, kind, description, lang });
+        const firstItem = newItemLike(d);
         d = addItem(d, firstItem);
         const entry = applyResult({
           ok: true,
@@ -172,6 +173,36 @@ const actions = {
           assetCount: 0,
         });
         state.route = { name: 'editor', uid: entry.uid };
+        render();
+      },
+      () => { state.modal = null; render(); }
+    );
+    render();
+  },
+
+  openDeckInfoModal(entry) {
+    if (!entry?.deck) return;
+    state.modal = renderDeckInfoModal(
+      entry.deck,
+      async ({ title, kind, description, lang }) => {
+        state.modal = null;
+        const nextMeta = {
+          ...entry.deck.meta,
+          title,
+          kind,
+          lang: lang || entry.deck.meta.lang || 'vi',
+        };
+        if (description) nextMeta.description = description;
+        else delete nextMeta.description;
+
+        entry.deck = {
+          ...entry.deck,
+          meta: nextMeta,
+        };
+        entry.deckText = JSON.stringify(entry.deck, null, 2);
+        if (entry.path) {
+          await saveEntry(entry, false);
+        }
         render();
       },
       () => { state.modal = null; render(); }
@@ -348,60 +379,218 @@ function renderSessionModal(entry, onStart, onCancel) {
 }
 
 function renderNewDeckModal(onCreate, onCancel) {
-  let title = 'Bộ thẻ mới';
+  let title = '';
   let kind = 'quiz';
+  let description = '';
   let lang = 'vi';
+  let errorText = '';
+
+  const kindGridHost = h('div', { class: 'ux-kind-grid' });
+  const errEl = h('div', { class: 'ux-field-msg error', hidden: true });
+  const descCountEl = h('span', { class: 'muted', style: 'font-size: 12px;' }, '0/200');
 
   const titleInput = h('input', {
     type: 'text',
-    class: 'input-text',
+    class: 'ux-input',
     value: title,
-    placeholder: 'Nhập tên bộ thẻ...',
-    oninput: ev => { title = ev.target.value; },
+    placeholder: 'Ví dụ: Giải tích 1, Lệnh Linux cơ bản…',
+    oninput: ev => {
+      title = ev.target.value;
+      if (title.trim()) {
+        errorText = '';
+        errEl.hidden = true;
+      }
+    },
+    onkeydown: ev => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        submit();
+      }
+    },
   });
 
-  const kindSelect = h('select', {
-    class: 'form-control',
-    onchange: ev => { kind = ev.target.value; },
-  },
-    h('option', { value: 'quiz' }, 'Trắc nghiệm & Câu hỏi (quiz)'),
-    h('option', { value: 'qa' }, 'Hỏi đáp (qa)'),
-    h('option', { value: 'vocab' }, 'Từ vựng (vocab)'));
+  function renderKindCards() {
+    kindGridHost.replaceChildren(
+      ...['qa', 'quiz', 'vocab'].map(k => {
+        const info = KINDS[k];
+        const disabled = !info.available;
+        const active = kind === k;
+        return h('button', {
+          type: 'button',
+          class: `ux-kind-card ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`,
+          'data-kind': k,
+          disabled,
+          onclick: () => {
+            if (disabled) return;
+            kind = k;
+            renderKindCards();
+            titleInput.focus();
+          },
+        },
+          h('div', { class: 'ux-kind-card-head' },
+            h('span', { class: 'ux-kind-icon' }, info.icon),
+            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : null),
+          h('div', { class: 'ux-kind-title' }, info.label),
+          h('div', { class: 'ux-kind-desc' }, info.description));
+      })
+    );
+  }
 
-  const langInput = h('input', {
-    type: 'text',
-    class: 'input-text',
-    value: lang,
-    placeholder: 'Ngôn ngữ (vd: vi, en)...',
-    oninput: ev => { lang = ev.target.value; },
-  });
+  function submit() {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) {
+      errorText = 'Vui lòng nhập tên bộ thẻ.';
+      errEl.textContent = errorText;
+      errEl.hidden = false;
+      titleInput.focus();
+      return;
+    }
+    onCreate({
+      title: cleanTitle,
+      kind,
+      description: description.trim().slice(0, 200),
+      lang: lang.trim() || 'vi',
+    });
+  }
+
+  renderKindCards();
+  queueMicrotask(() => titleInput.focus());
 
   const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
-    h('div', { class: 'modal-dialog' },
-      h('h2', null, 'Tạo bộ thẻ mới'),
-      h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' },
-        'Nhập thông tin ban đầu để mở màn hình soạn thảo'),
-      h('div', { class: 'form-group' },
-        h('label', null, 'Tên bộ thẻ:'),
-        titleInput),
-      h('div', { class: 'form-group' },
-        h('label', null, 'Loại bộ thẻ:'),
-        kindSelect),
-      h('div', { class: 'form-group' },
-        h('label', null, 'Ngôn ngữ:'),
-        langInput),
-      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px;' },
-        h('button', { class: 'btn ghost', onclick: onCancel }, 'Huỷ'),
-        h('button', {
-          class: 'btn primary',
-          onclick: () => {
-            if (!title.trim()) {
-              alert('Vui lòng nhập tên bộ thẻ.');
-              return;
-            }
-            onCreate({ title: title.trim(), kind, lang: lang.trim() });
+    h('div', { class: 'modal-dialog', style: 'max-width: 620px; width: 94vw;' },
+      h('h2', null, 'Bộ thẻ mới'),
+      h('p', { class: 'muted', style: 'margin-top: -6px; margin-bottom: 16px;' },
+        'Chọn loại bộ thẻ phù hợp với nội dung bạn muốn học, sau đó đặt tên để bắt đầu soạn.'),
+      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
+        h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, '1. Chọn loại bộ thẻ'),
+        kindGridHost),
+      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
+        h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, '2. Tên bộ thẻ'),
+        titleInput,
+        errEl),
+      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
+        h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;' },
+          h('label', { style: 'font-weight: 600; font-size: 13px;' }, 'Mô tả ngắn (tuỳ chọn)'),
+          descCountEl),
+        h('textarea', {
+          class: 'ux-textarea',
+          rows: '2',
+          maxLength: 200,
+          placeholder: 'Mô tả ngắn gọn nội dung bộ thẻ (tối đa 200 ký tự)…',
+          oninput: ev => {
+            description = ev.target.value.slice(0, 200);
+            descCountEl.textContent = `${description.length}/200`;
           },
-        }, 'Tạo bộ thẻ'))));
+        })),
+      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 20px; gap: 8px;' },
+        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
+        h('button', {
+          type: 'button',
+          class: 'ux-btn primary',
+          onclick: submit,
+        }, 'Tạo & Mở trình soạn'))));
+
+  return modal;
+}
+
+function renderDeckInfoModal(deck, onSave, onCancel) {
+  const meta = deck?.meta || {};
+  let title = meta.title || '';
+  let description = meta.description || '';
+  let lang = meta.lang || 'vi';
+  let kind = kindOf(deck);
+
+  const kindGridHost = h('div', { class: 'ux-kind-grid' });
+  const mismatchHost = h('div');
+  const descCountEl = h('span', { class: 'muted', style: 'font-size: 12px;' }, `${description.length}/200`);
+
+  function renderKindCardsAndWarning() {
+    kindGridHost.replaceChildren(
+      ...['qa', 'quiz', 'vocab'].map(k => {
+        const info = KINDS[k];
+        const disabled = !info.available && kindOf(deck) !== k;
+        const active = kind === k;
+        return h('button', {
+          type: 'button',
+          class: `ux-kind-card ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`,
+          'data-kind': k,
+          disabled,
+          onclick: () => {
+            if (disabled) return;
+            kind = k;
+            renderKindCardsAndWarning();
+          },
+        },
+          h('div', { class: 'ux-kind-card-head' },
+            h('span', { class: 'ux-kind-icon' }, info.icon),
+            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : null),
+          h('div', { class: 'ux-kind-title' }, info.label),
+          h('div', { class: 'ux-kind-desc' }, info.description));
+      })
+    );
+
+    const mismatched = mismatchedItems(deck, kind);
+    if (mismatched.length > 0) {
+      mismatchHost.replaceChildren(
+        h('div', { class: 'ux-mismatch-banner', style: 'margin-top: 8px;' },
+          h('span', { style: 'font-weight: 700;' }, '⚠'),
+          h('div', null,
+            h('div', { style: 'font-weight: 600;' }, formatMismatchWarning(deck, kind)),
+            h('div', { style: 'font-size: 12px; margin-top: 2px;' },
+              `Có ${mismatched.length} mục lệch loại với "${kindLabel(kind)}". Các mục này không bị xoá hay tự chuyển đổi.`)))
+      );
+    } else {
+      mismatchHost.replaceChildren();
+    }
+  }
+
+  renderKindCardsAndWarning();
+
+  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
+    h('div', { class: 'modal-dialog', style: 'max-width: 600px; width: 94vw;' },
+      h('h2', null, 'Thông tin bộ thẻ'),
+      h('div', { style: 'display: flex; flex-direction: column; gap: 14px; margin: 14px 0 20px;' },
+        h('div', { class: 'form-group' },
+          h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Tên bộ thẻ'),
+          h('input', {
+            type: 'text',
+            class: 'ux-input',
+            value: title,
+            oninput: ev => { title = ev.target.value; },
+          })),
+        h('div', { class: 'form-group' },
+          h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Loại bộ thẻ'),
+          kindGridHost,
+          mismatchHost),
+        h('div', { class: 'form-group' },
+          h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;' },
+            h('label', { style: 'font-weight: 600; font-size: 13px;' }, 'Mô tả (tuỳ chọn, tối đa 200 ký tự)'),
+            descCountEl),
+          h('textarea', {
+            class: 'ux-textarea',
+            rows: '2',
+            maxLength: 200,
+            value: description,
+            oninput: ev => {
+              description = ev.target.value.slice(0, 200);
+              descCountEl.textContent = `${description.length}/200`;
+            },
+          }))),
+      h('div', { class: 'toolbar', style: 'justify-content: flex-end; gap: 8px;' },
+        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
+        h('button', {
+          type: 'button',
+          class: 'ux-btn primary',
+          onclick: () => {
+            if (!title.trim()) return;
+            onSave({
+              title: title.trim(),
+              kind,
+              description: description.trim().slice(0, 200),
+              lang: lang.trim() || 'vi',
+            });
+          },
+        }, 'Lưu thông tin'))));
 
   return modal;
 }

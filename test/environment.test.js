@@ -64,3 +64,12 @@ test('Phase 3 SRS, planner, settings view and simulation script are present', ()
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });
+
+test('Phase 3B Lượt 1 deckkinds and deckstats modules are present', () => {
+  for (const file of [
+    'src/core/deckkinds.js',
+    'src/core/deckstats.js',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});

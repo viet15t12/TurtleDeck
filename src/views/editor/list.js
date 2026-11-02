@@ -3,6 +3,7 @@ import { h } from '../dom.js';
 import { toPlain } from '../../core/richtext.js';
 import { validateItem, hasError, friendlyIssue } from '../../core/validate.js';
 import { stripAccents, isBlankNewItem } from '../../core/deckmodel.js';
+import { kindOf, allowedTypes, detectItemType } from '../../core/deckkinds.js';
 
 const ROW_H = 56;
 const TYPE_BADGE = {
@@ -15,10 +16,11 @@ const TYPE_BADGE = {
 };
 
 const TYPE_GROUP_OPTIONS = [
-  { key: 'mc', label: 'Trắc nghiệm', match: t => t === 'single' || t === 'multi' },
-  { key: 'fill', label: 'Điền đáp án', match: t => t === 'fill' },
-  { key: 'command', label: 'Gõ lệnh', match: t => t === 'command' },
-  { key: 'card', label: 'Thẻ lật', match: t => t === 'card' },
+  { key: 'mc', label: 'Trắc nghiệm', types: ['single', 'multi'], match: t => t === 'single' || t === 'multi' },
+  { key: 'fill', label: 'Điền', types: ['fill'], match: t => t === 'fill' },
+  { key: 'command', label: 'Lệnh', types: ['command'], match: t => t === 'command' },
+  { key: 'card', label: 'Thẻ', types: ['card'], match: t => t === 'card' },
+  { key: 'vocab', label: 'Từ vựng', types: ['vocab'], match: t => t === 'vocab' },
 ];
 
 function createSearchSvg() {
@@ -316,6 +318,13 @@ export function createListPane({
     closeContextMenu();
     const deck = getDeck();
     const total = deck.items.length;
+    const allowedSet = new Set(allowedTypes(kindOf(deck)));
+    const convertOptions = [
+      { type: 'single', types: ['single', 'multi'], label: 'Trắc nghiệm' },
+      { type: 'fill', types: ['fill'], label: 'Điền' },
+      { type: 'command', types: ['command'], label: 'Lệnh' },
+      { type: 'card', types: ['card'], label: 'Thẻ' },
+    ].filter(opt => opt.types.some(tp => allowedSet.has(tp)));
 
     contextMenuEl = h('div', {
       class: 'ux-popover',
@@ -326,14 +335,9 @@ export function createListPane({
         class: 'ux-popover-item',
         onclick: () => { closeContextMenu(); onDuplicate(item.id); },
       }, 'Nhân đôi (Ctrl+D)'),
-      h('div', { class: 'ux-popover-sep' }),
-      h('div', { style: 'padding: 4px 10px; font-size: 11px; color: var(--c-text-muted);' }, 'Chuyển dạng'),
-      ...[
-        { type: 'single', label: 'Trắc nghiệm' },
-        { type: 'fill', label: 'Điền đáp án' },
-        { type: 'command', label: 'Gõ lệnh' },
-        { type: 'card', label: 'Thẻ lật' },
-      ].map(opt => h('button', {
+      convertOptions.length > 0 ? h('div', { class: 'ux-popover-sep' }) : null,
+      convertOptions.length > 0 ? h('div', { style: 'padding: 4px 10px; font-size: 11px; color: var(--c-text-muted);' }, 'Chuyển dạng') : null,
+      ...convertOptions.map(opt => h('button', {
         class: 'ux-popover-item',
         onclick: () => { closeContextMenu(); onChangeItemType(item.id, opt.type); },
       }, `→ ${opt.label}`)),
@@ -404,12 +408,18 @@ export function createListPane({
         },
       }, 'Chọn'));
 
-    // Chip lọc Dạng
+    // Chip lọc Dạng (theo allowedTypes + các dạng thực tế có trong deck)
+    const allowedFilterSet = new Set(allowedTypes(kindOf(deck)));
+    const existingTypes = new Set((deck.items || []).map(i => detectItemType(i)).filter(Boolean));
+    const visibleTypeGroups = TYPE_GROUP_OPTIONS.filter(
+      opt => opt.types.some(tp => allowedFilterSet.has(tp) || existingTypes.has(tp))
+    );
+
     const typePopover = openPopoverKey === 'type' ? h('div', {
       class: 'ux-popover',
       onclick: ev => ev.stopPropagation(),
     },
-      TYPE_GROUP_OPTIONS.map(opt => h('label', { class: 'ux-popover-item' },
+      visibleTypeGroups.map(opt => h('label', { class: 'ux-popover-item' },
         h('input', {
           type: 'checkbox',
           checked: selectedTypes.has(opt.key),
@@ -584,17 +594,21 @@ export function createListPane({
       return;
     }
 
-    const addMenu = openPopoverKey === 'add' ? h('div', {
+    const allowedAddSet = new Set(allowedTypes(kindOf(deck)));
+    const addTypeOptions = [
+      { type: 'single', types: ['single', 'multi'], label: 'Trắc nghiệm' },
+      { type: 'fill', types: ['fill'], label: 'Điền' },
+      { type: 'command', types: ['command'], label: 'Lệnh' },
+      { type: 'card', types: ['card'], label: 'Thẻ' },
+      { type: 'vocab', types: ['vocab'], label: 'Từ vựng' },
+    ].filter(opt => opt.types.some(tp => allowedAddSet.has(tp)));
+
+    const addMenu = openPopoverKey === 'add' && addTypeOptions.length > 0 ? h('div', {
       class: 'ux-popover align-right',
       style: 'top: auto; bottom: calc(100% + 4px);',
       onclick: ev => ev.stopPropagation(),
     },
-      [
-        { type: 'single', label: 'Trắc nghiệm' },
-        { type: 'fill', label: 'Điền đáp án' },
-        { type: 'command', label: 'Gõ lệnh' },
-        { type: 'card', label: 'Thẻ lật' },
-      ].map(opt => h('button', {
+      addTypeOptions.map(opt => h('button', {
         class: 'ux-popover-item',
         onclick: () => {
           openPopoverKey = null;
@@ -604,22 +618,29 @@ export function createListPane({
 
     footerEl.replaceChildren(
       h('div', { class: 'list-add-row' },
-        h('div', { class: 'ux-split-btn' },
-          h('button', {
-            class: 'ux-btn primary sm',
-            title: 'Thêm mục mới cùng dạng, cùng chủ đề, cùng nhãn (Ctrl+Enter)',
-            onclick: () => onAddLikeCurrent(),
-          }, '+ Thêm mục'),
-          h('button', {
-            class: 'ux-btn primary sm ux-split-caret',
-            title: 'Chọn dạng mục mới',
-            onclick: ev => {
-              ev.stopPropagation();
-              openPopoverKey = openPopoverKey === 'add' ? null : 'add';
-              renderFooter();
-            },
-          }, '▾'),
-          addMenu)),
+        addTypeOptions.length > 1
+          ? h('div', { class: 'ux-split-btn' },
+              h('button', {
+                class: 'ux-btn primary sm',
+                title: 'Thêm mục mới cùng dạng, cùng chủ đề, cùng nhãn (Ctrl+Enter)',
+                onclick: () => onAddLikeCurrent(),
+              }, '+ Thêm mục'),
+              h('button', {
+                class: 'ux-btn primary sm ux-split-caret',
+                title: 'Chọn dạng mục mới',
+                onclick: ev => {
+                  ev.stopPropagation();
+                  openPopoverKey = openPopoverKey === 'add' ? null : 'add';
+                  renderFooter();
+                },
+              }, '▾'),
+              addMenu)
+          : h('button', {
+              class: 'ux-btn primary sm',
+              style: 'width: 100%;',
+              title: 'Thêm mục mới (Ctrl+Enter)',
+              onclick: () => onAddLikeCurrent(),
+            }, `+ Thêm mục (${addTypeOptions[0]?.label || 'Thẻ'})`)),
       h('div', { class: 'list-meta-row' },
         h('span', null, `${total} mục${warnCount ? ` · ${warnCount} ⚠` : ''}`),
         h('button', {

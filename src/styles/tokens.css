@@ -55,6 +55,14 @@
   --c-type-lenh: #7c3aed;
   --c-type-the: #b45309;
 
+  /* Màu theo loại bộ thẻ (GĐ3B §3: xanh ngọc, chàm, hổ phách) */
+  --kind-qa: #0d9488;
+  --kind-qa-soft: #ccfbf1;
+  --kind-quiz: #4338ca;
+  --kind-quiz-soft: #e0e7ff;
+  --kind-vocab: #d97706;
+  --kind-vocab-soft: #fef3c7;
+
   /* Tương thích biến cũ ở các màn hình Home / Deck / Session */
   --accent: var(--c-primary);
   --accent-soft: var(--c-primary-soft);
@@ -99,5 +107,12 @@
   --c-type-dien: #34d399;
   --c-type-lenh: #a78bfa;
   --c-type-the: #fbbf24;
+
+  --kind-qa: #2dd4bf;
+  --kind-qa-soft: rgb(45 212 191 / 18%);
+  --kind-quiz: #818cf8;
+  --kind-quiz-soft: rgb(129 140 248 / 18%);
+  --kind-vocab: #fbbf24;
+  --kind-vocab-soft: rgb(251 191 36 / 18%);
 }
 

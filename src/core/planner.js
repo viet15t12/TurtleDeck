@@ -61,7 +61,7 @@ export function countNewStudiedToday(log = [], now = Date.now(), { deckId, cards
       const c = cards[cKey];
       const todayLogs = sorted.filter(e => e.card === cKey && localDayKey(e.t, timeZone) === today);
       const explicitNew = todayLogs.some(e => e.isNew === true);
-      if (!explicitNew && c && (c.reps > 0 || c.lapses > 0) && todayLogs.length === 1) {
+      if (!explicitNew && c && (c.reps > 1 || c.lapses > 0 || (c.interval || 0) > 4) && todayLogs.length === 1) {
         studiedToday.delete(cKey);
       }
     }

@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { collectImageRefs } from './deckmodel.js';
+import { kindOf } from './deckkinds.js';
 
 export const LIMITS = { entries: 2000, deckJson: 20e6, image: 5e6, total: 500e6 };
 export const FORMAT = 'studydeck';
@@ -86,6 +87,7 @@ export function writePackage(deckText, assets = new Map(), { prune = true } = {}
   if (!deck?.meta?.id || !Array.isArray(deck.items)) return fail('Thiếu meta.id hoặc danh sách items.');
   deck.meta.format = FORMAT;
   deck.meta.formatVersion = FORMAT_VERSION;
+  deck.meta.kind = kindOf(deck);
   const deckBytes = strToU8(JSON.stringify(deck, null, 2));
   if (deckBytes.length > LIMITS.deckJson) return fail('deck.json vượt quá 20 MB.');
 

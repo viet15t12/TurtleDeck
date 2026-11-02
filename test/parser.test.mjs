@@ -11,14 +11,43 @@ const good = {
   ],
 };
 
-test('deck hợp lệ', () => {
+test('deck hợp lệ (cảnh báo nhẹ nếu có mục lệch loại, không bỏ qua mục)', () => {
   const r = parseDeck(JSON.stringify(good));
   assert.equal(r.ok, true);
   assert.equal(r.deck.items.length, 3);
   assert.equal(r.total, 3);
   assert.equal(r.skipped, 0);
-  assert.deepEqual(r.issues, []);
+  // Bộ good có kind = 'quiz' nhưng mục #3 là 'card' -> 1 cảnh báo nhẹ mismatch
+  assert.equal(r.issues.length, 1);
+  assert.equal(r.issues[0].level, 'warn');
+  assert.equal(r.issues[0].mismatch, true);
+  assert.match(r.issues[0].msg, /1 mục dạng Thẻ nằm trong bộ Đề luyện thi/);
   assert.equal(r.deck.meta.title, 'LPIC-1 101');
+});
+
+test('GĐ3B: thiếu hoặc lạ meta.kind -> tự suy ra bằng inferKind, không báo lỗi; giữ meta.description', () => {
+  const qaNoKind = {
+    meta: { id: 'qa-1', title: 'Bộ thẻ nhớ', description: 'Ôn công thức giải tích' },
+    items: [
+      { id: '1', type: 'card', front: 'Mặt trước', back: 'Mặt sau' },
+    ],
+  };
+  const r1 = parseDeck(JSON.stringify(qaNoKind));
+  assert.equal(r1.ok, true);
+  assert.equal(r1.deck.meta.kind, 'qa');
+  assert.equal(r1.deck.meta.description, 'Ôn công thức giải tích');
+  assert.deepEqual(r1.issues, []);
+
+  const quizWeirdKind = {
+    meta: { id: 'qz-1', title: 'Bộ trắc nghiệm', kind: 'unknown-kind' },
+    items: [
+      { id: '1', type: 'single', question: '1+1?', choices: ['1', '2'], answer: [1] },
+    ],
+  };
+  const r2 = parseDeck(JSON.stringify(quizWeirdKind));
+  assert.equal(r2.ok, true);
+  assert.equal(r2.deck.meta.kind, 'quiz');
+  assert.deepEqual(r2.issues, []);
 });
 
 test('JSON hỏng → ok:false, thông báo có dòng/cột', () => {

@@ -38,7 +38,7 @@ test('deckmodel: newItemId sinh id duy nhất không trùng', () => {
   assert.equal(id2, 'q-004');
 });
 
-test('deckmodel: newItem tạo mẫu cho mọi dạng', () => {
+test('deckmodel: newItem tạo mẫu cho mọi dạng và theo loại bộ thẻ (kind)', () => {
   const s = newItem('single', '1');
   assert.equal(s.type, 'single');
   assert.equal(s.choices.length, 2);
@@ -56,6 +56,16 @@ test('deckmodel: newItem tạo mẫu cho mọi dạng', () => {
   assert.equal(c.type, 'card');
   assert.equal(c.front, '');
   assert.equal(c.back, '');
+
+  // Tạo mục theo loại bộ thẻ ('qa' -> 'card', 'quiz' -> 'single', 'vocab' -> 'vocab') hoặc đối tượng deck
+  assert.equal(newItem('qa', '5').type, 'card');
+  assert.equal(newItem('quiz', '6').type, 'single');
+  assert.equal(newItem('vocab', '7').type, 'vocab');
+  const qaDeck = newDeck({ title: 'Bộ thẻ nhớ', kind: 'qa', description: 'Mô tả' });
+  assert.equal(qaDeck.meta.description, 'Mô tả');
+  assert.equal(newItem(qaDeck, '8').type, 'card');
+  // newItemLike trong bộ qa luôn tạo 'card' kể cả khi mục mẫu lệch loại
+  assert.equal(newItemLike(qaDeck, { id: 'q-001', type: 'single' }).type, 'card');
 });
 
 test('deckmodel: addItem, removeItems, duplicateItem, moveItem, updateItem', () => {

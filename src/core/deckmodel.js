@@ -1,6 +1,8 @@
 // src/core/deckmodel.js — thao tác trên mô hình bộ thẻ (hàm thuần, không sửa state cũ, dùng chung main/renderer).
 // Hỗ trợ Deck Editor (GĐ2C): newDeck, newItem, addItem, removeItems, duplicateItem, moveItem, updateItem, changeType, history...
 
+import { kindOf, allowedTypes, defaultTypeFor, isValidKind } from './deckkinds.js';
+
 const MD_IMG = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
 
 export function stripAccents(s) {
@@ -19,16 +21,20 @@ export function newDeckId(title = '') {
 }
 
 // Tạo đối tượng bộ thẻ mới
-export function newDeck({ title = 'Bộ thẻ mới', kind = 'quiz', lang = 'vi', id = null } = {}) {
+export function newDeck({ title = 'Bộ thẻ mới', kind = 'quiz', lang = 'vi', description, id = null } = {}) {
+  const meta = {
+    id: id || newDeckId(title),
+    title: String(title).trim() || 'Bộ thẻ mới',
+    kind: isValidKind(kind) ? kind : 'quiz',
+    lang: String(lang || 'vi').trim(),
+    format: 'studydeck',
+    formatVersion: 1,
+  };
+  if (typeof description === 'string' && description.trim() !== '') {
+    meta.description = description.trim().slice(0, 200);
+  }
   return {
-    meta: {
-      id: id || newDeckId(title),
-      title: String(title).trim() || 'Bộ thẻ mới',
-      kind: ['vocab', 'qa', 'quiz'].includes(kind) ? kind : 'quiz',
-      lang: String(lang || 'vi').trim(),
-      format: 'studydeck',
-      formatVersion: 1,
-    },
+    meta,
     items: [],
   };
 }
@@ -43,8 +49,15 @@ export function newItemId(deck, prefix = 'q') {
   return `${prefix}-${String(n).padStart(3, '0')}`;
 }
 
-// Tạo mẫu item trắng cho từng dạng
-export function newItem(type = 'single', id = null) {
+// Tạo mẫu item trắng cho từng dạng (hoặc theo loại bộ thẻ 'qa' / 'quiz' / 'vocab' / đối tượng deck)
+export function newItem(typeOrKind = 'single', id = null) {
+  if (typeOrKind && typeof typeOrKind === 'object') {
+    const resolvedId = id || newItemId(typeOrKind);
+    return newItem(defaultTypeFor(kindOf(typeOrKind)), resolvedId);
+  }
+  const type = typeOrKind === 'qa'
+    ? 'card'
+    : (typeOrKind === 'quiz' ? 'single' : typeOrKind);
   const base = { id: id || 'q-001' };
   switch (type) {
     case 'single':
@@ -293,10 +306,13 @@ export function unusedAssets(deck, assets) {
   return out;
 }
 
-// Tạo mục mới cùng dạng, cùng chủ đề và cùng nhãn với item đang chọn (§5, §13.3)
+// Tạo mục mới cùng dạng (nếu dạng nằm trong allowedTypes của loại bộ thẻ), cùng chủ đề và cùng nhãn với item đang chọn (§5, §13.3, GĐ3B)
 export function newItemLike(deck, refItem = null) {
   const id = newItemId(deck);
-  const rawType = refItem?.type || (deck?.meta?.kind === 'qa' ? 'card' : 'single');
+  const deckKind = kindOf(deck);
+  const allowed = new Set(allowedTypes(deckKind));
+  const refType = refItem?.type && allowed.has(refItem.type) ? refItem.type : null;
+  const rawType = refType || defaultTypeFor(deckKind);
   const type = rawType === 'multi' ? 'single' : rawType;
   let item = newItem(type, id);
   if (type === 'single' || type === 'multi') {

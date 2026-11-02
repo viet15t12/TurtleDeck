@@ -490,3 +490,148 @@ select.form-control {
   text-decoration: underline;
 }
 
+/* ── Ô chọn loại bộ thẻ (3 ô lớn, GĐ3B §2.2) ───────────────────────────── */
+
+.ux-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .ux-kind-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ux-kind-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.ux-kind-card:hover:not(.disabled) {
+  border-color: var(--c-border-strong);
+  background: var(--c-surface-2);
+}
+
+.ux-kind-card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.ux-kind-card.active[data-kind="qa"] {
+  border-color: var(--kind-qa);
+  background: color-mix(in srgb, var(--kind-qa-soft) 45%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-qa) 22%, transparent);
+}
+
+.ux-kind-card.active[data-kind="quiz"] {
+  border-color: var(--kind-quiz);
+  background: color-mix(in srgb, var(--kind-quiz-soft) 45%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-quiz) 22%, transparent);
+}
+
+.ux-kind-card.active[data-kind="vocab"] {
+  border-color: var(--kind-vocab);
+  background: color-mix(in srgb, var(--kind-vocab-soft) 45%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-vocab) 22%, transparent);
+}
+
+.ux-kind-card.disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  background: var(--c-surface-2);
+}
+
+.ux-kind-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 6px;
+}
+
+.ux-kind-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ux-kind-soon {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--c-surface-3);
+  border: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.ux-kind-title {
+  font-size: var(--fs);
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.ux-kind-desc {
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+
+/* Huy hiệu loại bộ thẻ (kèm màu + biểu tượng + chữ) */
+.ux-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.ux-kind-badge[data-kind="qa"] {
+  color: var(--kind-qa);
+  background: var(--kind-qa-soft);
+  border-color: color-mix(in srgb, var(--kind-qa) 30%, transparent);
+}
+
+.ux-kind-badge[data-kind="quiz"] {
+  color: var(--kind-quiz);
+  background: var(--kind-quiz-soft);
+  border-color: color-mix(in srgb, var(--kind-quiz) 30%, transparent);
+}
+
+.ux-kind-badge[data-kind="vocab"] {
+  color: var(--kind-vocab);
+  background: var(--kind-vocab-soft);
+  border-color: color-mix(in srgb, var(--kind-vocab) 30%, transparent);
+}
+
+.ux-mismatch-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--c-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--c-warn) 35%, var(--c-border));
+  color: var(--c-warn);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+
