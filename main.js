@@ -280,36 +280,14 @@ handle('asset:remove', (_event, deckKeyOrObj, assetPath) => {
   return { ok: true };
 });
 
-// ── Tiến độ và cài đặt (ghi atomic) ──────────────────────────────────────────
+// ── Tiến độ và cài đặt (ghi atomic, tuần tự hoá, giữ .bak, hợp nhất an toàn) ──
 
-const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+handle('progress:load', () => fsutil.loadProgressFile(progressFile()));
+handle('progress:save', (_e, data) => fsutil.saveProgressFile(progressFile(), data));
 
-async function loadJson(file, fallback) {
-  try {
-    const data = JSON.parse(await fs.readFile(file, 'utf8'));
-    return isPlainObject(data) ? data : fallback;
-  } catch { return fallback; }
-}
-
-handle('progress:load', () => loadJson(progressFile(), { version: 1, cards: {}, log: [] }));
-handle('progress:save', async (_e, data) => {
-  if (!isPlainObject(data)) return { ok: false, error: 'Dữ liệu tiến độ không hợp lệ.' };
-  await fsutil.atomicWrite(progressFile(), JSON.stringify(data));
-  return { ok: true };
-});
-
-// decks: đường dẫn các .sdeck đã mở (tự nạp lại khi mở app)
-handle('settings:load', async () => {
-  const s = await loadJson(settingsFile(), { version: 1, decks: [] });
-  if (!Array.isArray(s.decks)) s.decks = [];
-  s.decks = s.decks.filter(p => typeof p === 'string');
-  return s;
-});
-handle('settings:save', async (_e, data) => {
-  if (!isPlainObject(data)) return { ok: false, error: 'Dữ liệu cài đặt không hợp lệ.' };
-  await fsutil.atomicWrite(settingsFile(), JSON.stringify(data, null, 2));
-  return { ok: true };
-});
+// decks: đường dẫn các .sdeck đã mở (tự nạp lại khi mở app); newCardsPerDay, learnSteps, độ rộng cột Editor...
+handle('settings:load', () => fsutil.loadSettingsFile(settingsFile()));
+handle('settings:save', (_e, data) => fsutil.saveSettingsFile(settingsFile(), data));
 
 function registerAssetProtocol() {
   protocol.handle('asset', req => {

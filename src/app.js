@@ -1,17 +1,38 @@
-// src/app.js — router màn hình + trạng thái bộ thẻ đã nạp (ES module, chỉ gọi main qua window.api).
+// src/app.js — router màn hình + trạng thái bộ thẻ, tiến độ (SRS) và cài đặt (ES module, chỉ gọi main qua window.api).
 import { h, fileName } from './views/dom.js';
 import { renderHome } from './views/home.js';
 import { renderDeck } from './views/deck.js';
 import { renderSession } from './views/session.js';
 import { renderEditor } from './views/editor.js';
+import { renderSettings } from './views/settings.js';
 import { newDeck, newItem, newItemId, addItem, newDeckId } from './core/deckmodel.js';
+import { setLearnSteps, recordReview, DEFAULT_LEARN_STEPS } from './core/srs.js';
+import { DEFAULT_NEW_CARDS_PER_DAY } from './core/planner.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
 const notices = document.querySelector('#notices');
 
 // entries: { uid, path|null, status: 'loading'|'ok'|'error'|'missing', deckKey, deckText, deck, issues, error, source, assetCount }
-const state = { settings: { version: 1, decks: [] }, entries: [], route: { name: 'home' }, modal: null, busy: false };
+const state = {
+  settings: {
+    version: 1,
+    decks: [],
+    newCardsPerDay: DEFAULT_NEW_CARDS_PER_DAY,
+    learnSteps: [...DEFAULT_LEARN_STEPS],
+  },
+  progress: {
+    version: 1,
+    cards: {},
+    meta: {},
+    log: [],
+  },
+  entries: [],
+  route: { name: 'home' },
+  modal: null,
+  busy: false,
+};
+
 let uidSeq = 0;
 const newEntry = fields => ({ uid: ++uidSeq, issues: [], ...fields });
 
@@ -25,12 +46,32 @@ function notify(text, level = 'info', timeout = level === 'error' ? 0 : 6000) {
   if (timeout) setTimeout(() => box.remove(), timeout);
 }
 
-// ── Lưu danh sách đường dẫn vào settings.json ─────────────────────────────
+// ── Lưu danh sách đường dẫn vào settings.json (hợp nhất) ──────────────────
 
 async function persistDeckPaths() {
-  state.settings.decks = [...new Set(state.entries.map(e => e.path).filter(Boolean))];
-  const r = await api.saveSettings(state.settings);
+  const decks = [...new Set(state.entries.map(e => e.path).filter(Boolean))];
+  state.settings.decks = decks;
+  const r = await api.saveSettings({ decks });
   if (r && r.ok === false) notify('Không lưu được cài đặt: ' + r.error, 'error');
+  else if (r?.settings) state.settings = r.settings;
+}
+
+// ── Ghi nhận kết quả trả lời câu hỏi vào progress.json ────────────────────
+
+function handleRecordReview(args) {
+  const res = recordReview(state.progress, {
+    ...args,
+    learnSteps: args?.learnSteps ?? state.settings.learnSteps,
+  });
+  if (res.persisted) {
+    state.progress = res.progress;
+    api.saveProgress(state.progress).then(r => {
+      if (r && r.ok === false) notify('Không lưu được tiến độ: ' + r.error, 'error');
+    }).catch(e => {
+      notify('Lỗi lưu tiến độ: ' + (e?.message || e), 'error');
+    });
+  }
+  return res;
 }
 
 // ── Nạp kết quả mở / nhập vào danh sách ───────────────────────────────────
@@ -85,6 +126,24 @@ async function withBusy(fn) {
 
 const actions = {
   home() { state.route = { name: 'home' }; render(); },
+
+  openSettings() {
+    state.route = { name: 'settings' };
+    render();
+  },
+
+  async saveSettings(patch) {
+    const r = await api.saveSettings(patch);
+    if (r && r.ok === false) {
+      notify('Không lưu được cài đặt: ' + r.error, 'error');
+      return;
+    }
+    state.settings = r?.settings || { ...state.settings, ...patch };
+    setLearnSteps(state.settings.learnSteps);
+    notify('Đã lưu cài đặt thành công.', 'success');
+    state.route = { name: 'home' };
+    render();
+  },
 
   openEditor(entry) {
     state.route = { name: 'editor', uid: entry.uid };
@@ -189,10 +248,20 @@ const actions = {
     render();
   },
 
+  startSrsSession(entry) {
+    state.modal = null;
+    state.route = {
+      name: 'session',
+      uid: entry.uid,
+      config: { mode: 'srs', persist: true },
+    };
+    render();
+  },
+
   openSessionSetup(entry) {
     state.modal = renderSessionModal(
       entry,
-      config => actions.startSession(entry, config),
+      config => actions.startSession(entry, { ...config, persist: true }),
       () => { state.modal = null; render(); }
     );
     render();
@@ -204,17 +273,21 @@ const actions = {
     render();
   },
 
+  // "Học thử" từ Editor (bộ thẻ đang soạn): persist: false → KHÔNG ghi progress hay log
   startTrialSession(entry, workingDeck) {
     state.modal = null;
-    if (workingDeck) {
-      entry.deck = JSON.parse(JSON.stringify(workingDeck));
-      entry.deckText = JSON.stringify(workingDeck, null, 2);
-    }
+    const trialDeck = workingDeck ? JSON.parse(JSON.stringify(workingDeck)) : entry.deck;
     state.route = {
       name: 'session',
       uid: entry.uid,
       fromEditor: true,
-      config: { count: (entry.deck.items || []).length, shuffle: false },
+      trialDeck,
+      config: {
+        mode: 'trial',
+        persist: false,
+        count: (trialDeck.items || []).length,
+        shuffle: false,
+      },
     };
     render();
   },
@@ -254,7 +327,7 @@ function renderSessionModal(entry, onStart, onCancel) {
 
   const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
     h('div', { class: 'modal-dialog' },
-      h('h2', null, 'Bắt đầu phiên học'),
+      h('h2', null, 'Bắt đầu phiên học tuỳ chọn'),
       h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' }, entry.deck.meta.title),
       h('div', { class: 'form-group' },
         h('label', null, 'Số lượng câu hỏi:'),
@@ -268,7 +341,7 @@ function renderSessionModal(entry, onStart, onCancel) {
         h('button', { class: 'btn ghost', onclick: onCancel }, 'Huỷ'),
         h('button', {
           class: 'btn primary',
-          onclick: () => onStart({ count: selectedCount, shuffle: shuffleOrder }),
+          onclick: () => onStart({ mode: 'custom', count: selectedCount, shuffle: shuffleOrder }),
         }, 'Bắt đầu học'))));
 
   return modal;
@@ -348,6 +421,12 @@ async function saveEntry(entry, saveAs) {
 function render() {
   document.body.classList.toggle('in-editor', state.route.name === 'editor');
 
+  if (state.route.name === 'settings') {
+    renderSettings(root, { settings: state.settings }, actions);
+    if (state.modal) root.append(state.modal);
+    return;
+  }
+
   if (state.route.name === 'editor') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
@@ -362,11 +441,20 @@ function render() {
   if (state.route.name === 'session') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `Học: ${entry.deck.meta.title} — Study App`;
+      const effectiveEntry = state.route.trialDeck
+        ? { ...entry, deck: state.route.trialDeck }
+        : entry;
+      document.title = `Học: ${effectiveEntry.deck.meta.title} — Study App`;
       const sessionActions = state.route.fromEditor
-        ? { ...actions, openDeckView: e => actions.openEditor(e) }
+        ? { ...actions, openDeckView: () => actions.openEditor(entry) }
         : actions;
-      renderSession(root, { entry, config: state.route.config }, sessionActions);
+      renderSession(root, {
+        entry: effectiveEntry,
+        config: state.route.config,
+        progress: state.progress,
+        settings: state.settings,
+        onRecordReview: handleRecordReview,
+      }, sessionActions);
       if (state.modal) root.append(state.modal);
       return;
     }
@@ -376,7 +464,7 @@ function render() {
   if (state.route.name === 'deck') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      renderDeck(root, entry, actions);
+      renderDeck(root, entry, actions, { progress: state.progress, settings: state.settings });
       if (state.modal) root.append(state.modal);
       return;
     }
@@ -384,16 +472,37 @@ function render() {
   }
 
   document.title = 'Study App';
-  renderHome(root, { entries: state.entries, busy: state.busy }, actions);
+  renderHome(root, {
+    entries: state.entries,
+    busy: state.busy,
+    progress: state.progress,
+    settings: state.settings,
+  }, actions);
   if (state.modal) root.append(state.modal);
 }
 
 // bấm ra ngoài thì đóng mọi menu thả xuống
 document.addEventListener('click', () => document.querySelectorAll('.menu').forEach(m => { m.hidden = true; }));
 
-// Khởi động: đọc settings, tự nạp lại các bộ thẻ đã mở lần trước
+// Khởi động: đọc settings + progress, tự nạp lại các bộ thẻ đã mở lần trước
 async function init() {
-  state.settings = await api.loadSettings();
+  const [loadedSettings, loadedProgress] = await Promise.all([
+    api.loadSettings(),
+    api.loadProgress(),
+  ]);
+  if (loadedSettings && typeof loadedSettings === 'object') {
+    state.settings = { ...state.settings, ...loadedSettings };
+    setLearnSteps(state.settings.learnSteps);
+  }
+  if (loadedProgress && typeof loadedProgress === 'object') {
+    state.progress = {
+      version: 1,
+      cards: loadedProgress.cards || {},
+      meta: loadedProgress.meta || {},
+      log: Array.isArray(loadedProgress.log) ? loadedProgress.log : [],
+    };
+  }
+
   const paths = state.settings.decks || [];
   state.entries = paths.map(p => newEntry({ path: p, status: 'loading' }));
   render();

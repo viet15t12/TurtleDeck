@@ -1,9 +1,10 @@
-// src/views/home.js — màn hình chính: mở / nhập bộ thẻ, danh sách bộ thẻ đã nạp.
+// src/views/home.js — màn hình chính: mở / nhập bộ thẻ, danh sách bộ thẻ đã nạp, số thẻ đến hạn/mới, nút Ôn hôm nay.
 import { h, fileName } from './dom.js';
+import { deckDueCounts } from '../core/planner.js';
 
 const countIssues = e => (e.issues || []).filter(i => i.level === 'warn' || i.level === 'error').length;
 
-function deckRow(entry, actions) {
+function deckRow(entry, { progress, settings }, actions) {
   const remove = h('button', { class: 'btn small ghost', title: 'Gỡ khỏi danh sách (không xoá file)',
     onclick: ev => { ev.stopPropagation(); actions.remove(entry); } }, 'Gỡ');
 
@@ -25,6 +26,10 @@ function deckRow(entry, actions) {
 
   const { meta, items } = entry.deck;
   const warn = countIssues(entry);
+  const counts = deckDueCounts(entry.deck, progress, Date.now(), {
+    newCardsPerDay: settings?.newCardsPerDay,
+  });
+  const totalToday = counts.dueToday + counts.newToday;
 
   const moreMenu = h('div', { class: 'menu', hidden: true },
     h('button', { class: 'menu-item', onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.openEditor(entry); } }, '✏ Sửa bộ thẻ'),
@@ -42,10 +47,19 @@ function deckRow(entry, actions) {
       h('div', { class: 'deck-sub' },
         h('span', null, `${items.length} mục`),
         h('span', { class: 'chip' }, meta.kind),
+        h('span', {
+          class: `badge srs-counts ${counts.dueToday > 0 ? 'has-due' : ''}`,
+          title: `Đến hạn ôn tập: ${counts.dueToday} thẻ (quá hạn: ${counts.due}, đang học: ${counts.learning}) · Thẻ mới hôm nay: ${counts.newToday}/${counts.newAvailable}`,
+        }, `Đến hạn hôm nay: ${counts.dueToday} / Thẻ mới: ${counts.newToday}`),
         warn ? h('span', { class: 'badge warn', title: 'Số cảnh báo / mục bị bỏ qua' }, `⚠ ${warn} cảnh báo`) : null),
       h('div', { class: 'deck-path' }, entry.path || `Nhập từ: ${entry.source}`)),
     h('div', { class: 'deck-actions' },
-      items.length ? h('button', { class: 'btn small primary',
+      counts.total > 0 ? h('button', {
+        class: 'btn small primary',
+        title: totalToday > 0 ? `Ôn ${counts.dueToday} thẻ đến hạn và ${counts.newToday} thẻ mới` : 'Đã hoàn thành lịch ôn hôm nay',
+        onclick: ev => { ev.stopPropagation(); actions.startSrsSession(entry); },
+      }, totalToday > 0 ? `Ôn hôm nay (${totalToday})` : 'Ôn hôm nay') : null,
+      items.length ? h('button', { class: 'btn small',
         onclick: ev => { ev.stopPropagation(); actions.openSessionSetup(entry); } }, 'Học') : null,
       h('button', { class: 'btn small',
         onclick: ev => { ev.stopPropagation(); actions.openEditor(entry); } }, 'Sửa'),
@@ -55,7 +69,7 @@ function deckRow(entry, actions) {
         moreMenu)));
 }
 
-export function renderHome(root, { entries, busy }, actions) {
+export function renderHome(root, { entries, busy, progress, settings }, actions) {
   const importMenu = h('div', { class: 'menu', hidden: true },
     h('button', { class: 'menu-item', onclick: () => { importMenu.hidden = true; actions.importDeck('file'); } }, 'Từ file deck .json…'),
     h('button', { class: 'menu-item', onclick: () => { importMenu.hidden = true; actions.importDeck('dir'); } }, 'Từ thư mục (deck.json + img/)…'));
@@ -66,10 +80,11 @@ export function renderHome(root, { entries, busy }, actions) {
     h('div', { class: 'menu-wrap' },
       h('button', { class: 'btn', disabled: busy, 'aria-haspopup': 'menu',
         onclick: ev => { ev.stopPropagation(); importMenu.hidden = !importMenu.hidden; } }, 'Nhập… ▾'),
-      importMenu));
+      importMenu),
+    h('button', { class: 'btn', disabled: busy, onclick: actions.openSettings }, '⚙ Cài đặt'));
 
   const list = entries.length
-    ? h('ul', { class: 'deck-list' }, entries.map(e => deckRow(e, actions)))
+    ? h('ul', { class: 'deck-list' }, entries.map(e => deckRow(e, { progress, settings }, actions)))
     : h('div', { class: 'empty' },
         h('p', null, 'Chưa có bộ thẻ nào.'),
         h('p', { class: 'muted' }, 'Bấm "Mở file…" để chọn file .sdeck, hoặc "Nhập…" để chuyển một deck .json / thư mục thành .sdeck.'));

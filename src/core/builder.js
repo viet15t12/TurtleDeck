@@ -1,5 +1,6 @@
 // src/core/builder.js — chuyển đổi item về cấu trúc Question thống nhất (hàm thuần, ES module).
 // GĐ2 & GĐ2B: hỗ trợ single, multi, fill, command, card (và vocab fallback như card), kèm image, answerImage, answerDisplay.
+import { validateItem, hasError } from './validate.js';
 
 export function buildQuestion(item) {
   if (!item || typeof item !== 'object') return null;
@@ -123,7 +124,8 @@ export function shuffle(array) {
 }
 
 export function buildSessionQuestions(items, options = {}) {
-  let list = (items || []).map(buildQuestion).filter(Boolean);
+  const validItems = (items || []).filter(it => !hasError(validateItem(it, { deckKind: options.deckKind })));
+  let list = validItems.map(buildQuestion).filter(Boolean);
 
   if (options.itemIds && Array.isArray(options.itemIds)) {
     const idSet = new Set(options.itemIds);

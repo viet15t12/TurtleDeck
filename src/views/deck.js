@@ -1,7 +1,7 @@
 // src/views/deck.js — Deck view: thông tin bộ thẻ, bảng item (rút gọn) và danh sách cảnh báo / mục bị bỏ qua.
-// Chưa có chế độ học (GĐ2) và nút Sửa bộ thẻ (GĐ2C).
 import { h, shorten, fileName } from './dom.js';
 import { toPlain } from '../core/richtext.js';
+import { deckDueCounts } from '../core/planner.js';
 
 const TYPE_LABEL = {
   single: '1 đáp án', multi: 'Nhiều đáp án', fill: 'Điền', command: 'Lệnh', card: 'Thẻ', vocab: 'Từ vựng',
@@ -55,10 +55,14 @@ function issueList(issues) {
         i.msg))));
 }
 
-export function renderDeck(root, entry, actions) {
+export function renderDeck(root, entry, actions, { progress, settings } = {}) {
   const { meta, items } = entry.deck;
   const issues = entry.issues || [];
   const skipped = issues.filter(i => i.skipped).length;
+  const counts = deckDueCounts(entry.deck, progress, Date.now(), {
+    newCardsPerDay: settings?.newCardsPerDay,
+  });
+  const totalToday = counts.dueToday + counts.newToday;
 
   root.replaceChildren(
     h('header', { class: 'page-head' },
@@ -70,11 +74,17 @@ export function renderDeck(root, entry, actions) {
           h('span', { class: 'chip' }, meta.kind),
           meta.lang ? h('span', { class: 'chip' }, meta.lang) : null,
           h('span', null, `${items.length} mục học được`),
+          h('span', { class: `badge srs-counts ${counts.dueToday > 0 ? 'has-due' : ''}` },
+            `Đến hạn hôm nay: ${counts.dueToday} / Thẻ mới: ${counts.newToday}`),
           skipped ? h('span', { class: 'error-text' }, `${skipped} mục bị bỏ qua`) : null,
           h('span', null, `${entry.assetCount ?? 0} ảnh`)),
         h('p', { class: 'deck-path' }, entry.path ? entry.path : `Nhập từ: ${entry.source}`)),
       h('div', { class: 'toolbar' },
-        items.length ? h('button', { class: 'btn primary', onclick: () => actions.openSessionSetup(entry) }, '▶ Bắt đầu học') : null,
+        counts.total > 0 ? h('button', {
+          class: 'btn primary',
+          onclick: () => actions.startSrsSession(entry),
+        }, totalToday > 0 ? `▶ Ôn hôm nay (${totalToday})` : '▶ Ôn hôm nay') : null,
+        items.length ? h('button', { class: 'btn', onclick: () => actions.openSessionSetup(entry) }, 'Học tuỳ chọn') : null,
         h('button', { class: 'btn', onclick: () => actions.openEditor(entry) }, '✏ Sửa bộ thẻ'),
         entry.path ? null : h('button', { class: 'btn', onclick: () => actions.saveAs(entry) }, 'Lưu thành .sdeck…'),
         h('button', { class: 'btn ghost', onclick: () => actions.remove(entry) }, 'Gỡ khỏi danh sách'))),
@@ -86,4 +96,3 @@ export function renderDeck(root, entry, actions) {
       itemTable(items)));
   root.ownerDocument.title = `${meta.title} — ${fileName(entry.path) || 'Study App'}`;
 }
-

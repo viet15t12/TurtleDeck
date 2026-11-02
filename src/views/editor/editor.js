@@ -223,12 +223,12 @@ export function renderEditor(root, { entry }, actions) {
 
   async function persistLayoutSettings() {
     try {
-      const s = (await api.loadSettings()) || { version: 1, decks: [] };
-      s.editorListWidth = listWidth;
-      s.editorPreviewWidth = previewWidth;
-      s.editorPreviewCollapsed = previewCollapsed;
-      s.recentMathSnippets = recentMathSnippets;
-      await api.saveSettings(s);
+      await api.saveSettings({
+        editorListWidth: listWidth,
+        editorPreviewWidth: previewWidth,
+        editorPreviewCollapsed: previewCollapsed,
+        recentMathSnippets,
+      });
     } catch {
       // Bỏ qua
     }
