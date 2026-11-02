@@ -113,3 +113,22 @@ test('Phase 5 Learn, Match, Exam and filters modules are present', () => {
   }
 });
 
+test('Phase 6 Stats, progressio, library, shortcuts and linux tools are present', () => {
+  for (const file of [
+    'src/core/stats.js',
+    'src/core/progressio.js',
+    'src/core/library.js',
+    'src/views/stats.js',
+    'src/styles/stats.css',
+    'src/shortcuts.js',
+    'src/theme-init.js',
+    'src/vendor/chartjs/chart.umd.min.js',
+    'tools/linux/install-dev-association.sh',
+    'tools/linux/study-deck-mimetype.xml',
+    'tools/linux/study-deck-dev.desktop',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});
+
+

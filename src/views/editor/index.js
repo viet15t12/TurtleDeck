@@ -108,6 +108,8 @@ export function renderEditor(root, { entry, initialItemId }, appActions) {
     panes,
   });
 
+  let draftTimer = null;
+
   actions = createActions({
     state,
     services,
@@ -115,7 +117,10 @@ export function renderEditor(root, { entry, initialItemId }, appActions) {
     modals,
     panes,
     appActions,
-    cleanup: () => { if (cleanupShortcuts) cleanupShortcuts(); },
+    cleanup: () => {
+      if (cleanupShortcuts) cleanupShortcuts();
+      if (draftTimer) clearInterval(draftTimer);
+    },
   });
 
   // 3. Khởi tạo các Pane (List, Form, Preview)
@@ -257,6 +262,17 @@ export function renderEditor(root, { entry, initialItemId }, appActions) {
     panes,
     ui,
   });
+
+  // Tự lưu nháp Editor mỗi 30 giây khi có thay đổi chưa lưu (Section H)
+  draftTimer = setInterval(() => {
+    if (state.dirty) {
+      actions.finalizeCurrentItemBeforeLeave();
+      const d = state.getDeck();
+      if (d?.meta?.id) {
+        window.api.saveDraft?.(d.meta.id, state.deckKey, JSON.stringify(d, null, 2));
+      }
+    }
+  }, 30000);
 
   // 5. Initial Render
   syncLayout();

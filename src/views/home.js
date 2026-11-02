@@ -11,6 +11,7 @@ const countIssues = e => (e.issues || []).filter(i => i.level === 'warn' || i.le
 // Giữ trạng thái bộ lọc/tìm kiếm/sắp xếp trên Home giữa các lần render
 const homeUiState = {
   filterKind: 'all', // 'all' | 'qa' | 'quiz' | 'vocab'
+  filterGroup: 'all', // 'all' | 'LPIC/101' | ...
   searchQuery: '',
   sortBy: 'due',     // 'due' | 'recent' | 'title'
 };
@@ -40,7 +41,7 @@ function closeAllDropdowns(except) {
 }
 
 function renderDeckCard(entry, st, actions) {
-  const removeBtn = h('button', {
+  const removeBtn = entry.inLibrary ? null : h('button', {
     type: 'button',
     class: 'ux-btn sm ghost danger-hover',
     title: 'Gỡ khỏi danh sách (không xoá file)',
@@ -107,11 +108,17 @@ function renderDeckCard(entry, st, actions) {
       title: entry.path,
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.showInFolder?.(entry); },
     }, '📂 Hiện trong thư mục') : null,
+    entry.path ? h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      title: 'Xuất bản sao file .sdeck sang nơi khác và giữ nguyên mã bộ thẻ',
+      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.exportCopy?.(entry); },
+    }, '📤 Xuất bản sao…') : null,
     h('button', {
       type: 'button',
       class: 'ux-popover-item',
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.duplicateDeck(entry); },
-    }, '📄 Sao chép'),
+    }, '📄 Nhân đôi (Bản sao mới)'),
     h('button', {
       type: 'button',
       class: 'ux-popover-item',
@@ -122,8 +129,8 @@ function renderDeckCard(entry, st, actions) {
       class: 'ux-popover-item',
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.saveAs(entry); },
     }, '💾 Lưu thành .sdeck…'),
-    h('div', { class: 'ux-popover-sep' }),
-    h('button', {
+    entry.inLibrary ? null : h('div', { class: 'ux-popover-sep' }),
+    entry.inLibrary ? null : h('button', {
       type: 'button',
       class: 'ux-popover-item danger',
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.remove(entry); },
@@ -151,6 +158,7 @@ function renderDeckCard(entry, st, actions) {
     h('div', { class: 'deck-card-head' },
       h('div', { class: 'deck-card-badges' },
         h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
+        entry.group ? h('span', { class: 'ux-chip', style: 'cursor: default; font-size: 11px;' }, `📁 ${entry.group}`) : null,
         entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu'),
         warn ? h('span', { class: 'ux-chip warn', title: `${warn} cảnh báo trong bộ thẻ` }, `⚠ ${warn}`) : null),
       h('div', { class: 'menu-wrap', onclick: ev => ev.stopPropagation() },
@@ -323,6 +331,12 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       type: 'button',
       class: 'ux-btn',
       disabled: busy,
+      onclick: actions.openStats,
+    }, '📊 Thống kê'),
+    h('button', {
+      type: 'button',
+      class: 'ux-btn',
+      disabled: busy,
       onclick: actions.openSettings,
     }, '⚙ Cài đặt'));
 
@@ -383,6 +397,20 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     const searchWrap = h('div', { class: 'ux-search-wrap home-search-box' });
     searchWrap.append(createSearchSvg(), searchInput, clearBtn);
 
+    const distinctGroups = [...new Set(entries.map(e => e.group).filter(Boolean))].sort();
+
+    const groupSelect = distinctGroups.length > 0 ? h('select', {
+      class: 'ux-select',
+      'aria-label': 'Lọc theo nhóm thư mục',
+      onchange: ev => {
+        homeUiState.filterGroup = ev.target.value;
+        renderCardsOnly();
+      },
+    },
+      h('option', { value: 'all', selected: homeUiState.filterGroup === 'all' }, 'Tất cả nhóm'),
+      ...distinctGroups.map(g => h('option', { value: g, selected: homeUiState.filterGroup === g }, `Nhóm: ${g}`))
+    ) : null;
+
     const sortSelect = h('select', {
       class: 'ux-select',
       'aria-label': 'Sắp xếp bộ thẻ',
@@ -407,6 +435,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         }, opt.label))),
       h('div', { class: 'home-filter-right' },
         searchWrap,
+        groupSelect,
         sortSelect));
 
     const cardsContainer = h('div');
@@ -417,6 +446,9 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         if (homeUiState.filterKind !== 'all') {
           if (e.status !== 'ok' || !e.deck) return false;
           if (kindOf(e.deck) !== homeUiState.filterKind) return false;
+        }
+        if (homeUiState.filterGroup !== 'all') {
+          if (e.group !== homeUiState.filterGroup) return false;
         }
         if (qNorm) {
           const title = e.deck?.meta?.title || fileName(e.path) || '';

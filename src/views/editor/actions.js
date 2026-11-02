@@ -243,6 +243,7 @@ export function createActions({ state, services, ui, modals, panes, appActions, 
     state.entry.assetCount = res.assetCount;
     state.dirty = false;
     state.lastSavedAt = new Date();
+    window.api.deleteDraft?.(deckToSave?.meta?.id);
     ui.renderTopbar();
     if (panes.list) panes.list.render();
     if (panes.form) panes.form.updateValidationUI();
@@ -299,7 +300,10 @@ export function createActions({ state, services, ui, modals, panes, appActions, 
         const ok = await performSave(false);
         if (ok) goBack();
       },
-      onDiscardAndExit: () => goBack(),
+      onDiscardAndExit: () => {
+        window.api.deleteDraft?.(state.getDeck()?.meta?.id);
+        goBack();
+      },
     });
   }
 

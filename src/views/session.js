@@ -26,6 +26,8 @@ import { planSession, reinsertWrong } from '../core/planner.js';
 import { renderResult, formatNextIntervalText } from './result.js';
 import { attachImageHandlers } from './components/lightbox.js';
 import { speak } from '../tts.js';
+import { applyCardOverride } from '../core/progressio.js';
+import { setShortcutScope } from '../shortcuts.js';
 
 let activeCleanup = null;
 
@@ -208,11 +210,13 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     const now = Date.now();
     const ms = Math.max(0, now - (session.questionStartedAt || now));
     const prevCard = currentCardState(q);
+    const prevState = { ...prevCard };
     session.nextIntervalText = previewIntervalLabel(prevCard, rating, now, { learnSteps });
 
     // Cập nhật tiến độ và ghi log (bỏ qua nếu persist === false khi Học thử từ Editor)
+    let reviewRes = null;
     if (onRecordReview) {
-      const res = onRecordReview({
+      reviewRes = onRecordReview({
         deckId,
         itemId: q.id,
         direction: q.direction || 'fwd',
@@ -222,9 +226,9 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         learnSteps,
         persist,
       });
-      if (res?.card) {
-        q.card = res.card;
-        session.nextIntervalText = formatNextIntervalText(res.card, now);
+      if (reviewRes?.card) {
+        q.card = reviewRes.card;
+        session.nextIntervalText = formatNextIntervalText(reviewRes.card, now);
       }
     }
 
@@ -236,15 +240,89 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     }
 
     session.submitted = true;
+    const cKey = reviewRes?.key || cardKey(deckId, q.id, q.direction || 'fwd');
+    session.currentReviewResult = {
+      prevState,
+      logEntry: reviewRes?.logEntry,
+      key: cKey,
+    };
+
     session.history.push({
       question: q,
       userAnswer: session.userAnswer,
       grade: session.grade,
       rating,
       ms,
+      prevState,
+      logEntry: reviewRes?.logEntry,
+      cardKey: cKey,
     });
 
     render();
+  }
+
+  function handleOverride() {
+    if (!session.submitted || !session.currentReviewResult) return;
+    const { prevState, logEntry, key } = session.currentReviewResult;
+    const now = Date.now();
+    const cKey = key || cardKey(deckId, currentQ().id, currentQ().direction || 'fwd');
+    const { nextCard, overrideLogEntry } = applyCardOverride(prevState, logEntry || { t: now, card: cKey, ms: 0 }, now, { learnSteps });
+
+    if (!progress.cards) progress.cards = {};
+    progress.cards[cKey] = nextCard;
+
+    if (logEntry && logEntry.t) {
+      if (!Array.isArray(progress.log)) progress.log = [];
+      progress.log.push(overrideLogEntry);
+    }
+
+    if (persist) {
+      window.api.saveProgress(progress);
+    }
+
+    session.grade = { ok: true, near: false, rating: RATING.GOOD, overridden: true };
+    session.slotResults.set(session.index, true);
+    session.nextIntervalText = formatNextIntervalText(nextCard, now);
+    currentQ().card = nextCard;
+
+    const lastHist = session.history[session.history.length - 1];
+    if (lastHist) {
+      lastHist.grade = session.grade;
+      lastHist.rating = RATING.GOOD;
+      lastHist.overridden = true;
+    }
+
+    // Xoá các lượt hỏi lại của câu này nếu có
+    const curId = currentQ().id;
+    for (let i = session.questions.length - 1; i > session.index; i--) {
+      if (session.questions[i].id === curId && session.questions[i].isRetry) {
+        session.questions.splice(i, 1);
+      }
+    }
+
+    render();
+  }
+
+  function getCurrentMeta() {
+    const q = currentQ();
+    if (!q) return { starred: false, note: '' };
+    const metaKey = `${deckId}:${q.id}`;
+    if (!progress.meta) progress.meta = {};
+    if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
+    return progress.meta[metaKey];
+  }
+
+  function toggleStar() {
+    const metaItem = getCurrentMeta();
+    metaItem.starred = !metaItem.starred;
+    window.api.saveProgress(progress);
+    render();
+  }
+
+  function saveNote(newNote) {
+    const metaItem = getCurrentMeta();
+    metaItem.note = String(newNote || '').slice(0, 2000);
+    window.api.saveProgress(progress);
   }
 
   function nextQuestion() {
@@ -362,16 +440,21 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
   }
 
   window.addEventListener('keydown', onKeyDown);
-  activeCleanup = () => window.removeEventListener('keydown', onKeyDown);
+  activeCleanup = () => {
+    window.removeEventListener('keydown', onKeyDown);
+    setShortcutScope('home');
+  };
 
   // ── Render màn hình kết quả (Result view) ─────────────────────────────────
 
   function renderResultView() {
+    setShortcutScope('result');
     renderResult(root, {
       entry,
       config,
       history: session.history,
       progress,
+      settings,
       isTrial: !persist,
     }, actions);
   }
@@ -625,12 +708,60 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
     const answerImgUrl = q.answerImage && q.kind !== 'card' ? assetUrl(q.answerImage, entry.deckKey) : null;
 
+    const metaItem = getCurrentMeta();
+    const isOverridden = Boolean(g.overridden);
+    const canOverride = (!g.ok || g.near) && !isOverridden;
+
+    const starBtn = h('button', {
+      type: 'button',
+      class: `star-btn ${metaItem.starred ? 'starred' : ''}`,
+      title: metaItem.starred ? 'Bỏ gắn sao (phím S hoặc Alt+S khi gõ)' : 'Gắn sao mục này (phím S hoặc Alt+S khi gõ)',
+      onclick: toggleStar,
+    }, metaItem.starred ? '★ Đã gắn sao' : '☆ Gắn sao');
+
+    const overrideBtn = canOverride
+      ? h('button', {
+          type: 'button',
+          class: 'ux-btn sm',
+          style: 'margin-left: auto;',
+          title: 'Chấm lại câu này là Đúng và cập nhật lịch ôn tập',
+          onclick: handleOverride,
+        }, '✓ Tôi chấm lại là đúng')
+      : (isOverridden
+        ? h('span', { class: 'chip ok-text', style: 'margin-left: auto; font-size: 12px;' }, '✓ Đã chấm lại thành Đúng')
+        : null);
+
+    const feedbackActionsBar = h('div', {
+      style: 'display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 6px 0; border-top: 1px solid var(--c-border);',
+    }, starBtn, overrideBtn);
+
+    const noteDetails = h('details', {
+      class: 'feedback-note-collapse',
+      style: 'margin-top: 8px; border: 1px dashed var(--c-border); border-radius: var(--radius-sm); padding: 8px 12px;',
+    },
+      h('summary', { style: 'cursor: pointer; font-size: 13px; font-weight: 600; color: var(--c-text-muted);' },
+        metaItem.note ? '📝 Ghi chú cá nhân (đã có)' : '📝 Thêm ghi chú cá nhân (Markdown / LaTeX)...'),
+      h('div', { style: 'margin-top: 8px;' },
+        h('textarea', {
+          class: 'ux-input',
+          style: 'width: 100%; min-height: 60px; font-size: 13px; resize: vertical;',
+          placeholder: 'Ghi chú cho riêng bạn (Markdown/LaTeX, tối đa 2000 ký tự)...',
+          maxlength: 2000,
+          value: metaItem.note || '',
+          onblur: ev => saveNote(ev.target.value),
+        }),
+        metaItem.note ? h('div', {
+          style: 'margin-top: 6px; padding: 6px 10px; background: var(--c-surface-2); border-radius: 4px; font-size: 13px;',
+        }, richEl('div', null, rich.html(metaItem.note))) : null));
+
     return h('div', { class: 'feedback-section' },
       h('div', { class: bannerClass },
         h('span', { class: 'feedback-icon' }, icon),
         h('span', { class: 'feedback-text' }, title)),
       compareGrid,
       vocabExtra,
+      feedbackActionsBar,
+      noteDetails,
       answerImgUrl ? h('div', { class: 'answer-img-wrap' },
         h('img', { class: 'rich-img', src: answerImgUrl, alt: 'Hình ảnh đáp án' })) : null,
       q.explanation
@@ -769,6 +900,12 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
           actionsRow,
           shortcutFooter))
     );
+
+    setShortcutScope('session', {
+      onToggleStar: toggleStar,
+      onEscape: requestExit,
+      onKeyDown,
+    });
 
     attachImageHandlers(root);
 

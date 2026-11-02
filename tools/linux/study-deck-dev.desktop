@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Study App (Dev)
+Comment=Study App Flashcards & Quiz
+Exec=electron <DIR> %f
+Terminal=false
+MimeType=application/x-studydeck;
+Categories=Education;
+

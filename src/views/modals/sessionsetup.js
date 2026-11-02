@@ -15,6 +15,12 @@ export function renderSessionModal(entry, onStart, onCancel, options = {}) {
   let direction = options.direction || 'both'; // 'both' | 'fwd' | 'rev'
   let selectedTopic = 'all';
   let selectedDuration = 30; // 30 phút mặc định cho Exam
+  let onlyStarred = false;
+
+  const deckId = entry.deck.meta.id || 'deck';
+  const starredItemIds = items
+    .filter(it => Boolean(options.progress?.meta?.[`${deckId}:${it.id}`]?.starred))
+    .map(it => it.id);
 
   const topics = extractTopics(items);
 
@@ -121,10 +127,22 @@ export function renderSessionModal(entry, onStart, onCancel, options = {}) {
   const modalTitle = isExam ? 'Thiết lập bài thi thử' : 'Bắt đầu phiên học';
   const startBtnText = isExam ? 'Bắt đầu thi' : 'Bắt đầu học';
 
+  const onlyStarredCheckbox = starredItemIds.length > 0
+    ? h('div', { class: 'form-group' },
+        h('label', { class: 'radio-label', style: 'cursor: pointer; font-weight: 600;' },
+          h('input', {
+            type: 'checkbox',
+            checked: onlyStarred,
+            onchange: ev => { onlyStarred = ev.target.checked; },
+          }),
+          `★ Chỉ học các mục đã gắn sao (${starredItemIds.length} mục)`))
+    : null;
+
   const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
     h('div', { class: 'modal-dialog' },
       h('h2', null, modalTitle),
       h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' }, entry.deck.meta.title),
+      onlyStarredCheckbox,
       topicGroup,
       h('div', { class: 'form-group' },
         h('label', null, 'Số lượng mục:'),
@@ -148,6 +166,7 @@ export function renderSessionModal(entry, onStart, onCancel, options = {}) {
             topic: selectedTopic,
             durationMinutes: selectedDuration,
             direction: isVocab ? direction : undefined,
+            itemIds: onlyStarred ? starredItemIds : options.itemIds,
           }),
         }, startBtnText))));
 

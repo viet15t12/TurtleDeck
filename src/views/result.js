@@ -1,9 +1,10 @@
 // src/views/result.js — Màn hình Kết quả phiên học (Result view, GĐ3B §6).
 // Hiển thị vòng tròn điểm, thời gian, dự kiến lịch ôn tiếp theo, hành động và danh sách câu sai.
 import { h } from './dom.js';
-import { cardKey, DAY, MINUTE } from '../core/srs.js';
+import { cardKey, DAY, MINUTE, RATING } from '../core/srs.js';
 import { makeRich } from '../core/richtext.js';
 import { attachImageHandlers } from './components/lightbox.js';
+import { applyCardOverride } from '../core/progressio.js';
 
 function richEl(tag, attrs, htmlContent) {
   const el = h(tag, attrs);
@@ -149,7 +150,7 @@ function buildAcceptedAnswerChips(q, rich) {
   return chips;
 }
 
-export function renderResult(root, { entry, config, history = [], progress, isTrial }, actions) {
+export function renderResult(root, { entry, config, history = [], progress, settings, isTrial }, actions) {
   const rich = makeRich(entry.deckKey);
   const total = history.length;
   const correct = history.filter(h => h.grade.ok && !h.grade.near).length;
@@ -259,7 +260,34 @@ export function renderResult(root, { entry, config, history = [], progress, isTr
                 ? h('div', { class: 'explanation-box' },
                     h('h4', null, 'Giải thích'),
                     richEl('div', { class: 'explanation-body' }, rich.html(q.explanation)))
-                : null));
+                : null,
+              h('div', { style: 'margin-top: 10px; display: flex; justify-content: flex-end;' },
+                h('button', {
+                  type: 'button',
+                  class: 'ux-btn sm',
+                  title: 'Chấm lại câu này là Đúng và cập nhật điểm phiên học',
+                  onclick: async () => {
+                    const now = Date.now();
+                    const cKey = item.cardKey || cardKey(entry.deck.meta.id, q.id, q.direction || 'fwd');
+                    const { nextCard, overrideLogEntry } = applyCardOverride(
+                      item.prevState,
+                      item.logEntry || { t: now, card: cKey, ms: item.ms || 0 },
+                      now,
+                      { learnSteps: settings?.learnSteps }
+                    );
+                    if (!progress.cards) progress.cards = {};
+                    progress.cards[cKey] = nextCard;
+                    if (!Array.isArray(progress.log)) progress.log = [];
+                    progress.log.push(overrideLogEntry);
+
+                    if (!isTrial) {
+                      await window.api.saveProgress(progress);
+                    }
+
+                    item.grade = { ok: true, near: false, rating: RATING.GOOD, overridden: true };
+                    renderResult(root, { entry, config, history, progress, settings, isTrial }, actions);
+                  },
+                }, '✓ Tôi chấm lại là đúng'))));
         }))) : null)
   );
 

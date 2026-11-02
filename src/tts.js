@@ -66,7 +66,7 @@ export function cancel() {
   }
 }
 
-export function speak(text, lang = 'en-US', { rate = 1.0 } = {}) {
+export function speak(text, lang = 'en-US', { rate = 1.0, voiceName = null } = {}) {
   if (!isSupported()) return;
 
   const plain = toPlain(text);
@@ -78,7 +78,7 @@ export function speak(text, lang = 'en-US', { rate = 1.0 } = {}) {
   utterance.rate = Math.max(0.2, Math.min(2.0, rate));
 
   const list = getVoices();
-  const matchedVoice = pickVoice(list, lang);
+  const matchedVoice = pickVoice(list, lang, voiceName);
   if (matchedVoice) {
     utterance.voice = matchedVoice;
     utterance.lang = matchedVoice.lang;

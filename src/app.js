@@ -5,6 +5,7 @@ import { renderDeck } from './views/deck.js';
 import { renderSession } from './views/session.js';
 import { renderEditor } from './views/editor.js';
 import { renderSettings } from './views/settings.js';
+import { renderStats } from './views/stats.js';
 import { newDeck, newItem, newItemId, newItemLike, addItem, newDeckId } from './core/deckmodel.js';
 import { setLearnSteps, recordReview, clearProgress, DEFAULT_LEARN_STEPS } from './core/srs.js';
 import { DEFAULT_NEW_CARDS_PER_DAY } from './core/planner.js';
@@ -15,6 +16,7 @@ import { renderDeckInfoModal } from './views/modals/deckinfo.js';
 import { renderLearn } from './views/learn.js';
 import { renderMatch } from './views/match.js';
 import { renderExam } from './views/exam.js';
+import { initGlobalShortcuts, renderShortcutsModal, setShortcutScope } from './shortcuts.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
@@ -122,6 +124,91 @@ async function withBusy(fn) {
 
 const actions = {
   home() { state.route = { name: 'home' }; render(); },
+
+  openStats() {
+    state.route = { name: 'stats' };
+    render();
+  },
+
+  hasModal() {
+    return Boolean(state.modal);
+  },
+
+  closeModal() {
+    if (state.modal) {
+      state.modal = null;
+      render();
+      return true;
+    }
+    return false;
+  },
+
+  showShortcuts() {
+    state.modal = renderShortcutsModal(() => {
+      state.modal = null;
+      render();
+    });
+    render();
+  },
+
+  async exportCopy(entry) {
+    if (!entry?.path) return;
+    const r = await api.exportCopy(entry.path);
+    if (r?.canceled) return;
+    if (!r?.ok) {
+      notify('Không xuất được bản sao: ' + (r?.error || 'Lỗi'), 'error');
+      return;
+    }
+    notify(`Đã xuất bản sao tới "${fileName(r.path)}".`, 'success');
+  },
+
+  async reloadProgress() {
+    const loadedProgress = await api.loadProgress();
+    if (loadedProgress && typeof loadedProgress === 'object') {
+      state.progress = {
+        version: 1,
+        cards: loadedProgress.cards || {},
+        meta: loadedProgress.meta || {},
+        log: Array.isArray(loadedProgress.log) ? loadedProgress.log : [],
+      };
+      render();
+    }
+  },
+
+  async scanLibrary() {
+    const r = await api.scanLibrary();
+    if (!r || !r.ok) return;
+    const libFiles = r.files || [];
+    let updated = false;
+
+    for (const entry of state.entries) {
+      const match = libFiles.find(f => samePath(f.path, entry.path));
+      if (match) {
+        entry.group = match.group;
+        entry.inLibrary = true;
+      } else if (entry.inLibrary) {
+        entry.inLibrary = false;
+      }
+    }
+
+    for (const f of libFiles) {
+      const existing = state.entries.find(e => samePath(e.path, f.path));
+      if (!existing) {
+        const [opened] = await api.openDecks(f.path);
+        if (opened?.ok) {
+          const e = applyResult(opened);
+          e.group = f.group;
+          e.inLibrary = true;
+          updated = true;
+        }
+      }
+    }
+
+    if (updated) {
+      await persistDeckPaths();
+    }
+    render();
+  },
 
   openSettings() {
     state.route = { name: 'settings' };
@@ -388,7 +475,25 @@ async function saveEntry(entry, saveAs) {
 function render() {
   document.body.classList.toggle('in-editor', state.route.name === 'editor');
 
+  if (state.route.name === 'stats') {
+    document.title = 'Thống kê học tập — Study App';
+    setShortcutScope('stats', {
+      onEscape: () => actions.home(),
+    });
+    renderStats(root, {
+      progress: state.progress,
+      entries: state.entries,
+      settings: state.settings,
+    }, actions);
+    if (state.modal) root.append(state.modal);
+    return;
+  }
+
   if (state.route.name === 'settings') {
+    document.title = 'Cài đặt — Study App';
+    setShortcutScope('settings', {
+      onEscape: () => actions.home(),
+    });
     renderSettings(root, {
       settings: state.settings,
       progress: state.progress,
@@ -401,6 +506,8 @@ function render() {
   if (state.route.name === 'editor') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
+      document.title = `Soạn thảo: ${entry.deck.meta.title} — Study App`;
+      setShortcutScope('editor');
       renderEditor(root, { entry, initialItemId: state.route.itemId || null }, actions);
       if (state.modal) root.append(state.modal);
       return;
@@ -436,6 +543,7 @@ function render() {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
       document.title = `Học thích ứng: ${entry.deck.meta.title} — Study App`;
+      setShortcutScope('session');
       renderLearn(root, {
         entry,
         progress: state.progress,
@@ -454,6 +562,7 @@ function render() {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
       document.title = `Ghép thẻ: ${entry.deck.meta.title} — Study App`;
+      setShortcutScope('session');
       renderMatch(root, {
         entry,
         progress: state.progress,
@@ -474,6 +583,7 @@ function render() {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
       document.title = `Thi thử: ${entry.deck.meta.title} — Study App`;
+      setShortcutScope('session');
       renderExam(root, {
         entry,
         config: state.route.config,
@@ -492,6 +602,10 @@ function render() {
   if (state.route.name === 'deck') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
+      document.title = `${entry.deck.meta.title} — Study App`;
+      setShortcutScope('deck', {
+        onEscape: () => actions.home(),
+      });
       renderDeck(root, entry, actions, { progress: state.progress, settings: state.settings });
       if (state.modal) root.append(state.modal);
       return;
@@ -500,6 +614,7 @@ function render() {
   }
 
   document.title = 'Study App';
+  setShortcutScope('home');
   renderHome(root, {
     entries: state.entries,
     busy: state.busy,
@@ -516,6 +631,78 @@ document.addEventListener('click', () => {
 
 // Khởi động: đọc settings + progress, tự nạp lại các bộ thẻ đã mở lần trước
 async function init() {
+  initGlobalShortcuts(actions);
+
+  // Đăng ký các sự kiện tệp và hệ thống từ main
+  api.onOpenExternal?.(async ({ path: filePath }) => {
+    if (!filePath) return;
+    const existing = state.entries.find(e => samePath(e.path, filePath));
+    if (existing && existing.status === 'ok') {
+      actions.openDeckView(existing);
+      return;
+    }
+    const [r] = await api.openDecks(filePath);
+    if (r && r.ok) {
+      const e = applyResult(r, existing);
+      await persistDeckPaths();
+      actions.openDeckView(e);
+    } else {
+      notify(`Không mở được file "${fileName(filePath)}": ${r?.error || 'Lỗi'}`, 'error');
+    }
+  });
+
+  api.onDeckChanged?.(async ({ deckKey, path: filePath }) => {
+    const entry = state.entries.find(e => (deckKey && e.deckKey === deckKey) || samePath(e.path, filePath));
+    if (!entry) return;
+    if (state.route.name === 'editor' && state.route.uid === entry.uid) {
+      const dirty = Boolean(document.querySelector('.editor-dirty-indicator') || window.__isEditorDirty?.());
+      if (dirty) {
+        const accept = window.confirm(
+          `File "${fileName(entry.path)}" vừa được sửa đổi từ bên ngoài.\nBạn có muốn nạp lại và ghi đè các thay đổi chưa lưu trong Editor không?`
+        );
+        if (!accept) return;
+      }
+    }
+    await actions.reload(entry);
+    notify(`Đã nạp lại "${fileName(entry.path)}" vì file có thay đổi bên ngoài.`, 'info');
+  });
+
+  api.onWatchError?.(({ path: filePath, error }) => {
+    const entry = state.entries.find(e => samePath(e.path, filePath));
+    if (entry) {
+      entry.status = 'error';
+      entry.error = error;
+      render();
+    }
+    notify(`Lỗi theo dõi file "${fileName(filePath)}": ${error}`, 'warn');
+  });
+
+  api.onFileAdded?.(async ({ path: filePath, group }) => {
+    const existing = state.entries.find(e => samePath(e.path, filePath));
+    if (existing) {
+      existing.group = group;
+      existing.inLibrary = true;
+      render();
+      return;
+    }
+    const [r] = await api.openDecks(filePath);
+    if (r?.ok) {
+      const e = applyResult(r);
+      e.group = group;
+      e.inLibrary = true;
+      await persistDeckPaths();
+      render();
+    }
+  });
+
+  api.onFileRemoved?.(({ path: filePath }) => {
+    const entry = state.entries.find(e => samePath(e.path, filePath));
+    if (entry) {
+      entry.status = 'missing';
+      render();
+    }
+  });
+
   const [loadedSettings, loadedProgress] = await Promise.all([
     api.loadSettings(),
     api.loadProgress(),
@@ -536,13 +723,72 @@ async function init() {
   const paths = state.settings.decks || [];
   state.entries = paths.map(p => newEntry({ path: p, status: 'loading' }));
   render();
-  if (!paths.length) return;
-  const results = await api.openDecks(paths);
-  results.forEach((r, i) => applyResult(r, state.entries[i]));
-  const missing = state.entries.filter(e => e.status === 'missing');
-  if (missing.length)
-    notify(`${missing.length} bộ thẻ không còn tồn tại: ${missing.map(e => fileName(e.path)).join(', ')}. Bấm "Gỡ" để bỏ khỏi danh sách.`, 'warn', 0);
-  render();
+
+  if (paths.length) {
+    const results = await api.openDecks(paths);
+    results.forEach((r, i) => applyResult(r, state.entries[i]));
+    const missing = state.entries.filter(e => e.status === 'missing');
+    if (missing.length) {
+      notify(`${missing.length} bộ thẻ không còn tồn tại: ${missing.map(e => fileName(e.path)).join(', ')}. Bấm "Gỡ" để bỏ khỏi danh sách.`, 'warn', 0);
+    }
+    render();
+  }
+
+  // Quét thư viện thư mục
+  await actions.scanLibrary();
+
+  // Kiểm tra bản nháp Editor chưa lưu còn sót (do sự cố bất ngờ)
+  const drafts = await api.listDrafts?.().catch(() => []);
+  if (drafts && drafts.length > 0) {
+    const draft = drafts[0];
+    const draftTimeStr = draft.mtime ? new Date(draft.mtime).toLocaleString('vi-VN') : '';
+    state.modal = h('div', { class: 'modal-backdrop' },
+      h('div', { class: 'modal-dialog', style: 'max-width: 520px;' },
+        h('h2', { style: 'margin-top: 0;' }, '📝 Khôi phục bản nháp chưa lưu'),
+        h('p', null, `Tìm thấy bản nháp được tự động lưu lúc ${draftTimeStr} cho bộ thẻ "${draft.metaId || 'Chưa đặt tên'}".`),
+        h('p', { class: 'color-muted', style: 'font-size: 13px;' }, 'Có thể ứng dụng đã bị tắt đột ngột trước khi kịp bấm Lưu.'),
+        h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px; gap: 10px;' },
+          h('button', {
+            type: 'button',
+            class: 'ux-btn ghost',
+            onclick: async () => {
+              state.modal = null;
+              await api.deleteDraft?.(draft.metaId);
+              render();
+            },
+          }, 'Bỏ qua & Xoá nháp'),
+          h('button', {
+            type: 'button',
+            class: 'ux-btn primary',
+            onclick: async () => {
+              state.modal = null;
+              const r = await api.loadDraft?.(draft.draftId);
+              if (r && r.ok) {
+                const entry = applyResult({
+                  ok: true,
+                  deckKey: r.deckKey,
+                  path: null,
+                  deckText: r.deckText,
+                  deck: r.deck,
+                  issues: [],
+                  assetCount: r.assetCount || 0,
+                });
+                notify(`Đã khôi phục bản nháp "${r.deck.meta.title}".`, 'success');
+                state.route = { name: 'editor', uid: entry.uid };
+              } else {
+                notify('Không thể nạp bản nháp: ' + (r?.error || 'Lỗi'), 'error');
+              }
+              render();
+            },
+          }, 'Khôi phục và mở Editor')
+        )
+      )
+    );
+    render();
+  }
+
+  // Báo cho main process biết renderer đã sẵn sàng nhận file mở từ ngoài
+  api.notifyReady?.();
 }
 
 init().catch(e => notify('Không khởi động được: ' + (e?.message || e), 'error'));

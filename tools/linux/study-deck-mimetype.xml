@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-studydeck">
+    <comment>Study App Deck Package</comment>
+    <comment xml:lang="vi">Gói bộ thẻ Study App</comment>
+    <glob pattern="*.sdeck"/>
+    <icon name="application-x-studydeck"/>
+  </mime-type>
+</mime-info>
+

@@ -80,6 +80,23 @@ export function readPackage(bytes) {
   return { ok: true, deckText, assets, issues };
 }
 
+// Đọc nhanh riêng deck.json để quét thư viện mà không giải nén toàn bộ ảnh
+export function readPackageMeta(bytes) {
+  if (!(bytes?.length > 4 && bytes[0] === 0x50 && bytes[1] === 0x4b))
+    return fail('Không phải file .sdeck (không phải gói nén ZIP).');
+  let files;
+  try {
+    files = unzipSync(bytes, {
+      filter(f) { return f.name === 'deck.json'; },
+    });
+  } catch (e) {
+    return fail('File hỏng hoặc không đọc được: ' + e.message);
+  }
+  if (!files['deck.json']) return fail('Gói không có deck.json.');
+  const deckText = strFromU8(files['deck.json']).replace(/^\uFEFF/, '');
+  return { ok: true, deckText };
+}
+
 // deckText (chuỗi JSON) + assets -> { ok, bytes, keptAssets }; prune=true bỏ ảnh không còn được tham chiếu
 export function writePackage(deckText, assets = new Map(), { prune = true } = {}) {
   let deck;

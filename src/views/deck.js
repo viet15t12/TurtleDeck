@@ -92,31 +92,36 @@ function getItemStudyStatus(deckId, item, progress, now) {
   const cards = progress?.cards || {};
   const key = cardKey(deckId, item.id, 'fwd');
   const c = cards[key] || cards[item.id] || null;
-  const isStarred = item.starred === true ||
-    (Array.isArray(progress?.starred) && progress.starred.includes(item.id));
-  const isErrorProne = (c?.lapses || 0) >= 1;
+  const metaKey = `${deckId}:${item.id}`;
+  const isStarred = Boolean(progress?.meta?.[metaKey]?.starred) || item.starred === true;
+  const lapses = Number(c?.lapses || 0);
+  const isLeech = lapses >= 8;
+  const isErrorProne = lapses >= 1;
 
+  if (isLeech) {
+    return { key: 'leech', label: `⚠ Leech (${lapses} lần quên)`, cls: 'status-error', isStarred, isLeech: true, isErrorProne };
+  }
   if (isStarred) {
-    return { key: 'starred', label: '★ Đã sao', cls: 'status-starred', isStarred, isErrorProne };
+    return { key: 'starred', label: '★ Đã sao', cls: 'status-starred', isStarred, isLeech: false, isErrorProne };
   }
   if (isErrorProne) {
-    return { key: 'error-prone', label: '⚠ Sai nhiều', cls: 'status-error', isStarred, isErrorProne };
+    return { key: 'error-prone', label: `⚠ Sai ${lapses} lần`, cls: 'status-error', isStarred, isLeech: false, isErrorProne };
   }
   if (!c || c.state === 'new') {
-    return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isErrorProne };
+    return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isLeech: false, isErrorProne };
   }
   if (c.state === 'learning' || c.state === 'relearning') {
-    return { key: 'learning', label: 'Đang học', cls: 'status-learning', isStarred, isErrorProne };
+    return { key: 'learning', label: 'Đang học', cls: 'status-learning', isStarred, isLeech: false, isErrorProne };
   }
   if (c.state === 'review') {
     if ((c.due || 0) <= now) {
-      return { key: 'due', label: 'Đến hạn', cls: 'status-due', isStarred, isErrorProne };
+      return { key: 'due', label: 'Đến hạn', cls: 'status-due', isStarred, isLeech: false, isErrorProne };
     }
     const diffDays = Math.max(1, Math.ceil((c.due - now) / DAY));
     const dueText = diffDays === 1 ? 'Ôn · đến hạn mai' : `Ôn · còn ${diffDays} ngày`;
-    return { key: 'mastered', label: dueText, cls: 'status-mastered', isStarred, isErrorProne };
+    return { key: 'mastered', label: dueText, cls: 'status-mastered', isStarred, isLeech: false, isErrorProne };
   }
-  return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isErrorProne };
+  return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isLeech: false, isErrorProne };
 }
 
 function renderCollapsibleIssues(issues) {
@@ -368,6 +373,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     h('option', { value: 'due' }, 'Trạng thái: Đến hạn'),
     h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'),
     h('option', { value: 'error-prone' }, 'Trạng thái: ⚠ Sai nhiều'),
+    h('option', { value: 'leech' }, 'Trạng thái: ⚠ Thẻ khó nhớ (Leech)'),
     h('option', { value: 'starred' }, 'Trạng thái: ★ Đã sao'));
 
   function renderTableBody() {
@@ -378,8 +384,9 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
       if (filterTag !== 'all' && !r.tags.includes(filterTag)) return false;
       if (filterStatus !== 'all') {
         if (filterStatus === 'starred' && !r.status.isStarred) return false;
+        if (filterStatus === 'leech' && !r.status.isLeech) return false;
         if (filterStatus === 'error-prone' && !r.status.isErrorProne) return false;
-        if (filterStatus !== 'starred' && filterStatus !== 'error-prone' && r.status.key !== filterStatus) return false;
+        if (filterStatus !== 'starred' && filterStatus !== 'leech' && filterStatus !== 'error-prone' && r.status.key !== filterStatus) return false;
       }
       if (qNorm && !r.searchBlob.includes(qNorm)) return false;
       return true;
@@ -430,13 +437,30 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
         h('table', { class: 'items deck-items-table' },
           h('thead', null, h('tr', null,
             h('th', { class: 'num' }, '#'),
+            h('th', { style: 'width: 40px;' }, '★'),
             h('th', { style: 'width: 120px;' }, 'Dạng'),
             h('th', null, 'Nội dung'),
             h('th', { style: 'width: 150px;' }, 'Chủ đề'),
             h('th', { style: 'width: 160px;' }, 'Nhãn'),
             h('th', { style: 'width: 150px;' }, 'Trạng thái'))),
-          h('tbody', null, filtered.map(r =>
-            h('tr', {
+          h('tbody', null, filtered.map(r => {
+            const metaKey = `${deckId}:${r.item.id}`;
+            const isStarred = Boolean(progress?.meta?.[metaKey]?.starred);
+            const starBtn = h('button', {
+              type: 'button',
+              class: `star-btn ${isStarred ? 'starred' : ''}`,
+              title: isStarred ? 'Bỏ gắn sao' : 'Gắn sao mục này',
+              onclick: async ev => {
+                ev.stopPropagation();
+                if (!progress.meta) progress.meta = {};
+                if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
+                progress.meta[metaKey].starred = !isStarred;
+                await window.api.saveProgress(progress);
+                renderTableBody();
+              },
+            }, isStarred ? '★' : '☆');
+
+            return h('tr', {
               class: 'deck-item-tr',
               tabindex: '0',
               role: 'button',
@@ -450,6 +474,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
               },
             },
               h('td', { class: 'num' }, r.index),
+              h('td', { style: 'text-align: center; width: 40px;' }, starBtn),
               h('td', null, h('span', { class: `chip type-badge type-${r.type}` }, r.typeLabel)),
               h('td', null,
                 h('div', { class: 'item-cell-main line-clamp-2', style: 'display: flex; align-items: center; gap: 6px;' },
@@ -467,7 +492,11 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
                 r.answer ? h('div', { class: 'item-cell-ans muted line-clamp-1' }, `→ ${r.answer}`) : null),
               h('td', null, r.topic ? h('span', { class: 'ux-chip', style: 'cursor: pointer;' }, r.topic) : h('span', { class: 'muted' }, '—')),
               h('td', null, r.tags.length ? r.tags.map(t => h('span', { class: 'tag' }, t)) : h('span', { class: 'muted' }, '—')),
-              h('td', null, h('span', { class: `item-status-pill ${r.status.cls}` }, r.status.label)))))))
+              h('td', null, h('span', { class: `item-status-pill ${r.status.cls}` }, r.status.label))
+            );
+          }))
+        )
+      )
     );
   }
 
