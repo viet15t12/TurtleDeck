@@ -196,6 +196,90 @@ handle('deck:save', async (event, args) => {
 
 handle('deck:close', (_e, deckKey) => packages.delete(deckKey));
 
+// Tạo bộ thẻ mới trong bộ nhớ
+handle('deck:new', async () => {
+  const deckKey = newKey();
+  packages.set(deckKey, { file: null, assets: new Map() });
+  return { ok: true, deckKey };
+});
+
+// Nhân đôi bộ thẻ (kèm toàn bộ ảnh) trong bộ nhớ
+handle('deck:duplicate', async (_event, oldDeckKey) => {
+  const oldPkg = packages.get(oldDeckKey);
+  const deckKey = newKey();
+  const newAssets = new Map();
+  if (oldPkg?.assets) {
+    for (const [k, v] of oldPkg.assets) newAssets.set(k, new Uint8Array(v));
+  }
+  packages.set(deckKey, { file: null, assets: newAssets });
+  return { ok: true, deckKey, assetCount: newAssets.size };
+});
+
+// ── Quản lý ảnh trong gói (Editor) ───────────────────────────────────────────
+
+// Nút "Chèn ảnh" (hộp thoại chọn 1 hoặc nhiều ảnh)
+handle('asset:add', async (event, deckKey) => {
+  const pkg = packages.get(deckKey);
+  if (!pkg) return [];
+  const r = await dialog.showOpenDialog(winOf(event), {
+    title: 'Chèn ảnh vào bộ thẻ',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Ảnh', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }],
+  });
+  if (r.canceled || !r.filePaths.length) return [];
+  const results = [];
+  for (const p of r.filePaths) {
+    try {
+      const bytes = await fs.readFile(p);
+      results.push(sdeck.addImage(pkg.assets, path.basename(p), bytes));
+    } catch (e) {
+      results.push({ ok: false, error: errMsg(e) });
+    }
+  }
+  return results;
+});
+
+// Kéo thả / dán clipboard (Ctrl+V)
+handle('asset:addBytes', async (_event, deckKeyOrObj, name, bytes) => {
+  let deckKey = deckKeyOrObj;
+  let imgName = name;
+  let rawBytes = bytes;
+  if (typeof deckKeyOrObj === 'object' && deckKeyOrObj !== null) {
+    deckKey = deckKeyOrObj.deckKey;
+    imgName = deckKeyOrObj.name;
+    rawBytes = deckKeyOrObj.bytes;
+  }
+  const pkg = packages.get(deckKey);
+  if (!pkg) return { ok: false, error: 'Bộ thẻ không còn mở.' };
+  if (!rawBytes) return { ok: false, error: 'Không có dữ liệu ảnh.' };
+  const buf = Buffer.isBuffer(rawBytes) ? rawBytes : Buffer.from(rawBytes);
+  return sdeck.addImage(pkg.assets, String(imgName || 'image.png'), buf);
+});
+
+// Liệt kê ảnh trong gói kèm kích thước
+handle('asset:list', (_event, deckKey) => {
+  const pkg = packages.get(deckKey);
+  if (!pkg) return [];
+  return [...pkg.assets.entries()].map(([name, data]) => ({
+    name,
+    size: data.byteLength || data.length || 0,
+  }));
+});
+
+// Xoá một ảnh khỏi gói
+handle('asset:remove', (_event, deckKeyOrObj, assetPath) => {
+  let deckKey = deckKeyOrObj;
+  let p = assetPath;
+  if (typeof deckKeyOrObj === 'object' && deckKeyOrObj !== null) {
+    deckKey = deckKeyOrObj.deckKey;
+    p = deckKeyOrObj.assetPath;
+  }
+  const pkg = packages.get(deckKey);
+  if (!pkg) return { ok: false, error: 'Bộ thẻ không còn mở.' };
+  pkg.assets.delete(p);
+  return { ok: true };
+});
+
 // ── Tiến độ và cài đặt (ghi atomic) ──────────────────────────────────────────
 
 const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);

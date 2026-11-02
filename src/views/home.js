@@ -25,6 +25,14 @@ function deckRow(entry, actions) {
 
   const { meta, items } = entry.deck;
   const warn = countIssues(entry);
+
+  const moreMenu = h('div', { class: 'menu', hidden: true },
+    h('button', { class: 'menu-item', onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.openEditor(entry); } }, '✏ Sửa bộ thẻ'),
+    h('button', { class: 'menu-item', onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.duplicateDeck(entry); } }, '📄 Sao chép'),
+    entry.path ? null : h('button', { class: 'menu-item', onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.saveAs(entry); } }, '💾 Lưu thành .sdeck…'),
+    h('button', { class: 'menu-item error-text', onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.remove(entry); } }, '✕ Gỡ khỏi danh sách')
+  );
+
   return h('li', { class: 'deck-row', tabindex: '0', role: 'button',
     onclick: () => actions.openDeckView(entry),
     onkeydown: ev => { if (ev.key === 'Enter') actions.openDeckView(entry); } },
@@ -39,9 +47,12 @@ function deckRow(entry, actions) {
     h('div', { class: 'deck-actions' },
       items.length ? h('button', { class: 'btn small primary',
         onclick: ev => { ev.stopPropagation(); actions.openSessionSetup(entry); } }, 'Học') : null,
-      entry.path ? null : h('button', { class: 'btn small',
-        onclick: ev => { ev.stopPropagation(); actions.saveAs(entry); } }, 'Lưu thành .sdeck…'),
-      remove));
+      h('button', { class: 'btn small',
+        onclick: ev => { ev.stopPropagation(); actions.openEditor(entry); } }, 'Sửa'),
+      h('div', { class: 'menu-wrap' },
+        h('button', { class: 'btn small ghost',
+          onclick: ev => { ev.stopPropagation(); moreMenu.hidden = !moreMenu.hidden; } }, '⋯'),
+        moreMenu)));
 }
 
 export function renderHome(root, { entries, busy }, actions) {
@@ -50,7 +61,8 @@ export function renderHome(root, { entries, busy }, actions) {
     h('button', { class: 'menu-item', onclick: () => { importMenu.hidden = true; actions.importDeck('dir'); } }, 'Từ thư mục (deck.json + img/)…'));
 
   const toolbar = h('div', { class: 'toolbar' },
-    h('button', { class: 'btn primary', disabled: busy, onclick: actions.openFiles }, 'Mở file…'),
+    h('button', { class: 'btn primary', disabled: busy, onclick: actions.openNewDeckModal }, '+ Bộ thẻ mới'),
+    h('button', { class: 'btn', disabled: busy, onclick: actions.openFiles }, 'Mở file…'),
     h('div', { class: 'menu-wrap' },
       h('button', { class: 'btn', disabled: busy, 'aria-haspopup': 'menu',
         onclick: ev => { ev.stopPropagation(); importMenu.hidden = !importMenu.hidden; } }, 'Nhập… ▾'),

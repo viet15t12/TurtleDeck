@@ -916,3 +916,562 @@ table.items {
   text-align: center;
   text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DECK EDITOR (GĐ2C) — BỐ CỤC 3 KHU VỰC
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.editor-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-title-input {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: inherit;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.editor-title-input:hover {
+  border-color: var(--border);
+}
+
+.editor-title-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  outline: none;
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: 290px 1.1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+  height: calc(100vh - 120px);
+  min-height: 550px;
+}
+
+@media (max-width: 1024px) {
+  .editor-layout {
+    grid-template-columns: 260px 1fr;
+  }
+  .editor-preview-panel {
+    display: none;
+  }
+}
+
+/* ── Panel chung trong Editor ───────────────────────────────────────────── */
+
+.editor-list-panel,
+.editor-form-panel,
+.editor-preview-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ── 1. Cột trái: Danh sách mục ─────────────────────────────────────────── */
+
+.editor-list-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fbfcfe;
+}
+
+.editor-items-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  background: #fff;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.editor-item-row:hover {
+  background: #f4f6fb;
+}
+
+.editor-item-row.active {
+  background: var(--accent-soft);
+  border-color: #cbd5e1;
+}
+
+.editor-item-row.item-bad {
+  border-left: 3px solid var(--warn);
+}
+
+.editor-item-row.dragging {
+  opacity: 0.4;
+}
+
+.editor-item-row.drag-target {
+  border-top: 2px solid var(--accent);
+}
+
+.drag-handle {
+  color: var(--muted);
+  cursor: grab;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.issue-mark {
+  color: var(--warn);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.item-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-text {
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-badges {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #fff4dc;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.bulk-count {
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.editor-list-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: #fbfcfe;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.small-gap {
+  gap: 4px;
+}
+
+.assets-trigger-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-assets {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ── 2. Cột giữa: Form soạn thảo ────────────────────────────────────────── */
+
+.editor-form-panel {
+  padding: 16px 20px;
+  overflow-y: auto;
+  gap: 16px;
+}
+
+.form-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.type-select {
+  font-weight: 600;
+}
+
+.id-chip {
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.md-toolbar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 4px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.tb-btn {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #334155;
+}
+
+.tb-btn:hover {
+  background: #e2e8f0;
+}
+
+.tb-btn.italic { font-style: italic; }
+.tb-btn.code { font-family: monospace; }
+.tb-btn.sym-toggle { color: var(--accent); }
+
+.latex-palette {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.latex-sym-btn {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.latex-sym-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.md-input {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  resize: vertical;
+}
+
+.drag-over {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+}
+
+.form-choices-list,
+.form-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.choice-edit-row,
+.answer-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.choice-input,
+.answer-text-input {
+  flex: 1;
+}
+
+.choice-edit-row.is-correct input[type="text"] {
+  border-color: var(--ok);
+  background: #fcfdfd;
+}
+
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.chips-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 38px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e2e8f0;
+  border-radius: 14px;
+  padding: 2px 8px;
+  font-size: 0.82rem;
+}
+
+.chip-remove {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.chip-remove:hover {
+  color: var(--error);
+}
+
+.chip-input {
+  border: 0;
+  outline: none;
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 120px;
+}
+
+.test-grader-box {
+  background: #f8fafc;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.img-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.issue-tag {
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.issue-tag.error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.issue-tag.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+/* ── 3. Cột phải: Xem trước thời gian thực ──────────────────────────────── */
+
+.editor-preview-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #fbfcfe;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.preview-card {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Modal quản lý ảnh ─────────────────────────────────────────────────── */
+
+.modal-large {
+  max-width: 800px;
+  width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.modal-head h2 {
+  margin: 0;
+}
+
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 480px;
+  padding: 4px;
+}
+
+.asset-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.asset-card.unused {
+  border-color: #fed7aa;
+  background: #fffaf0;
+}
+
+.asset-thumb-wrap {
+  width: 100%;
+  height: 110px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.asset-thumb-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.asset-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asset-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asset-card-size {
+  font-size: 0.75rem;
+}
+
+.asset-usage {
+  font-size: 0.75rem;
+  color: var(--ok);
+}
+
+.asset-usage.warn {
+  color: var(--warn);
+}
+
+.asset-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+

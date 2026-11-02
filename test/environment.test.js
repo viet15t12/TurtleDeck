@@ -49,3 +49,7 @@ test('Phase 2B modules, vendor assets and sample math deck are present', () => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });
+
+test('Phase 2C Deck Editor view is present', () => {
+  assert.equal(fs.existsSync(path.join(root, 'src/views/editor.js')), true, 'src/views/editor.js should exist');
+});

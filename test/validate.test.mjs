@@ -123,3 +123,36 @@ test('validateDeck: cảnh báo không chặn (thiếu tiêu đề, kind lạ, d
   assert.ok(validateDeck({ meta: { id: 'x', title: 'T' }, items: [] }).warnings.some(w => /chưa có mục/.test(w)));
 });
 
+test('validateItem: cảnh báo thiếu mô tả ảnh (alt text) và ảnh tham chiếu trong assets', () => {
+  // Thiếu mô tả ảnh trong question
+  const itemNoAlt = { id: 'c1', type: 'card', front: 'Hình: ![](img/pic.png)', back: 'Đáp án' };
+  const issues1 = validateItem(itemNoAlt);
+  assert.equal(hasError(issues1), false);
+  assert.ok(issues1.some(i => i.level === 'warn' && i.field === 'front' && /Thiếu mô tả/.test(i.msg)));
+
+  // Có mô tả ảnh
+  const itemWithAlt = { id: 'c2', type: 'card', front: 'Hình: ![mô tả](img/pic.png)', back: 'Đáp án' };
+  const issues2 = validateItem(itemWithAlt);
+  assert.equal(issues2.length, 0);
+
+  // Đuôi ảnh không hỗ trợ
+  const itemBadExt = { id: 'c3', type: 'card', front: 'F', back: 'B', image: 'img/doc.pdf' };
+  const issues3 = validateItem(itemBadExt);
+  assert.ok(issues3.some(i => i.level === 'warn' && /không được hỗ trợ/.test(i.msg)));
+
+  // assets: thiếu ảnh
+  const assetsMap = new Map([['img/pic.png', new Uint8Array(100)]]);
+  const issues4 = validateItem({ id: 'c4', type: 'card', front: 'F', back: 'B', image: 'img/missing.png' }, { assets: assetsMap });
+  assert.ok(issues4.some(i => i.level === 'warn' && /Không tìm thấy ảnh/.test(i.msg)));
+
+  // assets: ảnh hợp lệ
+  const issues5 = validateItem({ id: 'c5', type: 'card', front: 'F', back: 'B', image: 'img/pic.png' }, { assets: assetsMap });
+  assert.equal(issues5.length, 0);
+
+  // assets: ảnh quá lớn
+  const bigMap = new Map([['img/big.png', new Uint8Array(6 * 1024 * 1024)]]);
+  const issues6 = validateItem({ id: 'c6', type: 'card', front: 'F', back: 'B', image: 'img/big.png' }, { assets: bigMap });
+  assert.ok(issues6.some(i => i.level === 'warn' && /vượt quá dung lượng/.test(i.msg)));
+});
+
+

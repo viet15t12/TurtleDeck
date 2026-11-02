@@ -3,6 +3,8 @@ import { h, fileName } from './views/dom.js';
 import { renderHome } from './views/home.js';
 import { renderDeck } from './views/deck.js';
 import { renderSession } from './views/session.js';
+import { renderEditor } from './views/editor.js';
+import { newDeck, newItem, newItemId, addItem, newDeckId } from './core/deckmodel.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
@@ -83,6 +85,64 @@ async function withBusy(fn) {
 
 const actions = {
   home() { state.route = { name: 'home' }; render(); },
+
+  openEditor(entry) {
+    state.route = { name: 'editor', uid: entry.uid };
+    render();
+  },
+
+  openNewDeckModal() {
+    state.modal = renderNewDeckModal(
+      async ({ title, kind, lang }) => {
+        state.modal = null;
+        const r = await api.newDeck();
+        if (!r?.ok) {
+          notify('Không tạo được bộ thẻ: ' + (r?.error || 'Lỗi'), 'error');
+          return;
+        }
+        let d = newDeck({ title, kind, lang });
+        const firstItem = newItem('single', newItemId(d));
+        d = addItem(d, firstItem);
+        const entry = applyResult({
+          ok: true,
+          deckKey: r.deckKey,
+          path: null,
+          deckText: JSON.stringify(d, null, 2),
+          deck: d,
+          issues: [],
+          assetCount: 0,
+        });
+        state.route = { name: 'editor', uid: entry.uid };
+        render();
+      },
+      () => { state.modal = null; render(); }
+    );
+    render();
+  },
+
+  async duplicateDeck(entry) {
+    const r = await api.duplicateDeck(entry.deckKey);
+    if (!r?.ok) {
+      notify('Không nhân đôi được bộ thẻ: ' + (r?.error || 'Lỗi'), 'error');
+      return;
+    }
+    const copyDeck = JSON.parse(JSON.stringify(entry.deck));
+    copyDeck.meta.id = newDeckId(copyDeck.meta.title + ' (Bản sao)');
+    copyDeck.meta.title = copyDeck.meta.title + ' (Bản sao)';
+
+    const newEntry = applyResult({
+      ok: true,
+      deckKey: r.deckKey,
+      path: null,
+      deckText: JSON.stringify(copyDeck, null, 2),
+      deck: copyDeck,
+      issues: [],
+      assetCount: r.assetCount || 0,
+    });
+    notify(`Đã tạo bản sao "${copyDeck.meta.title}".`, 'success');
+    state.route = { name: 'editor', uid: newEntry.uid };
+    render();
+  },
 
   openDeckView(entry) { state.route = { name: 'deck', uid: entry.uid }; render(); },
 
@@ -199,6 +259,65 @@ function renderSessionModal(entry, onStart, onCancel) {
   return modal;
 }
 
+function renderNewDeckModal(onCreate, onCancel) {
+  let title = 'Bộ thẻ mới';
+  let kind = 'quiz';
+  let lang = 'vi';
+
+  const titleInput = h('input', {
+    type: 'text',
+    class: 'input-text',
+    value: title,
+    placeholder: 'Nhập tên bộ thẻ...',
+    oninput: ev => { title = ev.target.value; },
+  });
+
+  const kindSelect = h('select', {
+    class: 'form-control',
+    onchange: ev => { kind = ev.target.value; },
+  },
+    h('option', { value: 'quiz' }, 'Trắc nghiệm & Câu hỏi (quiz)'),
+    h('option', { value: 'qa' }, 'Hỏi đáp (qa)'),
+    h('option', { value: 'vocab' }, 'Từ vựng (vocab)'));
+
+  const langInput = h('input', {
+    type: 'text',
+    class: 'input-text',
+    value: lang,
+    placeholder: 'Ngôn ngữ (vd: vi, en)...',
+    oninput: ev => { lang = ev.target.value; },
+  });
+
+  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
+    h('div', { class: 'modal-dialog' },
+      h('h2', null, 'Tạo bộ thẻ mới'),
+      h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' },
+        'Nhập thông tin ban đầu để mở màn hình soạn thảo'),
+      h('div', { class: 'form-group' },
+        h('label', null, 'Tên bộ thẻ:'),
+        titleInput),
+      h('div', { class: 'form-group' },
+        h('label', null, 'Loại bộ thẻ:'),
+        kindSelect),
+      h('div', { class: 'form-group' },
+        h('label', null, 'Ngôn ngữ:'),
+        langInput),
+      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px;' },
+        h('button', { class: 'btn ghost', onclick: onCancel }, 'Huỷ'),
+        h('button', {
+          class: 'btn primary',
+          onclick: () => {
+            if (!title.trim()) {
+              alert('Vui lòng nhập tên bộ thẻ.');
+              return;
+            }
+            onCreate({ title: title.trim(), kind, lang: lang.trim() });
+          },
+        }, 'Tạo bộ thẻ'))));
+
+  return modal;
+}
+
 // Lưu thành .sdeck (hộp thoại chọn nơi lưu do main hiển thị)
 async function saveEntry(entry, saveAs) {
   const r = await api.saveDeck(entry.deckKey, entry.deckText, { saveAs });
@@ -212,6 +331,16 @@ async function saveEntry(entry, saveAs) {
 // ── Router ────────────────────────────────────────────────────────────────
 
 function render() {
+  if (state.route.name === 'editor') {
+    const entry = state.entries.find(e => e.uid === state.route.uid);
+    if (entry?.status === 'ok') {
+      renderEditor(root, { entry }, actions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
+    state.route = { name: 'home' };
+  }
+
   if (state.route.name === 'session') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {

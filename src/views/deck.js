@@ -75,6 +75,7 @@ export function renderDeck(root, entry, actions) {
         h('p', { class: 'deck-path' }, entry.path ? entry.path : `Nhập từ: ${entry.source}`)),
       h('div', { class: 'toolbar' },
         items.length ? h('button', { class: 'btn primary', onclick: () => actions.openSessionSetup(entry) }, '▶ Bắt đầu học') : null,
+        h('button', { class: 'btn', onclick: () => actions.openEditor(entry) }, '✏ Sửa bộ thẻ'),
         entry.path ? null : h('button', { class: 'btn', onclick: () => actions.saveAs(entry) }, 'Lưu thành .sdeck…'),
         h('button', { class: 'btn ghost', onclick: () => actions.remove(entry) }, 'Gỡ khỏi danh sách'))),
     h('section', { class: 'panel' },

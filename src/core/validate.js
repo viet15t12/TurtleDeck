@@ -1,10 +1,16 @@
 // src/core/validate.js — kiểm tra item / bộ thẻ. Hàm thuần, dùng chung cho parser (main) và Editor (GĐ2C).
 // validateItem trả danh sách vấn đề [{ level: 'error' | 'warn', field, msg }]; item có 'error' bị bỏ qua khi học.
 
+import { imageRefs } from './deckmodel.js';
+
 export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
 export const MATCH_MODES = ['normalized', 'exact', 'regex', 'number', 'latex'];
 export const SUPPORTED_FORMAT_VERSION = 1;
+
+const IMG_EXT = /\.(png|jpe?g|gif|webp|svg)$/i;
+const MAX_IMG_SIZE = 5 * 1024 * 1024;
+const MD_IMG_WITH_ALT = /!\[([^\]]*)\]\(\s*([^)\s]+)[^)]*\)/g;
 
 const TYPE_LABEL = {
   single: 'trắc nghiệm 1 đáp án', multi: 'trắc nghiệm nhiều đáp án',
@@ -75,7 +81,7 @@ function checkTextAnswers(item, add) {
     add('error', 'tolerance', 'Dung sai (tolerance) phải là số không âm.');
 }
 
-export function validateItem(item, { deckKind } = {}) {
+export function validateItem(item, { deckKind, assets } = {}) {
   const out = [];
   const add = (level, field, msg) => out.push({ level, field, msg });
   if (!isObj(item)) { add('error', '', 'Mục không phải đối tượng JSON.'); return out; }
@@ -100,6 +106,54 @@ export function validateItem(item, { deckKind } = {}) {
     if (item[f] !== undefined && !isStr(item[f])) add('error', f, `Trường ${f} phải là chuỗi.`);
   for (const f of ['tags', 'forms', 'synonyms'])
     if (item[f] !== undefined && !(Array.isArray(item[f]) && item[f].every(isStr))) add('error', f, `Trường ${f} phải là danh sách chuỗi.`);
+
+  // Kiểm tra thiếu mô tả ảnh trong Markdown (warn)
+  const checkAlt = (text, fieldName) => {
+    if (typeof text !== 'string') return;
+    for (const m of text.matchAll(MD_IMG_WITH_ALT)) {
+      if (!m[1] || m[1].trim() === '') {
+        add('warn', fieldName, `Thiếu mô tả cho ảnh "${m[2]}" (alt text).`);
+      }
+    }
+  };
+  checkAlt(item.question, 'question');
+  checkAlt(item.explanation, 'explanation');
+  checkAlt(item.front, 'front');
+  checkAlt(item.back, 'back');
+  if (Array.isArray(item.choices)) {
+    item.choices.forEach((c, idx) => {
+      if (typeof c === 'string') checkAlt(c, `choices[${idx}]`);
+      else if (isObj(c) && typeof c.text === 'string') checkAlt(c.text, `choices[${idx}]`);
+    });
+  }
+
+  // Kiểm tra ảnh tham chiếu
+  const refs = imageRefs(item);
+  for (const ref of refs) {
+    if (!IMG_EXT.test(ref)) {
+      add('warn', 'image', `Ảnh "${ref}" có định dạng không được hỗ trợ (chỉ nhận png, jpg, jpeg, gif, webp, svg).`);
+    } else if (assets) {
+      let data;
+      let has = false;
+      if (assets instanceof Map) {
+        has = assets.has(ref);
+        data = assets.get(ref);
+      } else if (assets instanceof Set) {
+        has = assets.has(ref);
+      } else if (Array.isArray(assets)) {
+        has = assets.includes(ref);
+      } else if (isObj(assets)) {
+        has = ref in assets;
+        data = assets[ref];
+      }
+      if (!has) {
+        add('warn', 'image', `Không tìm thấy ảnh "${ref}" trong gói bộ thẻ.`);
+      } else if (data && (data.byteLength > MAX_IMG_SIZE || data.length > MAX_IMG_SIZE)) {
+        add('warn', 'image', `Ảnh "${ref}" vượt quá dung lượng cho phép (> 5 MB).`);
+      }
+    }
+  }
+
   return out;
 }
 
@@ -108,7 +162,7 @@ export const typeLabel = t => TYPE_LABEL[t] ?? String(t);
 
 // Kiểm tra toàn bộ deck (đối tượng đã JSON.parse).
 // Trả { errors: string[] (lỗi cấp bộ thẻ, deck không dùng được), warnings: string[], items: [{ index, id, issues }] }
-export function validateDeck(deck) {
+export function validateDeck(deck, { assets } = {}) {
   const errors = [], warnings = [], items = [];
   if (!isObj(deck)) return { errors: ['Nội dung bộ thẻ không phải đối tượng JSON ({ "meta": …, "items": […] }).'], warnings, items };
 
@@ -133,7 +187,7 @@ export function validateDeck(deck) {
   const firstIndex = new Map(), dups = new Map();
   deck.items.forEach((it, index) => {
     const id = isObj(it) && nonEmpty(it.id) ? it.id : null;
-    items.push({ index, id, issues: validateItem(it, { deckKind }) });
+    items.push({ index, id, issues: validateItem(it, { deckKind, assets }) });
     if (id === null) return;
     if (firstIndex.has(id)) dups.set(id, (dups.get(id) ?? [firstIndex.get(id)]).concat(index));
     else firstIndex.set(id, index);
