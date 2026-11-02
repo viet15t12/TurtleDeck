@@ -3,9 +3,12 @@
 
 const MD_IMG = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
 
+export function stripAccents(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+}
+
 function slugify(s) {
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'bo-the-moi';
+  return stripAccents(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'bo-the-moi';
 }
 
 export function newDeckId(title = '') {
@@ -290,44 +293,177 @@ export function unusedAssets(deck, assets) {
   return out;
 }
 
-// Quản lý Undo / Redo cho Deck Editor, gộp các lần gõ liên tiếp trong 500 ms thành 1 bước
+// Tạo mục mới cùng dạng, cùng chủ đề và cùng nhãn với item đang chọn (§5, §13.3)
+export function newItemLike(deck, refItem = null) {
+  const id = newItemId(deck);
+  const rawType = refItem?.type || (deck?.meta?.kind === 'qa' ? 'card' : 'single');
+  const type = rawType === 'multi' ? 'single' : rawType;
+  let item = newItem(type, id);
+  if (type === 'single' || type === 'multi') {
+    item = { ...item, choices: ['', '', '', ''], answer: [0] };
+  }
+  if (refItem?.topic && typeof refItem.topic === 'string' && refItem.topic.trim()) {
+    item.topic = refItem.topic.trim();
+  }
+  if (Array.isArray(refItem?.tags) && refItem.tags.length > 0) {
+    item.tags = [...refItem.tags];
+  }
+  return item;
+}
+
+// Kiểm tra xem mục có phải mới tinh chưa nhập nội dung gì không (§9)
+export function isBlankNewItem(item) {
+  if (!item || typeof item !== 'object') return false;
+  const main = (item.question ?? item.front ?? item.term ?? '').trim();
+  if (main) return false;
+  if ((item.explanation ?? '').trim() || (item.image ?? '').trim() || (item.answerImage ?? '').trim()) return false;
+  if ((item.back ?? '').trim() || (item.definition ?? '').trim()) return false;
+  if (Array.isArray(item.choices)) {
+    const anyChoice = item.choices.some(c =>
+      typeof c === 'string' ? c.trim() !== '' : ((c?.text ?? '').trim() !== '' || (c?.image ?? '').trim() !== '')
+    );
+    if (anyChoice) return false;
+  }
+  if ((item.type === 'fill' || item.type === 'command') && Array.isArray(item.answer)) {
+    if (item.answer.some(a => String(a ?? '').trim() !== '')) return false;
+  }
+  return true;
+}
+
+// Bật/tắt đáp án đúng ở chỉ số index và tự động đặt type single/multi theo số đáp án đúng (§6.2, §13.3)
+export function setCorrect(item, index, on) {
+  if (!item || typeof item !== 'object') return item;
+  const current = new Set(Array.isArray(item.answer) ? item.answer : []);
+  const shouldBeOn = on === undefined ? !current.has(index) : Boolean(on);
+  if (shouldBeOn) current.add(index);
+  else current.delete(index);
+  const answer = [...current].sort((a, b) => a - b);
+  const type = answer.length >= 2 ? 'multi' : 'single';
+  return { ...item, type, answer };
+}
+
+// Tách nhiều dòng dán vào thành danh sách lựa chọn [{ text, correct }] (§6.2, §13.3)
+export function splitPastedChoices(text) {
+  const lines = String(text ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  return lines.map(line => {
+    let s = line;
+    let correct = false;
+
+    // Kiểm tra dấu [x] hoặc * ở đầu dòng
+    if (/^\[[xX✓✔]\]\s*/.test(s)) {
+      correct = true;
+      s = s.replace(/^\[[xX✓✔]\]\s*/, '');
+    } else if (/^\[\s*\]\s*/.test(s)) {
+      s = s.replace(/^\[\s*\]\s*/, '');
+    } else if (/^\*\s*/.test(s)) {
+      correct = true;
+      s = s.replace(/^\*\s*/, '');
+    } else if (/^[-•]\s+/.test(s)) {
+      s = s.replace(/^[-•]\s+/, '');
+    }
+
+    // Bỏ tiền tố A., A), 1., 1), (A), (1)
+    s = s.replace(/^(?:\([A-Za-z0-9]+\)|[A-Za-z0-9]+[.)])\s*/, '');
+
+    // Trường hợp tiền tố nằm trước [x] hoặc * (vd: "A. [x] Nội dung")
+    if (/^\[[xX✓✔]\]\s*/.test(s)) {
+      correct = true;
+      s = s.replace(/^\[[xX✓✔]\]\s*/, '');
+    } else if (/^\[\s*\]\s*/.test(s)) {
+      s = s.replace(/^\[\s*\]\s*/, '');
+    }
+
+    return { text: s.trim(), correct };
+  }).filter(c => c.text !== '');
+}
+
+// Chuẩn hoá mục khi rời đi: bỏ lựa chọn trống nằm cuối (giữ tối thiểu 2), cắt khoảng trắng thừa (§6.2, §13.3)
+export function normalizeOnLeave(item) {
+  if (!item || typeof item !== 'object') return item;
+  const out = JSON.parse(JSON.stringify(item));
+
+  for (const f of ['question', 'front', 'back', 'explanation', 'topic', 'answerDisplay', 'term', 'definition']) {
+    if (typeof out[f] === 'string') out[f] = out[f].trim();
+  }
+
+  if (Array.isArray(out.choices)) {
+    out.choices = out.choices.map(c => {
+      if (typeof c === 'string') return c.trim();
+      if (c && typeof c === 'object') {
+        const next = { ...c };
+        if (typeof next.text === 'string') next.text = next.text.trim();
+        if (typeof next.image === 'string') next.image = next.image.trim();
+        return next;
+      }
+      return c;
+    });
+
+    const isChoiceEmpty = c =>
+      typeof c === 'string' ? c.trim() === '' : !((c?.text ?? '').trim() || (c?.image ?? '').trim());
+    const ansSet = new Set(Array.isArray(out.answer) ? out.answer : []);
+
+    while (out.choices.length > 2) {
+      const lastIdx = out.choices.length - 1;
+      if (isChoiceEmpty(out.choices[lastIdx]) && !ansSet.has(lastIdx)) {
+        out.choices.pop();
+      } else {
+        break;
+      }
+    }
+
+    if (Array.isArray(out.answer)) {
+      out.answer = out.answer.filter(i => Number.isInteger(i) && i >= 0 && i < out.choices.length);
+      out.type = out.answer.length >= 2 ? 'multi' : 'single';
+    }
+  } else if ((out.type === 'fill' || out.type === 'command') && Array.isArray(out.answer)) {
+    const trimmed = out.answer.map(a => String(a ?? '').trim());
+    const nonEmpty = trimmed.filter(Boolean);
+    out.answer = nonEmpty.length > 0 ? nonEmpty : [''];
+  }
+
+  return out;
+}
+
+// Quản lý Undo / Redo cho Deck Editor, gộp các lần gõ liên tiếp trong 500 ms thành 1 bước,
+// kèm lưu vị trí con trỏ { itemId, path, selStart, selEnd } (§13.2)
 export function createHistory(initialDeck, limit = 100) {
   let past = [];
-  let present = initialDeck;
+  let present = { deck: initialDeck, cursor: null };
   let future = [];
   let lastTypingTime = 0;
 
   return {
-    push(newDeck, { isTyping = false, now = Date.now() } = {}) {
+    push(newDeck, { isTyping = false, now = Date.now(), cursor = null, beforeCursor = null } = {}) {
       if (isTyping && lastTypingTime && (now - lastTypingTime < 500)) {
         // Gộp lần gõ trong 500ms: cập nhật present mà không đẩy bước mới vào past
-        present = newDeck;
+        present = { deck: newDeck, cursor: cursor ?? present.cursor };
         lastTypingTime = now;
         future = [];
         return;
       }
 
-      past.push(present);
+      const prevSnap = beforeCursor ? { deck: present.deck, cursor: beforeCursor } : present;
+      past.push(prevSnap);
       if (past.length > limit) past.shift();
-      present = newDeck;
+      present = { deck: newDeck, cursor };
       future = [];
       lastTypingTime = isTyping ? now : 0;
     },
 
     undo() {
-      if (!past.length) return present;
+      if (!past.length) return present.deck;
       future.unshift(present);
       present = past.pop();
       lastTypingTime = 0;
-      return present;
+      return present.deck;
     },
 
     redo() {
-      if (!future.length) return present;
+      if (!future.length) return present.deck;
       past.push(present);
       present = future.shift();
       lastTypingTime = 0;
-      return present;
+      return present.deck;
     },
 
     canUndo() {
@@ -339,12 +475,16 @@ export function createHistory(initialDeck, limit = 100) {
     },
 
     current() {
-      return present;
+      return present.deck;
     },
 
-    reset(deck) {
+    cursor() {
+      return present.cursor;
+    },
+
+    reset(deck, cursor = null) {
       past = [];
-      present = deck;
+      present = { deck, cursor };
       future = [];
       lastTypingTime = 0;
     },

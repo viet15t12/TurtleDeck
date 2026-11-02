@@ -65,6 +65,8 @@ Tiến độ nhớ (SRS) gắn với **item + hướng học**, lưu riêng vớ
 - Giao diện: bấm vào ảnh để phóng to; công thức dài cuộn ngang; ảnh trong dark mode có nền sáng để không mất nét; TTS, tìm kiếm và xem trước tự bỏ LaTeX/ảnh (`toPlain()`).
 
 ### 2.7 Soạn bộ thẻ trong app (Deck Editor)
+> **Cập nhật thiết kế UX/UI:** Chi tiết giao diện, bố cục 100vh 3 cột có vách ngăn kéo thả, quy tắc ẩn thông tin kỹ thuật (`id`, tên trường JSON, đường dẫn ảnh thô), gộp `single`/`multi` thành một nút *Trắc nghiệm*, kiểm tra lỗi đúng lúc (sau `blur`) và cấu trúc thư mục `src/views/editor/` được quy định đầy đủ trong **`study-app-editor-ux.md`** (thay thế mục 2.7 và 9.3 này).
+
 Mục tiêu: **tạo bộ thẻ mới, thêm / xoá / sửa câu hỏi và ảnh bằng giao diện trực quan**, rồi bấm *Lưu* ra file `.sdeck`. Người dùng không bao giờ phải giải nén gói hay mở file JSON.
 
 - **Tạo mới**: *Bộ thẻ mới* → nhập tên, loại (`vocab` / `qa` / `quiz`), ngôn ngữ → vào Editor với một mục trống. **Sửa bộ thẻ có sẵn**: nút *Sửa* ở Home / Deck view.
@@ -988,7 +990,7 @@ function registerAssetProtocol() {                  // gọi trong app.whenReady
 
 1. **Home**: Thư viện deck (tự quét thư mục), số thẻ đến hạn/mới, nút *Ôn hôm nay*, *Learn*, *Thi thử*; nút **Bộ thẻ mới**, **Mở file…**, **Nhập…**; menu mỗi deck: *Sửa*, *Sao chép*, *Hiện trong thư mục*, *Gỡ khỏi danh sách*.
 2. **Deck view**: danh sách item, tìm kiếm, sao, chọn chế độ học và hướng, danh sách cảnh báo / mục bị bỏ qua; nút **Sửa bộ thẻ**.
-3. **Editor** (mục 2.7): ba khu vực, thanh trên có tên bộ thẻ, chỉ báo chưa lưu, Undo/Redo, Lưu.
+3. **Editor** (chi tiết tại **`study-app-editor-ux.md`**): khung `100vh` không thanh cuộn lồng, 3 cột (`Danh sách 260px` | `Vùng soạn co giãn` | `Xem trước 400px` có thể thu gọn `Ctrl+\`) ngăn bằng 2 vách kéo `6px` lưu độ rộng vào `settings.json`; thanh trên cố định `56px` có nút `←`, tên bộ thẻ sửa tại chỗ kèm trạng thái `Đã lưu HH:MM` / `● Chưa lưu` ngay sát bên, `▶ Học thử`, `↶ ↷`, nút gộp `[Lưu ▾]`; thông báo *toast* góc dưới có nút **Hoàn tác** / **Xem**.
 ```
 ┌─ ← Về Home │ Giải tích 1 ✎ │ ● chưa lưu │ ↶ ↷ │ [Lưu Ctrl+S ▾] ───────────────┐
 ├─ Danh sách (240px) ───┬─ Form soạn ───────────────────┬─ Xem trước ────────────┤

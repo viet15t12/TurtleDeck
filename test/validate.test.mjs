@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateItem, validateDeck, hasError, itemType, parseNumber } from '../src/core/validate.js';
+import { validateItem, validateDeck, hasError, itemType, parseNumber, friendlyIssue } from '../src/core/validate.js';
 
 const fields = issues => issues.filter(i => i.level === 'error').map(i => i.field);
 const ok = (item, opts) => assert.deepEqual(validateItem(item, opts), [], JSON.stringify(validateItem(item, opts)));
@@ -153,6 +153,16 @@ test('validateItem: cảnh báo thiếu mô tả ảnh (alt text) và ảnh tham
   const bigMap = new Map([['img/big.png', new Uint8Array(6 * 1024 * 1024)]]);
   const issues6 = validateItem({ id: 'c6', type: 'card', front: 'F', back: 'B', image: 'img/big.png' }, { assets: bigMap });
   assert.ok(issues6.some(i => i.level === 'warn' && /vượt quá dung lượng/.test(i.msg)));
+
+  // Công thức còn ô trống ▢
+  const issues7 = validateItem({ id: 'c7', type: 'card', front: 'Tính $\\frac{1}{▢}$', back: 'B' });
+  assert.ok(issues7.some(i => i.level === 'warn' && i.field === 'front' && /Công thức còn ô trống/.test(i.msg)));
+
+  // friendlyIssue chuyển thông báo sang tiếng Việt ngắn gọn
+  const dupIssues = validateItem({ id: 's', type: 'single', question: 'Q', choices: ['A', 'B', 'A'], answer: [0] });
+  assert.equal(friendlyIssue(dupIssues[0]), 'Hai lựa chọn trùng nhau (A và C).');
+  const emptyIssues = validateItem({ id: 's', type: 'single', question: 'Q', choices: ['A', ''], answer: [0] });
+  assert.equal(friendlyIssue(emptyIssues[0]), 'Lựa chọn B đang trống.');
 });
 
 

@@ -203,6 +203,21 @@ const actions = {
     state.route = { name: 'session', uid: entry.uid, config };
     render();
   },
+
+  startTrialSession(entry, workingDeck) {
+    state.modal = null;
+    if (workingDeck) {
+      entry.deck = JSON.parse(JSON.stringify(workingDeck));
+      entry.deckText = JSON.stringify(workingDeck, null, 2);
+    }
+    state.route = {
+      name: 'session',
+      uid: entry.uid,
+      fromEditor: true,
+      config: { count: (entry.deck.items || []).length, shuffle: false },
+    };
+    render();
+  },
 };
 
 function renderSessionModal(entry, onStart, onCancel) {
@@ -331,6 +346,8 @@ async function saveEntry(entry, saveAs) {
 // ── Router ────────────────────────────────────────────────────────────────
 
 function render() {
+  document.body.classList.toggle('in-editor', state.route.name === 'editor');
+
   if (state.route.name === 'editor') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
@@ -339,13 +356,17 @@ function render() {
       return;
     }
     state.route = { name: 'home' };
+    document.body.classList.remove('in-editor');
   }
 
   if (state.route.name === 'session') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
       document.title = `Học: ${entry.deck.meta.title} — Study App`;
-      renderSession(root, { entry, config: state.route.config }, actions);
+      const sessionActions = state.route.fromEditor
+        ? { ...actions, openDeckView: e => actions.openEditor(e) }
+        : actions;
+      renderSession(root, { entry, config: state.route.config }, sessionActions);
       if (state.modal) root.append(state.modal);
       return;
     }

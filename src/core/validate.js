@@ -107,23 +107,37 @@ export function validateItem(item, { deckKind, assets } = {}) {
   for (const f of ['tags', 'forms', 'synonyms'])
     if (item[f] !== undefined && !(Array.isArray(item[f]) && item[f].every(isStr))) add('error', f, `Trường ${f} phải là danh sách chuỗi.`);
 
-  // Kiểm tra thiếu mô tả ảnh trong Markdown (warn)
-  const checkAlt = (text, fieldName) => {
+  // Kiểm tra thiếu mô tả ảnh trong Markdown (warn) và công thức còn ô trống ▢ (warn)
+  const checkTextWarnings = (text, fieldName) => {
     if (typeof text !== 'string') return;
     for (const m of text.matchAll(MD_IMG_WITH_ALT)) {
       if (!m[1] || m[1].trim() === '') {
         add('warn', fieldName, `Thiếu mô tả cho ảnh "${m[2]}" (alt text).`);
       }
     }
+    if (text.includes('▢')) {
+      add('warn', fieldName, 'Công thức còn ô trống.');
+    }
   };
-  checkAlt(item.question, 'question');
-  checkAlt(item.explanation, 'explanation');
-  checkAlt(item.front, 'front');
-  checkAlt(item.back, 'back');
+  checkTextWarnings(item.question, 'question');
+  checkTextWarnings(item.explanation, 'explanation');
+  checkTextWarnings(item.front, 'front');
+  checkTextWarnings(item.back, 'back');
+  checkTextWarnings(item.answerDisplay, 'answerDisplay');
+  checkTextWarnings(item.term, 'term');
+  checkTextWarnings(item.definition, 'definition');
+  checkTextWarnings(item.example, 'example');
   if (Array.isArray(item.choices)) {
     item.choices.forEach((c, idx) => {
-      if (typeof c === 'string') checkAlt(c, `choices[${idx}]`);
-      else if (isObj(c) && typeof c.text === 'string') checkAlt(c.text, `choices[${idx}]`);
+      if (typeof c === 'string') checkTextWarnings(c, `choices[${idx}]`);
+      else if (isObj(c) && typeof c.text === 'string') checkTextWarnings(c.text, `choices[${idx}]`);
+    });
+  }
+  if (Array.isArray(item.answer)) {
+    item.answer.forEach((a, idx) => {
+      if (typeof a === 'string' && a.includes('▢')) {
+        add('warn', `answer[${idx}]`, 'Công thức còn ô trống.');
+      }
     });
   }
 
@@ -159,6 +173,50 @@ export function validateItem(item, { deckKind, assets } = {}) {
 
 export const hasError = issues => issues.some(i => i.level === 'error');
 export const typeLabel = t => TYPE_LABEL[t] ?? String(t);
+
+// Đổi thông báo kỹ thuật sang câu ngắn gọn, không lộ tên trường cho giao diện Editor (§9)
+export function friendlyIssue(issue) {
+  if (!issue) return '';
+  const { field = '', msg = '' } = issue;
+  const letter = idx => String.fromCharCode(65 + Number(idx));
+
+  if (field === 'question') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập câu hỏi.';
+  if (field === 'front') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập mặt trước.';
+  if (field === 'back') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập mặt sau.';
+  if (field === 'term') return 'Chưa nhập từ vựng.';
+  if (field === 'definition') return 'Chưa nhập nghĩa.';
+
+  const cm = /^choices\[(\d+)\]$/.exec(field);
+  if (cm) {
+    const L = letter(cm[1]);
+    if (/trùng với lựa chọn (\d+)/.test(msg)) {
+      const other = RegExp.$1;
+      return `Hai lựa chọn trùng nhau (${letter(Number(other) - 1)} và ${L}).`;
+    }
+    if (/Công thức/.test(msg)) return `Lựa chọn ${L}: công thức còn ô trống.`;
+    if (/mô tả/.test(msg)) return `Lựa chọn ${L}: ảnh chưa có mô tả.`;
+    return `Lựa chọn ${L} đang trống.`;
+  }
+
+  const am = /^answer\[(\d+)\]$/.exec(field);
+  if (am) {
+    if (/regex/i.test(msg)) return msg.replace(/^Biểu thức regex ở đáp án \d+ không hợp lệ:\s*/i, 'Regex không hợp lệ: ');
+    const numMatch = /\("([^"]+)"\) không đọc được thành số/.exec(msg);
+    if (numMatch) return `Không đọc được số "${numMatch[1]}".`;
+    if (/Công thức/.test(msg)) return 'Công thức còn ô trống.';
+    return `Đáp án ${Number(am[1]) + 1} đang trống.`;
+  }
+
+  if (field === 'answer') {
+    if (/Cần ít nhất 1 đáp án/.test(msg)) return 'Chưa nhập đáp án chấp nhận.';
+    return 'Chưa chọn đáp án đúng.';
+  }
+  if (field === 'choices') return 'Cần ít nhất 2 lựa chọn.';
+  if (field === 'tolerance') return 'Sai số cho phép phải là số không âm.';
+  if (/Thiếu mô tả cho ảnh/.test(msg)) return 'Ảnh chưa có mô tả.';
+  if (/Công thức còn ô trống/.test(msg)) return 'Công thức còn ô trống.';
+  return msg;
+}
 
 // Kiểm tra toàn bộ deck (đối tượng đã JSON.parse).
 // Trả { errors: string[] (lỗi cấp bộ thẻ, deck không dùng được), warnings: string[], items: [{ index, id, issues }] }

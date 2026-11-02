@@ -1,0 +1,928 @@
+/* src/styles/editor.css — Giao diện Deck Editor UX v2 (study-app-editor-ux.md §3–§11) */
+
+body.in-editor {
+  overflow: hidden;
+}
+
+body.in-editor .app {
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.editor-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-text);
+  overflow: hidden;
+}
+
+/* ── §4. Thanh trên (56px, cố định) ─────────────────────────────────────── */
+
+.editor-topbar {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  z-index: 40;
+}
+
+.editor-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.editor-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.editor-drawer-btn {
+  display: none;
+}
+
+.editor-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 380px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-title-btn:hover {
+  background: var(--c-surface-2);
+  border-color: var(--c-border);
+}
+
+.editor-title-edit-icon {
+  font-size: 13px;
+  color: var(--c-text-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.editor-title-btn:hover .editor-title-edit-icon {
+  opacity: 1;
+}
+
+.editor-title-inline-input {
+  height: 32px;
+  width: 280px;
+  max-width: 45vw;
+  padding: 0 8px;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.editor-save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  padding-left: 4px;
+}
+
+.editor-save-state.unsaved {
+  color: var(--c-warn);
+  font-weight: 600;
+}
+
+/* ── §3. Khung 3 cột + Splitter 6px ─────────────────────────────────────── */
+
+.editor-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-splitter {
+  width: 6px;
+  flex-shrink: 0;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  z-index: 15;
+  transition: background 0.12s ease;
+}
+
+.editor-splitter::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: var(--c-border);
+  transition: background 0.12s ease, width 0.12s ease;
+}
+
+.editor-splitter:hover::after,
+.editor-splitter.dragging::after {
+  width: 2px;
+  background: var(--c-primary);
+}
+
+/* ── §5. Cột trái: Danh sách mục ────────────────────────────────────────── */
+
+.editor-col-list {
+  width: var(--list-w, 260px);
+  min-width: 200px;
+  max-width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--c-surface);
+  overflow: hidden;
+}
+
+.list-top-controls {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  background: var(--c-surface);
+}
+
+.list-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  position: relative;
+}
+
+.list-chip-anchor {
+  position: relative;
+}
+
+/* Vùng cuộn ảo hoá của danh sách */
+.list-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.list-virtual-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.list-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 56px;
+  padding: 6px 10px 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-border) 55%, transparent);
+  background: var(--c-surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.08s ease;
+}
+
+.list-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--c-type-tn);
+}
+
+.list-row[data-type="fill"]::before { background: var(--c-type-dien); }
+.list-row[data-type="command"]::before { background: var(--c-type-lenh); }
+.list-row[data-type="card"]::before { background: var(--c-type-the); }
+
+.list-row:hover {
+  background: var(--c-surface-2);
+}
+
+.list-row.active {
+  background: var(--c-primary-soft);
+}
+
+.list-row.selected {
+  background: color-mix(in srgb, var(--c-primary-soft) 75%, var(--c-surface));
+}
+
+.list-row.drag-above {
+  box-shadow: inset 0 2px 0 var(--c-primary);
+}
+
+.list-row.drag-below {
+  box-shadow: inset 0 -2px 0 var(--c-primary);
+}
+
+/* Tay kéo & checkbox chỉ hiện khi rê chuột hoặc đang ở chế độ chọn (§5) */
+.list-row-HoverLead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: width 0.1s ease, opacity 0.1s ease;
+  flex-shrink: 0;
+}
+
+.list-row:hover .list-row-HoverLead,
+.list-viewport.select-mode .list-row-HoverLead,
+.list-row.selected .list-row-HoverLead {
+  width: 32px;
+  opacity: 1;
+}
+
+.list-drag-grip {
+  color: var(--c-text-muted);
+  cursor: grab;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.list-row-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--c-primary);
+  cursor: pointer;
+}
+
+/* Huy hiệu dạng chữ TN / ĐIỀN / LỆNH / THẺ */
+.list-type-badge {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: var(--c-surface-3);
+  color: var(--c-type-tn);
+}
+
+.list-row[data-type="fill"] .list-type-badge { color: var(--c-type-dien); }
+.list-row[data-type="command"] .list-type-badge { color: var(--c-type-lenh); }
+.list-row[data-type="card"] .list-type-badge { color: var(--c-type-the); }
+
+.list-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.list-row-title {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--c-text);
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.list-row-title.is-empty {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--c-text-muted);
+}
+
+.list-row-sub {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Chấm trạng thái bên phải (§5, §9): đỏ = lỗi, cam = cảnh báo, xám = mới, không có chấm = ổn */
+.list-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.list-status-dot.error {
+  background: var(--c-danger);
+}
+
+.list-status-dot.warn {
+  background: var(--c-warn);
+}
+
+.list-status-dot.fresh {
+  background: var(--c-border-strong);
+}
+
+/* Chân danh sách */
+.list-footer {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--c-border);
+  background: var(--c-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.list-add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-add-row .ux-split-btn {
+  flex: 1;
+}
+
+.list-add-row .ux-split-btn > .ux-btn:first-child {
+  flex: 1;
+}
+
+.list-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
+.list-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--c-primary-soft);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+}
+
+.list-bulk-title {
+  font-weight: 700;
+  color: var(--c-primary);
+  margin-right: auto;
+}
+
+/* ── §6. Cột giữa: Form soạn thảo ───────────────────────────────────────── */
+
+.editor-col-form {
+  flex: 1;
+  min-width: 480px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg);
+  overflow: hidden;
+}
+
+/* Đầu cột form dính trên cùng */
+.form-topbar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.form-nav-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form-pos-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text);
+  min-width: 72px;
+  text-align: center;
+}
+
+.form-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.form-mobile-tabs {
+  display: none;
+}
+
+.editor-form-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+}
+
+.editor-form-inner {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.form-hint {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
+/* Khung soạn Markdown có thanh công cụ dính (sticky) */
+.md-box {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.md-box:focus-within {
+  border-color: var(--c-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.md-box.has-error {
+  border-color: var(--c-danger);
+}
+
+.md-box.has-warn {
+  border-color: var(--c-warn);
+}
+
+.md-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--c-surface-2);
+  border-bottom: 1px solid var(--c-border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.md-tool-btn {
+  height: 26px;
+  min-width: 28px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.md-tool-btn:hover {
+  background: var(--c-surface-3);
+  color: var(--c-text);
+}
+
+.md-box-textarea {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  max-height: 55vh;
+  padding: 10px 12px;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: transparent;
+  color: var(--c-text);
+  font-size: var(--fs);
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+}
+
+/* Hàng lựa chọn trắc nghiệm (§6.2) */
+.choices-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.choice-letter-btn {
+  width: 32px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.choice-letter-btn:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+.choice-letter-btn.is-correct {
+  background: var(--c-ok);
+  border-color: var(--c-ok);
+  color: #ffffff;
+}
+
+.choice-input-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.choice-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+}
+
+.choice-thumb-btn {
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.choice-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.choice-del-btn {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.choice-row:hover .choice-del-btn,
+.choice-row:focus-within .choice-del-btn {
+  opacity: 1;
+}
+
+/* Hàng chip "+ Thêm …" cho các trường tuỳ chọn (§6.1) */
+.optional-chips-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.optional-chips-label {
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  margin-right: 2px;
+}
+
+/* Ô nhập nhãn kiểu chip */
+.tags-chip-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+}
+
+.tags-chip-box:focus-within {
+  border-color: var(--c-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.tags-chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--c-surface-3);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+.tags-chip-remove {
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 11px;
+}
+
+.tags-chip-remove:hover {
+  color: var(--c-danger);
+}
+
+.tags-chip-input {
+  flex: 1;
+  min-width: 120px;
+  height: 26px;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none;
+  background: transparent;
+  font-size: var(--fs-sm);
+}
+
+/* Ô ảnh gọn không lộ đường dẫn (§8) */
+.img-slot-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--c-border-strong);
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+}
+
+.img-slot-box.empty {
+  justify-content: center;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.img-slot-box.empty:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+
+.img-slot-thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+/* ── §10. Cột phải: Xem trước (không bao giờ cuộn ngang) ────────────────── */
+
+.editor-col-preview {
+  width: var(--preview-w, 400px);
+  min-width: 320px;
+  max-width: 640px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--c-surface);
+  overflow: hidden;
+}
+
+.editor-shell.preview-collapsed .editor-col-preview,
+.editor-shell.preview-collapsed .splitter-preview {
+  display: none;
+}
+
+.preview-topbar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.preview-col-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.preview-scroll .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+
+.preview-empty-choice {
+  border: 1px dashed var(--c-border-strong) !important;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+.preview-skip-note {
+  margin-top: auto;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+}
+
+/* ── Bảng phím tắt (Ctrl+/) ─────────────────────────────────────────────── */
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.shortcuts-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.shortcuts-table kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: 4px;
+  background: var(--c-surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* ── Đáp ứng cửa sổ hẹp (§3: < 1200px và < 900px) ───────────────────────── */
+
+@media (max-width: 1200px) {
+  .splitter-preview {
+    display: none !important;
+  }
+
+  .editor-col-preview {
+    display: none;
+  }
+
+  .form-mobile-tabs {
+    display: inline-flex;
+  }
+
+  .editor-shell[data-CompactTab="preview"] .editor-col-form {
+    display: none;
+  }
+
+  .editor-shell[data-CompactTab="preview"] .editor-col-preview {
+    display: flex;
+    flex: 1;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .editor-drawer-btn {
+    display: inline-flex;
+  }
+
+  .splitter-list {
+    display: none !important;
+  }
+
+  .editor-col-list {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 60;
+    width: 280px !important;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-102%);
+    transition: transform 0.18s ease;
+  }
+
+  .editor-shell.drawer-open .editor-col-list {
+    transform: translateX(0);
+  }
+
+  .editor-col-form {
+    min-width: 0;
+  }
+}
+

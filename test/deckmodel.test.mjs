@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   newDeck, newItemId, newItem, addItem, removeItems, duplicateItem,
   moveItem, updateItem, changeType, imageRefs, collectImageRefs,
-  unusedAssets, createHistory,
+  unusedAssets, createHistory, newItemLike, setCorrect, splitPastedChoices,
+  normalizeOnLeave, isBlankNewItem, stripAccents,
 } from '../src/core/deckmodel.js';
 
 test('deckmodel: newDeck tạo bộ thẻ hợp lệ', () => {
@@ -189,4 +190,66 @@ test('deckmodel: createHistory undo, redo và gộp các lần gõ liên tiếp 
   assert.equal(h.undo().items.length, 0);
   assert.equal(h.canUndo(), false);
 });
+
+test('deckmodel: createHistory lưu và khôi phục vị trí con trỏ (cursor)', () => {
+  const d0 = { items: [{ id: '1', type: 'card', front: 'ab', back: '' }] };
+  const h = createHistory(d0);
+  const d1 = { items: [{ id: '1', type: 'card', front: 'abc', back: '' }] };
+  h.push(d1, {
+    beforeCursor: { itemId: '1', path: 'front', selStart: 2, selEnd: 2 },
+    cursor: { itemId: '1', path: 'front', selStart: 3, selEnd: 3 },
+  });
+  assert.deepEqual(h.cursor(), { itemId: '1', path: 'front', selStart: 3, selEnd: 3 });
+
+  h.undo();
+  assert.deepEqual(h.cursor(), { itemId: '1', path: 'front', selStart: 2, selEnd: 2 });
+
+  h.redo();
+  assert.deepEqual(h.cursor(), { itemId: '1', path: 'front', selStart: 3, selEnd: 3 });
+});
+
+test('deckmodel: newItemLike, setCorrect, splitPastedChoices, normalizeOnLeave, isBlankNewItem', () => {
+  const deck = {
+    meta: { kind: 'quiz' },
+    items: [{ id: 'q-001', type: 'multi', topic: '101.1', tags: ['linux', 'boot'] }],
+  };
+  const next = newItemLike(deck, deck.items[0]);
+  assert.equal(next.id, 'q-002');
+  assert.equal(next.type, 'single');
+  assert.equal(next.choices.length, 4);
+  assert.equal(next.topic, '101.1');
+  assert.deepEqual(next.tags, ['linux', 'boot']);
+  assert.equal(isBlankNewItem(next), true);
+
+  // setCorrect tự đổi single <-> multi
+  const c1 = setCorrect(next, 2, true);
+  assert.equal(c1.type, 'multi');
+  assert.deepEqual(c1.answer, [0, 2]);
+  const c2 = setCorrect(c1, 0, false);
+  assert.equal(c2.type, 'single');
+  assert.deepEqual(c2.answer, [2]);
+
+  // splitPastedChoices
+  const pasted = splitPastedChoices('A. Lựa chọn một\n* B) Lựa chọn hai\n[x] 3. Lựa chọn ba\n- Lựa chọn bốn');
+  assert.deepEqual(pasted, [
+    { text: 'Lựa chọn một', correct: false },
+    { text: 'Lựa chọn hai', correct: true },
+    { text: 'Lựa chọn ba', correct: true },
+    { text: 'Lựa chọn bốn', correct: false },
+  ]);
+
+  // normalizeOnLeave bỏ lựa chọn trống cuối (giữ tối thiểu 2)
+  const raw = {
+    id: 'q-003',
+    type: 'single',
+    question: '  Câu hỏi?  ',
+    choices: [' Đáp án A ', ' Đáp án B ', '   ', ''],
+    answer: [0],
+  };
+  const norm = normalizeOnLeave(raw);
+  assert.equal(norm.question, 'Câu hỏi?');
+  assert.deepEqual(norm.choices, ['Đáp án A', 'Đáp án B']);
+  assert.equal(stripAccents('Giải tích 1 — Đường thẳng'), 'giai tich 1 — duong thang');
+});
+
 
