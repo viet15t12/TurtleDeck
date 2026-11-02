@@ -35,3 +35,4 @@ export function createToastManager(hostEl) {
 
   return { toastHost, showToast };
 }
+

@@ -313,22 +313,48 @@ Quy tắc control:
 
 ## 13. Kỹ thuật (JS thuần)
 
-### 13.1 Cấu trúc file
+### 13.1 Cấu trúc file & Phân tách trách nhiệm (Modular Architecture)
+Được tổ chức theo **Nguyên lý Trách nhiệm Duy nhất (Single Responsibility Principle - SRP)**, loại bỏ hoàn toàn mô hình "God Object" nguyên khối:
 ```
 src/views/editor/
-├── editor.js          # khung: thanh trên, lưới 3 cột, splitter, điều phối state
-├── list.js            # cột danh sách (ảo hoá, lọc, kéo thả, chọn nhiều)
-├── form.js            # khung form + chip "Thêm" + header (điều hướng, chip lỗi)
-├── fields/            # textarea tự giãn, mdfield (thanh công cụ), choices, chips, imageslot, graderbox
-├── mathpopover.js     # popover công thức (tab, tìm kiếm, render KaTeX, gần đây, soạn riêng)
-├── preview.js         # cột xem trước (bọc component của session)
-└── imagemanager.js    # hộp thoại quản lý ảnh
+├── index.js            # Orchestrator (Composition Root: khởi tạo state, services, UI managers, actions, pane hooks)
+├── editor.js           # Re-export renderEditor từ index.js (bảo toàn 100% tương thích ngược với router/app.js)
+├── state.js            # Quản lý toàn bộ trạng thái (State Store: history, activeId, dirty, layout widths, touched items/fields)
+├── actions.js          # Các hành động nghiệp vụ (Business Logic: thêm/xoá/nhân đôi mục, chuyển dạng, lưu, undo/redo, v.v.)
+├── services.js         # Giao tiếp API (window.api wrapper: nạp/lưu layout, nạp/tải ảnh, lưu deck)
+├── shortcuts.js        # Xử lý phím tắt và sự kiện toàn cục (Ctrl+S, Ctrl+Z, Ctrl+Enter, v.v.)
+├── list.js             # Cột danh sách mục (ảo hoá, lọc, kéo thả, chọn nhiều)
+├── form.js             # Cột soạn thảo (form chung, header điều hướng, chip lỗi)
+├── preview.js          # Cột xem trước thời gian thực (bọc component session)
+├── bulkimport.js       # Hộp thoại Nhập hàng loạt (CSV/TSV/Quizlet/Markdown)
+├── imagemanager.js     # Hộp thoại Quản lý ảnh
+├── mathpopover.js      # Popover chèn & sửa công thức toán KaTeX
+├── fields/             # Các trường soạn thảo chuyên biệt:
+│   ├── mdfield.js      # Ô Markdown tự giãn, auto-pair $, toolbar, con trỏ
+│   ├── choices.js      # Lựa chọn trắc nghiệm (tự suy single/multi, kéo thả, dán thông minh)
+│   ├── chips.js        # Nhập danh sách chip (nhãn, từ đồng nghĩa)
+│   ├── imageslot.js    # Khung chọn & thumbnail ảnh
+│   └── graderbox.js    # Hộp chấm điểm điền/lệnh (dung sai, regex, thử đáp án)
+└── ui/                 # Các thành phần giao diện con:
+    ├── toast.js        # Hệ thống thông báo Toast (thông báo đã lưu, hoàn tác xoá)
+    ├── modals.js       # Quản lý & hiển thị các hộp thoại (chưa lưu, xác nhận xoá, bulk input, meta, phím tắt)
+    ├── topbar.js       # Render thanh công cụ trên cùng Topbar
+    └── layout.js       # Bố cục 3 cột, Splitter kéo thả, responsive
 src/core/
 ├── mathinput.js       # mathContext, insertFormula, jumpToNextPlaceholder (thuần)
 ├── snippets.js        # danh mục ký hiệu
 └── deckmodel.js       # thêm hàm ở 13.3
 src/styles/tokens.css, controls.css, editor.css
 ```
+
+**Nguyên tắc thiết kế & mở rộng (áp dụng cho Giai đoạn 5 và tương lai):**
+- **State (`state.js`)**: Quản lý tập trung mọi trạng thái runtime của phiên soạn thảo; không chứa logic thao tác DOM. Cung cấp API cập nhật an toàn (`updateItemWithoutHistory`, `pushHistory`, `markClean`, v.v.).
+- **Actions (`actions.js`)**: Chứa toàn bộ business logic. Được inject `state`, `services`, `ui`, `modals`, `panes`, `appActions`. Không gọi trực tiếp `window.api` hay tạo DOM phức tạp; nhờ đó kiểm thử đơn vị độc lập không cần môi trường Electron/DOM.
+- **Services (`services.js`)**: Wrapper duy nhất giao tiếp `window.api` (I/O, IPC), cho phép dễ dàng mock khi test.
+- **Modals (`ui/modals.js`)**: Quản lý tập trung các hộp thoại popup của Editor (Meta, Xác nhận xoá, Phím tắt, Unsaved changes, v.v.). Khi GĐ 5 cần thêm modal mới, mở rộng tại đây thay vì nhồi vào view chính.
+- **Shortcuts (`shortcuts.js`)**: Bắt phím tắt tập trung và trả về hàm `cleanup()` dọn dẹp khi unmount.
+- **Orchestrator (`index.js`)**: File điều phối trung tâm cực kỳ gọn gàng (~120 dòng), chỉ có nhiệm vụ kết nối các dependency và trả về phần tử DOM của Editor.
+- **Tương thích ngược (`editor.js`)**: Re-export `renderEditor` từ `index.js`, đảm bảo các router cũ trong app không cần thay đổi đường dẫn import.
 
 ### 13.2 Render, focus và undo
 - Mỗi vùng có hàm dựng riêng (`renderTopbar`, `renderList`, `renderForm`, `renderPreview`). **Khi người dùng gõ**: chỉ cập nhật state → cập nhật xem trước (debounce) → vá đúng một hàng danh sách → cập nhật dòng lỗi. **Không dựng lại ô đang gõ** (tránh mất focus/con trỏ).

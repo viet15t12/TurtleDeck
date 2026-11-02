@@ -405,7 +405,16 @@ study-app/
 │   │   ├── deck.js         # màn hình chi tiết bộ thẻ
 │   │   ├── session.js      # màn hình phiên học
 │   │   ├── result.js       # màn hình tổng kết phiên học
-│   │   ├── editor.js       # màn hình Deck Editor
+│   │   ├── editor.js       # màn hình Deck Editor (chuyển tiếp sang editor/index.js)
+│   │   ├── editor/         # cấu trúc module hoá Deck Editor (xem study-app-editor-ux.md §13)
+│   │   │   ├── index.js    # orchestrator điều phối
+│   │   │   ├── state.js    # state store
+│   │   │   ├── actions.js  # business logic
+│   │   │   ├── services.js # api wrapper
+│   │   │   ├── shortcuts.js# phím tắt toàn cục
+│   │   │   ├── list.js / form.js / preview.js / imagemanager.js / bulkimport.js
+│   │   │   ├── fields/     # các widget trường soạn thảo
+│   │   │   └── ui/         # toast, modals, topbar, layout
 │   │   ├── settings.js     # màn hình Cài đặt
 │   │   ├── notify.js       # toast notifications
 │   │   ├── components/     # component dùng chung giữa các màn hình

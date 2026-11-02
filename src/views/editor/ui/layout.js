@@ -44,3 +44,4 @@ export function createSplitter(side, { state, listColEl, previewColEl, onPersist
   });
   return sp;
 }
+
