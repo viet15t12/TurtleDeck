@@ -30,6 +30,7 @@ theo file study-app.md. Tuân thủ:
 - Viết test cho phần logic trong src/core/. Chạy test và `npm start` để chắc không lỗi trước khi báo xong.
 - Cuối mỗi giai đoạn: liệt kê file đã tạo/sửa, cách chạy, và những gì chưa làm.
 - Giao diện, thông báo, comment cho người dùng: tiếng Việt. Tên biến/hàm: tiếng Anh.
+- Bố cục giao diện rộng rãi (full-width responsive, tối đa ~1400px), không dồn cục hẹp ở giữa màn hình; thẻ học Flashcard mở rộng trực quan, không hiển thị lặp đề bài ngoài thẻ.
 - Môi trường: Fedora Linux, Node LTS.
 ```
 

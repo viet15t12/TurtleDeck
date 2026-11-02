@@ -1005,6 +1005,11 @@ function registerAssetProtocol() {                  // gọi trong app.whenReady
 6. **Stats**: % đúng theo deck/topic, heatmap, leech.
 7. **Settings**: thư mục Thư viện, số thẻ mới/ngày, learning steps, giọng TTS, theme, backup.
 
+- **Nguyên tắc bố cục rộng rãi (Full-width Responsive):**
+  - Giao diện trải rộng theo chiều ngang màn hình máy tính (tối đa ~1400px), không ép hẹp vào một cột giữa nhỏ khiến giao diện bị dồn cục hoặc tạo cảm giác zoom in chật chội.
+  - **Phiên học (Session)**: thẻ câu hỏi mở rộng (~1100px); với Flashcard, thẻ lật có kích thước rộng rãi, phông chữ lớn dễ đọc, không lặp lại đề bài bên ngoài thẻ; danh sách lựa chọn trắc nghiệm tự động chia 2 cột khi màn hình đủ rộng.
+  - **Danh sách & Bảng**: bảng xem trước và danh sách bộ thẻ co giãn đầy đủ chiều rộng, giúp đọc trọn vẹn văn bản câu hỏi và công thức LaTeX.
+
 ---
 
 ## 10. Kế hoạch làm

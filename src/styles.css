@@ -26,9 +26,10 @@ body {
 }
 
 .app {
-  width: min(1040px, calc(100% - 48px));
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 0 48px;
+  padding: 24px 32px 48px;
 }
 
 .eyebrow {
@@ -271,7 +272,8 @@ table.items {
 /* ── Màn hình phiên học & Kết quả (GĐ2) ─────────────────── */
 
 .session-container {
-  max-width: 760px;
+  max-width: 1100px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -349,8 +351,14 @@ table.items {
 
 .choices-list {
   display: grid;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 860px) {
+  .choices-list.choices-multi-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .choice-label {
@@ -461,28 +469,33 @@ table.items {
 .flashcard-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 24px;
+  width: 100%;
 }
 
 .flashcard {
   width: 100%;
-  min-height: 220px;
+  min-height: 320px;
   border: 1.5px solid var(--border);
-  border-radius: 12px;
-  padding: 28px;
+  border-radius: 16px;
+  padding: 36px 32px;
   background: #fafbfc;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   text-align: center;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 2%);
 }
 
 .flashcard:hover {
   border-color: var(--accent);
+  box-shadow: 0 6px 24px rgb(74 98 199 / 8%);
+  transform: translateY(-1px);
 }
 
 .flashcard.flipped {
@@ -494,30 +507,40 @@ table.items {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 }
 
 .card-face.card-back {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px dashed var(--border);
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1.5px dashed var(--border);
 }
 
 .card-badge {
-  font-size: 0.75rem;
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  margin-bottom: 8px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 12px;
+  border-radius: 999px;
+  margin-bottom: 18px;
 }
 
 .card-content {
-  font-size: 1.25rem;
-  line-height: 1.5;
+  font-size: 1.45rem;
+  line-height: 1.6;
+  max-width: 960px;
+  overflow-wrap: break-word;
 }
 
 .card-hint {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--muted);
+  text-align: center;
+}
 }
 
 /* Phản hồi sau khi nộp */

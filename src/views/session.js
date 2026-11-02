@@ -334,7 +334,9 @@ export function renderSession(root, { entry, config = {} }, actions) {
   function renderQuestionBody(q) {
     if (q.kind === 'single' || q.kind === 'multi') {
       const isMulti = q.kind === 'multi';
-      return h('div', { class: 'choices-list' },
+      const hasImages = q.choices.some(c => c && typeof c === 'object' && c.image);
+      const isMultiCol = hasImages || q.choices.length >= 4;
+      return h('div', { class: `choices-list ${isMultiCol ? 'choices-multi-col' : ''}` },
         q.choices.map((c, i) => {
           const isObj = c && typeof c === 'object';
           const text = isObj ? (c.text ?? '') : String(c ?? '');
@@ -568,8 +570,8 @@ export function renderSession(root, { entry, config = {} }, actions) {
             h('span', { class: `chip type-${q.kind}` }, q.kind),
             q.topic ? h('span', { class: 'chip' }, q.topic) : null,
             (q.tags || []).map(t => h('span', { class: 'tag' }, t))),
-          richEl('div', { class: 'question-prompt' }, rich.html(q.prompt)),
-          questionImgUrl ? h('div', { class: 'question-img-wrap' },
+          q.kind !== 'card' ? richEl('div', { class: 'question-prompt' }, rich.html(q.prompt)) : null,
+          (q.kind !== 'card' && questionImgUrl) ? h('div', { class: 'question-img-wrap' },
             h('img', { class: 'rich-img', src: questionImgUrl, alt: 'Hình ảnh câu hỏi' })) : null,
           renderQuestionBody(q),
           renderFeedback(q),
