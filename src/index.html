@@ -9,14 +9,10 @@
     >
     <title>Study App</title>
     <link rel="stylesheet" href="./styles.css">
-    <script src="./app.js" defer></script>
+    <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <main class="welcome">
-      <p class="eyebrow">STUDY APP</p>
-      <h1>Chào mừng bạn</h1>
-      <p>Môi trường ứng dụng đã sẵn sàng. Các chức năng học sẽ được xây dựng theo từng giai đoạn.</p>
-      <p id="runtime" class="runtime" aria-live="polite"></p>
-    </main>
+    <div id="notices" class="notices" aria-live="polite"></div>
+    <main id="app" class="app"></main>
   </body>
 </html>

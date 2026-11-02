@@ -1,11 +1,12 @@
-SS{
+{
   "name": "study-app",
   "version": "0.1.0",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
   "main": "main.js",
   "scripts": {
     "test": "node --test",
-    "start": "electron ."
+    "start": "electron .",
+    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples"
   },
   "repository": {
     "type": "git",

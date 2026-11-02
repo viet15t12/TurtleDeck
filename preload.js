@@ -1,5 +1,15 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('studyApp', {
-  platform: process.platform,
+// Renderer chỉ gọi main qua window.api (contextIsolation: true, nodeIntegration: false).
+// GĐ1: mở / nhập / lưu / đóng bộ thẻ, tiến độ, cài đặt. Editor và ảnh (newDeck, asset:*) bổ sung ở GĐ2C.
+contextBridge.exposeInMainWorld('api', {
+  platform:     process.platform,
+  openDecks:    filePath => ipcRenderer.invoke('deck:open', filePath),
+  importDeck:   kind => ipcRenderer.invoke('deck:import', kind),          // kind: 'file' | 'dir'
+  saveDeck:     (deckKey, deckText, opts) => ipcRenderer.invoke('deck:save', { deckKey, deckText, ...opts }),
+  closeDeck:    deckKey => ipcRenderer.invoke('deck:close', deckKey),
+  loadProgress: () => ipcRenderer.invoke('progress:load'),
+  saveProgress: d => ipcRenderer.invoke('progress:save', d),
+  loadSettings: () => ipcRenderer.invoke('settings:load'),
+  saveSettings: d => ipcRenderer.invoke('settings:save', d),
 });

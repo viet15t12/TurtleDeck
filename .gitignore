@@ -2,3 +2,5 @@ node_modules/
 dist/
 release/
 npm-debug.log*
+data/samples/
+*.tmp

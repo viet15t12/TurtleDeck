@@ -10,3 +10,15 @@ test('Electron app entry files and renderer are present', () => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });
+
+test('Phase 1 core modules, views and dev tool are present', () => {
+  for (const file of [
+    'src/core/sdeck.js', 'src/core/parser.js', 'src/core/validate.js', 'src/core/deckmodel.js', 'src/core/fsutil.js',
+    'src/views/home.js', 'src/views/deck.js', 'tools/sdeck.mjs',
+    'data/samples-src/lpic-sample/deck.json', 'data/samples-src/vocab-sample/deck.json',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+  const corePkg = JSON.parse(fs.readFileSync(path.join(root, 'src/core/package.json'), 'utf8'));
+  assert.equal(corePkg.type, 'module');
+});

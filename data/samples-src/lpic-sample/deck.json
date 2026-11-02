@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "id": "lpic-sample",
+    "title": "LPIC-1 101 — mẫu",
+    "kind": "quiz",
+    "lang": "vi",
+    "format": "studydeck",
+    "formatVersion": 1
+  },
+  "items": [
+    {
+      "id": "101.1-001",
+      "type": "single",
+      "topic": "101.1",
+      "tags": ["hardware"],
+      "question": "Lệnh nào liệt kê các thiết bị PCI?",
+      "choices": ["lsusb", "lspci", "lsmod", "lshw -usb"],
+      "answer": [1],
+      "explanation": "`lspci` liệt kê thiết bị PCI; `lsusb` dành cho USB, `lsmod` liệt kê module kernel đã nạp."
+    },
+    {
+      "id": "101.1-002",
+      "type": "multi",
+      "topic": "101.1",
+      "tags": ["kernel", "module"],
+      "question": "Chọn HAI lệnh dùng để nạp module kernel.",
+      "choices": ["modprobe", "insmod", "rmmod", "lsmod"],
+      "answer": [0, 1],
+      "explanation": "`modprobe` (tự xử lý phụ thuộc) và `insmod` (nạp trực tiếp file `.ko`) đều nạp module; `rmmod` gỡ module."
+    },
+    {
+      "id": "101.2-003",
+      "type": "fill",
+      "topic": "101.2",
+      "tags": ["boot"],
+      "question": "Trên hệ thống systemd, tiến trình đầu tiên (PID 1) có tên là ___",
+      "answer": ["systemd", "/sbin/init", "init"],
+      "match": "normalized",
+      "explanation": "Với systemd, `/sbin/init` là liên kết tới `systemd`."
+    },
+    {
+      "id": "102.4-020",
+      "type": "command",
+      "topic": "102.4",
+      "tags": ["rpm", "package"],
+      "question": "Liệt kê tất cả gói đã cài bằng `rpm`.",
+      "answer": ["rpm -qa", "rpm --query --all", "rpm -aq"],
+      "match": "normalized",
+      "explanation": "`-q` = query, `-a` = all."
+    },
+    {
+      "id": "104.6-001",
+      "type": "card",
+      "topic": "104.6",
+      "tags": ["filesystem"],
+      "front": "inode là gì?",
+      "back": "Cấu trúc lưu **metadata** của file (quyền, chủ sở hữu, kích thước, vị trí khối dữ liệu…), **không** chứa tên file.",
+      "answerImage": "img/inode.svg"
+    }
+  ]
+}
+

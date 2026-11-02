@@ -3,6 +3,16 @@
   font-family: system-ui, sans-serif;
   color: #172033;
   background: #f4f6fb;
+  --accent: #4a62c7;
+  --accent-soft: #e8ecfb;
+  --border: #e1e6f0;
+  --muted: #596579;
+  --warn: #9a6200;
+  --warn-soft: #fff4dc;
+  --error: #b42318;
+  --error-soft: #fdecea;
+  --ok: #1b7a43;
+  --ok-soft: #e5f6ec;
 }
 
 * {
@@ -13,37 +23,246 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  display: grid;
-  place-items: center;
 }
 
-.welcome {
-  width: min(600px, calc(100% - 48px));
-  padding: 40px;
-  border: 1px solid #e1e6f0;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 16px 48px rgb(23 32 51 / 8%);
+.app {
+  width: min(1040px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
 }
 
 .eyebrow {
-  color: #4a62c7;
+  margin: 0 0 4px;
+  color: var(--accent);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 
 h1 {
+  margin: 0 0 8px;
+  font-size: 1.75rem;
+}
+
+h2 {
   margin: 0 0 12px;
-  font-size: 2rem;
+  font-size: 1.05rem;
 }
 
-.welcome > p:not(.eyebrow) {
-  color: #596579;
-  line-height: 1.6;
+.muted { color: var(--muted); }
+.error-text { color: var(--error); }
+
+/* ── Đầu trang và nút ─────────────────────────────────────── */
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.runtime {
-  margin-bottom: 0;
-  font-size: 0.875rem;
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: #3b51ad; }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 10px; font-size: 0.85rem; }
+.btn.back { margin-bottom: 12px; padding-left: 0; border: 0; color: var(--accent); }
+
+.menu-wrap { position: relative; }
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  min-width: 240px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(23 32 51 / 12%);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover { background: var(--accent-soft); }
+
+/* ── Home: danh sách bộ thẻ ───────────────────────────────── */
+
+.deck-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.deck-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.deck-row[role="button"] { cursor: pointer; }
+.deck-row[role="button"]:hover,
+.deck-row[role="button"]:focus-visible { border-color: var(--accent); outline: none; }
+.deck-row.bad { border-color: #f3c5c0; background: #fffafa; }
+.deck-row.loading { opacity: 0.6; }
+
+.deck-main { min-width: 0; }
+.deck-title { font-weight: 600; font-size: 1.05rem; }
+
+.deck-sub {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.deck-path, .deck-meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.deck-meta { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; }
+.deck-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.empty {
+  padding: 40px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+}
+
+/* ── Nhãn ─────────────────────────────────────────────────── */
+
+.chip, .tag, .badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chip { background: var(--accent-soft); color: var(--accent); }
+.tag { margin: 0 4px 2px 0; background: #eef0f4; color: var(--muted); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.unsaved { margin-left: 8px; background: var(--warn-soft); color: var(--warn); font-weight: 500; vertical-align: middle; }
+
+/* ── Deck view ────────────────────────────────────────────── */
+
+.panel {
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.table-wrap { overflow-x: auto; }
+
+table.items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.items th, .items td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.items th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+.items .num { width: 40px; color: var(--muted); text-align: right; }
+
+.issues { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+
+.issue {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.issue.warn { background: var(--warn-soft); color: #5c3b00; }
+.issue.error { background: var(--error-soft); color: #7a1a12; }
+.issue-icon { font-weight: 700; }
+.issue code { padding: 0 4px; border-radius: 4px; background: rgb(0 0 0 / 6%); }
+
+/* ── Thông báo ────────────────────────────────────────────── */
+
+.notices {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  display: grid;
+  gap: 8px;
+  width: min(440px, calc(100% - 32px));
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(23 32 51 / 12%);
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+
+.notice.success { border-color: #b9e3c9; background: var(--ok-soft); }
+.notice.warn { border-color: #f0d9a8; background: var(--warn-soft); }
+.notice.error { border-color: #f3c5c0; background: var(--error-soft); }
+.notice-text { flex: 1; }
+
+.notice-close {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
 }
