@@ -381,6 +381,8 @@ study-app/
 │   │   ├── sdeck.js        # đọc/ghi gói .sdeck (fflate), kiểm tra tên entry, giới hạn, nhận dạng ảnh
 │   │   ├── parser.js       # deck.json + nhập csv/md -> items
 │   │   ├── validate.js     # validateItem/validateDeck dùng chung cho parser và Editor
+│   │   ├── deckkinds.js    # KINDS (qa/quiz/vocab), inferKind, kindOf, allowedTypes, modesFor, mismatchedItems
+│   │   ├── deckstats.js    # deckStats (new, learning, due, mastered, newLeftToday, lastStudied)
 │   │   ├── deckmodel.js    # thao tác soạn: newDeck/newItem/add/remove/move/update, undo-redo, ảnh dùng/không dùng
 │   │   ├── builder.js      # item -> question (mc, write, cloze, listen)
 │   │   ├── grader.js

@@ -36,7 +36,7 @@ function formatTimeHHMM(date) {
   return `${hh}:${mm}`;
 }
 
-export function renderEditor(root, { entry }, actions) {
+export function renderEditor(root, { entry, initialItemId }, actions) {
   const api = window.api;
   const deckKey = entry.deckKey;
   const rich = makeRich(deckKey);
@@ -53,7 +53,9 @@ export function renderEditor(root, { entry }, actions) {
   }
 
   const history = createHistory(initialDeck, 100);
-  let activeId = initialDeck.items[0]?.id || null;
+  let activeId = (initialItemId && initialDeck.items.some(i => i.id === initialItemId))
+    ? initialItemId
+    : (initialDeck.items[0]?.id || null);
   let dirty = !entry.path;
   let lastSavedAt = entry.path ? new Date() : null;
   let assetsList = [];
@@ -1328,6 +1330,9 @@ export function renderEditor(root, { entry }, actions) {
   formPane.render();
   previewPane.render(getActiveItem(), { immediate: true });
   root.replaceChildren(shellEl);
+  if (initialItemId && activeId) {
+    queueMicrotask(() => listPane.scrollToItem(activeId));
+  }
 
   loadLayoutSettings();
   refreshAssets();

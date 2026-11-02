@@ -117,15 +117,15 @@ Từ ảnh hiện tại, cần sửa:
 
 ## 7. Nghiệm thu
 
-- [ ] Mở bộ thẻ cũ không có `meta.kind` → nhận đúng loại suy ra, không báo lỗi; Lưu lại thì file có `meta.kind`.
-- [ ] Tạo mới bằng ba ô loại: `Thẻ ghi nhớ` chỉ cho thêm mục dạng Thẻ; `Đề luyện thi` không có dạng Thẻ; `Từ vựng` mờ với chú thích.
-- [ ] Bộ `quiz` chứa một mục `card`: Deck view có cảnh báo nhẹ, mục vẫn học được trong *Ôn hôm nay*, không bị xoá.
-- [ ] Home: không còn đường dẫn file hay chữ `quiz`; dải "Hôm nay" và thanh tiến độ khớp `progress.json` (so với test `deckStats`); nút chính đổi thành "Hôm nay đã xong ✓" khi N = 0.
-- [ ] `Học ▾` chỉ liệt kê chế độ đã có của loại đó; không có nút dẫn tới màn chưa làm.
-- [ ] Session: không còn chữ `card` / `fill` / "SRS" / "Again"; thanh tiến độ chia đoạn có màu; thẻ lật có nút `Hiện đáp án`; phản hồi câu Điền hiện hai cột với chip đáp án.
-- [ ] Học thử từ Editor vẫn không ghi `progress.json` và hiện dải "không lưu tiến độ".
-- [ ] Ở 1920×1080 và 1280×720 không có thanh cuộn ngang; mọi nút/ô dùng chung style với Editor.
-- [ ] Test xanh: `deckkinds` (`inferKind`, `allowedTypes`, `modesFor`, `mismatchedItems`), `deckstats` (đúng số mới/học/đến hạn/thuộc, hạn mức thẻ mới theo ngày địa phương), parser (thiếu `kind`, `kind` lạ).
+- [x] Mở bộ thẻ cũ không có `meta.kind` → nhận đúng loại suy ra, không báo lỗi; Lưu lại thì file có `meta.kind`.
+- [x] Tạo mới bằng ba ô loại: `Thẻ ghi nhớ` chỉ cho thêm mục dạng Thẻ; `Đề luyện thi` không có dạng Thẻ; `Từ vựng` mờ với chú thích.
+- [x] Bộ `quiz` chứa một mục `card`: Deck view có cảnh báo nhẹ, mục vẫn học được trong *Ôn hôm nay*, không bị xoá.
+- [x] Home: không còn đường dẫn file hay chữ `quiz`; dải "Hôm nay" và thanh tiến độ khớp `progress.json` (so với test `deckStats`); nút chính đổi thành "Hôm nay đã xong ✓" khi N = 0.
+- [x] `Học ▾` chỉ liệt kê chế độ đã có của loại đó; không có nút dẫn tới màn chưa làm.
+- [x] Session: không còn chữ `card` / `fill` / "SRS" / "Again"; thanh tiến độ chia đoạn có màu; thẻ lật có nút `Hiện đáp án`; phản hồi câu Điền hiện hai cột với chip đáp án.
+- [x] Học thử từ Editor vẫn không ghi `progress.json` và hiện dải "không lưu tiến độ".
+- [x] Ở 1920×1080 và 1280×720 không có thanh cuộn ngang; mọi nút/ô dùng chung style với Editor.
+- [x] Test xanh: `deckkinds` (`inferKind`, `allowedTypes`, `modesFor`, `mismatchedItems`), `deckstats` (đúng số mới/học/đến hạn/thuộc, hạn mức thẻ mới theo ngày địa phương), parser (thiếu `kind`, `kind` lạ).
 
 ---
 

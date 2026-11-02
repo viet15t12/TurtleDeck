@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   importDeck:   kind => ipcRenderer.invoke('deck:import', kind),          // kind: 'file' | 'dir'
   saveDeck:     (deckKey, deckText, opts) => ipcRenderer.invoke('deck:save', { deckKey, deckText, ...opts }),
   closeDeck:    deckKey => ipcRenderer.invoke('deck:close', deckKey),
+  showInFolder: filePath => ipcRenderer.invoke('deck:showInFolder', filePath),
   addImages:    deckKey => ipcRenderer.invoke('asset:add', deckKey),
   addImageBytes:(deckKey, name, bytes) => ipcRenderer.invoke('asset:addBytes', deckKey, name, bytes),
   listAssets:   deckKey => ipcRenderer.invoke('asset:list', deckKey),

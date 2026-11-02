@@ -146,12 +146,20 @@ const actions = {
     render();
   },
 
-  openEditor(entry) {
-    state.route = { name: 'editor', uid: entry.uid };
+  openEditor(entry, initialItemId = null) {
+    state.route = { name: 'editor', uid: entry.uid, itemId: initialItemId };
     render();
   },
 
-  openNewDeckModal() {
+  async showInFolder(entry) {
+    if (!entry?.path) return;
+    const r = await api.showInFolder?.(entry.path);
+    if (r && r.ok === false) {
+      notify(r.error || 'Không mở được thư mục chứa file.', 'warn');
+    }
+  },
+
+  openNewDeckModal(preselectedKind) {
     state.modal = renderNewDeckModal(
       async ({ title, kind, description, lang }) => {
         state.modal = null;
@@ -175,7 +183,8 @@ const actions = {
         state.route = { name: 'editor', uid: entry.uid };
         render();
       },
-      () => { state.modal = null; render(); }
+      () => { state.modal = null; render(); },
+      preselectedKind
     );
     render();
   },
@@ -337,7 +346,8 @@ function renderSessionModal(entry, onStart, onCancel) {
   if (items.length > 20) countOptions.push({ value: 20, label: '20 câu' });
 
   const selectEl = h('select', {
-    class: 'form-control',
+    class: 'ux-select',
+    style: 'width: 100%;',
     onchange: ev => { selectedCount = Number(ev.target.value); },
   }, countOptions.map(opt => h('option', { value: opt.value }, opt.label)));
 
@@ -358,29 +368,30 @@ function renderSessionModal(entry, onStart, onCancel) {
 
   const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
     h('div', { class: 'modal-dialog' },
-      h('h2', null, 'Bắt đầu phiên học tuỳ chọn'),
+      h('h2', null, 'Bắt đầu phiên luyện tập'),
       h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' }, entry.deck.meta.title),
       h('div', { class: 'form-group' },
-        h('label', null, 'Số lượng câu hỏi:'),
+        h('label', null, 'Số lượng mục:'),
         selectEl),
       h('div', { class: 'form-group' },
-        h('label', null, 'Thứ tự câu hỏi:'),
+        h('label', null, 'Thứ tự hiển thị:'),
         h('div', { class: 'radio-group' },
-          h('label', { class: 'radio-label' }, fileOrderRadio, 'Theo file'),
+          h('label', { class: 'radio-label' }, fileOrderRadio, 'Theo thứ tự bộ thẻ'),
           h('label', { class: 'radio-label' }, randomOrderRadio, 'Ngẫu nhiên'))),
       h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px;' },
-        h('button', { class: 'btn ghost', onclick: onCancel }, 'Huỷ'),
+        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
         h('button', {
-          class: 'btn primary',
+          type: 'button',
+          class: 'ux-btn primary',
           onclick: () => onStart({ mode: 'custom', count: selectedCount, shuffle: shuffleOrder }),
         }, 'Bắt đầu học'))));
 
   return modal;
 }
 
-function renderNewDeckModal(onCreate, onCancel) {
+function renderNewDeckModal(onCreate, onCancel, preselectedKind) {
   let title = '';
-  let kind = 'quiz';
+  let kind = (typeof preselectedKind === 'string' && KINDS[preselectedKind]?.available) ? preselectedKind : 'quiz';
   let description = '';
   let lang = 'vi';
   let errorText = '';
@@ -619,7 +630,7 @@ function render() {
   if (state.route.name === 'editor') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      renderEditor(root, { entry }, actions);
+      renderEditor(root, { entry, initialItemId: state.route.itemId || null }, actions);
       if (state.modal) root.append(state.modal);
       return;
     }
@@ -671,7 +682,9 @@ function render() {
 }
 
 // bấm ra ngoài thì đóng mọi menu thả xuống
-document.addEventListener('click', () => document.querySelectorAll('.menu').forEach(m => { m.hidden = true; }));
+document.addEventListener('click', () => {
+  document.querySelectorAll('.menu, .ux-popover[data-dropdown]').forEach(m => { m.hidden = true; });
+});
 
 // Khởi động: đọc settings + progress, tự nạp lại các bộ thẻ đã mở lần trước
 async function init() {

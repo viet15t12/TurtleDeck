@@ -1,61 +1,146 @@
-// src/views/deck.js — Deck view: thông tin bộ thẻ, bảng item (rút gọn) và danh sách cảnh báo / mục bị bỏ qua.
-import { h, shorten, fileName } from './dom.js';
+// src/views/deck.js — Deck view (GĐ3B Lượt 2): huy hiệu loại, 4 ô số thống kê, thẻ Chế độ học theo loại,
+// khối cảnh báo thu gọn, bảng mục có tìm kiếm & lọc (Dạng/Chủ đề/Trạng thái), bấm dòng mở Editor tại đúng mục.
+import { h, fileName } from './dom.js';
 import { toPlain } from '../core/richtext.js';
-import { KINDS, kindOf, kindLabel, itemTypeLabel, mismatchedItems, formatMismatchWarning } from '../core/deckkinds.js';
+import {
+  KINDS,
+  kindOf,
+  kindLabel,
+  modesFor,
+  detectItemType,
+  itemTypeLabel,
+  mismatchedItems,
+  formatMismatchWarning,
+} from '../core/deckkinds.js';
 import { deckStats } from '../core/deckstats.js';
+import { cardKey, DAY } from '../core/srs.js';
+import { stripAccents } from '../core/deckmodel.js';
 
 const choiceText = c => typeof c === 'string' ? c : [c?.text, c?.image ? `[ảnh ${c.image}]` : ''].filter(Boolean).join(' ');
 
-// nội dung chính + đáp án của item, dạng văn bản thuần rút gọn
-function summarize(it) {
-  const type = it.type ?? 'vocab';
+const MODE_ICONS = {
+  srs: '📅',
+  all: '🗂',
+  practice: '🎯',
+  flashcards: '🔤',
+};
+
+function createSearchSvg() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.6');
+  svg.setAttribute('class', 'ux-search-icon');
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', '7');
+  circle.setAttribute('cy', '7');
+  circle.setAttribute('r', '4.8');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  line.setAttribute('d', 'M10.6 10.6L14 14');
+  line.setAttribute('stroke-linecap', 'round');
+  svg.append(circle, line);
+  return svg;
+}
+
+// Nội dung chính + đáp án của item dạng văn bản thuần (toPlain)
+function summarize(it, deckKind) {
+  const type = detectItemType(it, deckKind) || 'vocab';
   switch (type) {
-    case 'single': case 'multi':
-      return { type, main: toPlain(it.question), answer: toPlain((it.answer || []).map(i => choiceText(it.choices?.[i])).join(' · ')) };
-    case 'fill': case 'command':
-      return { type, main: toPlain(it.question), answer: toPlain(it.answerDisplay || (it.answer || []).join(' | ')) };
+    case 'single':
+    case 'multi':
+      return {
+        type,
+        main: toPlain(it.question),
+        answer: toPlain((it.answer || []).map(i => choiceText(it.choices?.[i])).join(' · ')),
+      };
+    case 'fill':
+    case 'command':
+      return {
+        type,
+        main: toPlain(it.question),
+        answer: toPlain(it.answerDisplay || (it.answer || []).join(' · ')),
+      };
     case 'card':
-      return { type, main: toPlain(it.front), answer: toPlain(it.back) };
+      return {
+        type,
+        main: toPlain(it.front),
+        answer: toPlain(it.back),
+      };
     default:
-      return { type: 'vocab', main: toPlain(it.term), answer: toPlain(it.definition) };
+      return {
+        type: 'vocab',
+        main: toPlain(it.term),
+        answer: toPlain(it.definition),
+      };
   }
 }
 
-function itemTable(items) {
-  if (!items.length) return h('p', { class: 'muted' }, 'Không có mục nào học được.');
-  return h('div', { class: 'table-wrap' },
-    h('table', { class: 'items' },
-      h('thead', null, h('tr', null,
-        h('th', { class: 'num' }, '#'), h('th', null, 'Dạng'), h('th', null, 'Câu hỏi / Từ'),
-        h('th', null, 'Đáp án / Nghĩa'), h('th', null, 'Chủ đề'), h('th', null, 'Nhãn'))),
-      h('tbody', null, items.map((it, i) => {
-        const s = summarize(it);
-        return h('tr', null,
-          h('td', { class: 'num' }, i + 1),
-          h('td', null, h('span', { class: `chip type-${s.type}` }, itemTypeLabel(s.type))),
-          h('td', { title: String(s.main ?? '') }, shorten(s.main)),
-          h('td', { class: 'muted', title: String(s.answer ?? '') }, shorten(s.answer, 60)),
-          h('td', null, it.topic ?? ''),
-          h('td', null, (it.tags || []).map(t => h('span', { class: 'tag' }, t))));
-      }))));
+// Xác định trạng thái học của từng mục để hiển thị và lọc trên bảng
+function getItemStudyStatus(deckId, item, progress, now) {
+  const cards = progress?.cards || {};
+  const key = cardKey(deckId, item.id, 'fwd');
+  const c = cards[key] || cards[item.id] || null;
+  if (!c || c.state === 'new') {
+    return { key: 'new', label: 'Mới', cls: 'status-new' };
+  }
+  if (c.state === 'learning' || c.state === 'relearning') {
+    return { key: 'learning', label: 'Đang học', cls: 'status-learning' };
+  }
+  if (c.state === 'review') {
+    if ((c.due || 0) <= now) {
+      return { key: 'due', label: 'Đến hạn', cls: 'status-due' };
+    }
+    const diffDays = Math.max(1, Math.ceil((c.due - now) / DAY));
+    const dueText = diffDays === 1 ? 'Ôn · đến hạn mai' : `Ôn · còn ${diffDays} ngày`;
+    return { key: 'mastered', label: dueText, cls: 'status-mastered' };
+  }
+  return { key: 'new', label: 'Mới', cls: 'status-new' };
 }
 
-function issueList(issues) {
-  if (!issues.length) return h('p', { class: 'muted' }, 'Không có cảnh báo.');
+function renderStackedBar(st) {
+  const total = st.new + st.learning + st.due + st.mastered;
+  if (total <= 0) {
+    return h('div', { class: 'deck-stacked-bar empty-bar' });
+  }
+  const pct = n => `${Math.max(0, (n / total) * 100).toFixed(2)}%`;
+  return h('div', {
+    class: 'deck-stacked-bar',
+    title: `Đã thuộc: ${st.mastered} · Đến hạn: ${st.due} · Đang học: ${st.learning} · Mới: ${st.new}`,
+  },
+    st.mastered > 0 ? h('div', { class: 'seg seg-mastered', style: `width: ${pct(st.mastered)}` }) : null,
+    st.due > 0 ? h('div', { class: 'seg seg-due', style: `width: ${pct(st.due)}` }) : null,
+    st.learning > 0 ? h('div', { class: 'seg seg-learning', style: `width: ${pct(st.learning)}` }) : null,
+    st.new > 0 ? h('div', { class: 'seg seg-new', style: `width: ${pct(st.new)}` }) : null);
+}
+
+function renderCollapsibleIssues(issues) {
+  if (!issues.length) return null;
   const sorted = [...issues].sort((a, b) => (a.level === 'error' ? 0 : 1) - (b.level === 'error' ? 0 : 1));
-  return h('ul', { class: 'issues' }, sorted.map(i =>
-    h('li', { class: `issue ${i.level}` },
-      h('span', { class: 'issue-icon' }, i.level === 'error' ? '✕' : '⚠'),
-      h('span', null,
-        i.itemId && !i.skipped ? h('code', null, i.itemId) : null,
-        i.itemId && !i.skipped ? ' ' : null,
-        i.msg))));
+  const errCount = sorted.filter(i => i.level === 'error' || i.skipped).length;
+  const warnCount = sorted.length - errCount;
+  const parts = [];
+  if (errCount > 0) parts.push(`${errCount} mục lỗi bị bỏ qua`);
+  if (warnCount > 0) parts.push(`${warnCount} cảnh báo`);
+
+  return h('details', { class: 'deck-issues-collapse' },
+    h('summary', { class: 'deck-issues-summary' },
+      h('span', { class: 'issue-icon' }, '⚠'),
+      h('span', { style: 'font-weight: 600;' }, `Cảnh báo / mục cần lưu ý (${parts.join(', ')})`),
+      h('span', { class: 'muted', style: 'margin-left: auto; font-size: 12px;' }, 'Bấm để xem chi tiết ▾')),
+    h('ul', { class: 'issues', style: 'margin-top: 10px;' }, sorted.map(i =>
+      h('li', { class: `issue ${i.level}` },
+        h('span', { class: 'issue-icon' }, i.level === 'error' ? '✕' : '⚠'),
+        h('span', null, i.msg)))));
 }
 
 export function renderDeck(root, entry, actions, { progress, settings } = {}) {
+  const now = Date.now();
   const { meta, items } = entry.deck;
+  const deckId = meta?.id || 'deck';
   const kind = kindOf(entry.deck);
   const kInfo = KINDS[kind];
+
   const rawIssues = entry.issues || [];
   const mismatched = mismatchedItems(entry.deck);
   const hasMismatchInIssues = rawIssues.some(i => i.mismatch || (i.msg && i.msg.includes('nằm trong bộ')));
@@ -63,41 +148,298 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     ? [...rawIssues, { level: 'warn', mismatch: true, msg: formatMismatchWarning(entry.deck) }]
     : rawIssues;
 
-  const skipped = issues.filter(i => i.skipped).length;
-  const st = deckStats(entry.deck, progress, settings, Date.now());
+  const st = deckStats(entry.deck, progress, settings, now);
   const dueToday = st.due + st.learning;
   const totalToday = dueToday + st.newLeftToday;
   const totalValid = st.new + st.learning + st.due + st.mastered;
+  const modes = modesFor(kind);
+
+  // 1. Đầu trang: huy hiệu loại, tên, mô tả, nút Sửa bộ thẻ
+  const headerEl = h('header', { class: 'page-head deck-view-head' },
+    h('div', { class: 'deck-view-title-block' },
+      h('button', { type: 'button', class: 'ux-btn ghost sm back-btn', onclick: actions.home }, '← Về trang chủ'),
+      h('div', { class: 'deck-view-badges' },
+        h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
+        entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu'),
+        entry.assetCount ? h('span', { class: 'ux-chip', style: 'cursor: default;' }, `🖼 ${entry.assetCount} ảnh`) : null),
+      h('h1', { class: 'deck-view-h1' }, meta.title),
+      meta.description ? h('p', { class: 'deck-view-desc muted' }, meta.description) : null),
+    h('div', { class: 'toolbar' },
+      h('button', {
+        type: 'button',
+        class: 'ux-btn primary',
+        onclick: () => actions.openEditor(entry),
+      }, '✏ Sửa bộ thẻ'),
+      actions.openDeckInfoModal ? h('button', {
+        type: 'button',
+        class: 'ux-btn',
+        onclick: () => actions.openDeckInfoModal(entry),
+      }, 'ℹ Thông tin') : null,
+      entry.path ? null : h('button', {
+        type: 'button',
+        class: 'ux-btn',
+        onclick: () => actions.saveAs(entry),
+      }, '💾 Lưu thành .sdeck…'),
+      h('button', {
+        type: 'button',
+        class: 'ux-btn ghost danger-hover',
+        onclick: () => actions.remove(entry),
+      }, 'Gỡ khỏi danh sách')));
+
+  // 2. Bốn ô số thống kê (Mới, Đang học, Đến hạn, Đã thuộc) + thanh phân bổ
+  const statsSection = h('section', { class: 'deck-stats-panel panel' },
+    h('div', { class: 'deck-stat-boxes' },
+      h('div', { class: 'deck-stat-box' },
+        h('div', { class: 'deck-stat-label' }, 'Mới'),
+        h('div', { class: 'deck-stat-num num-new' }, String(st.new)),
+        h('div', { class: 'deck-stat-sub muted' }, `Hạn mức hôm nay: ${st.newLeftToday}`)),
+      h('div', { class: 'deck-stat-box' },
+        h('div', { class: 'deck-stat-label' }, 'Đang học'),
+        h('div', { class: 'deck-stat-num num-learning' }, String(st.learning)),
+        h('div', { class: 'deck-stat-sub muted' }, 'Trong các bước nhắc ngắn')),
+      h('div', { class: 'deck-stat-box' },
+        h('div', { class: 'deck-stat-label' }, 'Đến hạn'),
+        h('div', { class: `deck-stat-num ${st.due > 0 ? 'num-due' : ''}` }, String(st.due)),
+        h('div', { class: 'deck-stat-sub muted' }, st.due > 0 ? 'Cần ôn tập ngay' : 'Không có thẻ trễ hạn')),
+      h('div', { class: 'deck-stat-box' },
+        h('div', { class: 'deck-stat-label' }, 'Đã thuộc'),
+        h('div', { class: 'deck-stat-num num-mastered' }, String(st.mastered)),
+        h('div', { class: 'deck-stat-sub muted' }, `Tổng ${totalValid} mục hợp lệ`))),
+    renderStackedBar(st));
+
+  // 3. Thẻ "Chế độ học" theo loại (biểu tượng + mô tả + số mục áp dụng)
+  const modesSection = h('section', { class: 'deck-modes-section' },
+    h('h2', { class: 'section-label' }, 'Chế độ học'),
+    h('div', { class: 'deck-modes-grid' },
+      ...modes.map(m => {
+        const isSrs = m.id === 'srs';
+        const icon = MODE_ICONS[m.id] || '▶';
+        const countBadgeText = isSrs
+          ? (totalToday > 0 ? `${totalToday} mục cần ôn hôm nay` : 'Hôm nay đã xong ✓')
+          : `${totalValid} mục áp dụng`;
+        const isPrimaryCard = isSrs && totalToday > 0;
+        const disabled = totalValid === 0;
+
+        return h('button', {
+          type: 'button',
+          class: `deck-mode-card ${isPrimaryCard ? 'primary-mode' : ''}`,
+          disabled,
+          onclick: () => {
+            if (disabled) return;
+            if (m.id === 'srs') actions.startSrsSession(entry);
+            else if (m.id === 'all' || m.id === 'flashcards') {
+              actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
+            } else {
+              actions.openSessionSetup(entry);
+            }
+          },
+        },
+          h('div', { class: 'deck-mode-card-top' },
+            h('span', { class: 'deck-mode-icon' }, icon),
+            h('span', { class: `ux-chip ${isPrimaryCard ? 'active' : ''}` }, countBadgeText)),
+          h('div', { class: 'deck-mode-title' }, m.label),
+          h('div', { class: 'deck-mode-desc muted' }, m.description));
+      })));
+
+  // 4. Bảng mục có tìm kiếm và lọc theo Dạng / Chủ đề / Trạng thái, bấm dòng mở Editor tại đúng mục đó
+  let searchQuery = '';
+  let filterType = 'all';
+  let filterTopic = 'all';
+  let filterStatus = 'all';
+
+  const preparedRows = items.map((it, idx) => {
+    const s = summarize(it, kind);
+    const typeLbl = itemTypeLabel(s.type);
+    const status = getItemStudyStatus(deckId, it, progress, now);
+    const topic = it.topic || '';
+    const tags = Array.isArray(it.tags) ? it.tags : [];
+    const searchBlob = stripAccents(`${s.main} ${s.answer} ${topic} ${tags.join(' ')} ${typeLbl}`);
+    return {
+      item: it,
+      index: idx + 1,
+      type: s.type,
+      typeLabel: typeLbl,
+      main: s.main,
+      answer: s.answer,
+      topic,
+      tags,
+      status,
+      searchBlob,
+    };
+  });
+
+  const distinctTypeLabels = [...new Set(preparedRows.map(r => r.typeLabel))];
+  const distinctTopics = [...new Set(preparedRows.map(r => r.topic).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+
+  const tableHost = h('div');
+  const countLabelEl = h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 400; margin-left: 8px;' });
+
+  const searchInput = h('input', {
+    type: 'text',
+    class: 'ux-input ux-search-input',
+    placeholder: 'Tìm nội dung, chủ đề, nhãn…',
+    oninput: ev => {
+      searchQuery = ev.target.value;
+      clearSearchBtn.hidden = !searchQuery;
+      renderTableBody();
+    },
+  });
+
+  const clearSearchBtn = h('button', {
+    type: 'button',
+    class: 'ux-search-clear',
+    hidden: true,
+    title: 'Xoá tìm kiếm',
+    onclick: () => {
+      searchQuery = '';
+      searchInput.value = '';
+      clearSearchBtn.hidden = true;
+      renderTableBody();
+      searchInput.focus();
+    },
+  }, '✕');
+
+  const searchWrap = h('div', { class: 'ux-search-wrap deck-table-search' });
+  searchWrap.append(createSearchSvg(), searchInput, clearSearchBtn);
+
+  const typeSelect = h('select', {
+    class: 'ux-select',
+    'aria-label': 'Lọc theo dạng mục',
+    onchange: ev => {
+      filterType = ev.target.value;
+      renderTableBody();
+    },
+  },
+    h('option', { value: 'all' }, 'Tất cả dạng'),
+    ...distinctTypeLabels.map(lbl => h('option', { value: lbl }, `Dạng: ${lbl}`)));
+
+  const topicSelect = distinctTopics.length > 0 ? h('select', {
+    class: 'ux-select',
+    'aria-label': 'Lọc theo chủ đề',
+    onchange: ev => {
+      filterTopic = ev.target.value;
+      renderTableBody();
+    },
+  },
+    h('option', { value: 'all' }, 'Tất cả chủ đề'),
+    ...distinctTopics.map(tp => h('option', { value: tp }, `Chủ đề: ${tp}`))) : null;
+
+  const statusSelect = h('select', {
+    class: 'ux-select',
+    'aria-label': 'Lọc theo trạng thái học',
+    onchange: ev => {
+      filterStatus = ev.target.value;
+      renderTableBody();
+    },
+  },
+    h('option', { value: 'all' }, 'Tất cả trạng thái'),
+    h('option', { value: 'new' }, 'Trạng thái: Mới'),
+    h('option', { value: 'learning' }, 'Trạng thái: Đang học'),
+    h('option', { value: 'due' }, 'Trạng thái: Đến hạn'),
+    h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'));
+
+  function renderTableBody() {
+    const qNorm = stripAccents(searchQuery.trim());
+    const filtered = preparedRows.filter(r => {
+      if (filterType !== 'all' && r.typeLabel !== filterType) return false;
+      if (filterTopic !== 'all' && r.topic !== filterTopic) return false;
+      if (filterStatus !== 'all' && r.status.key !== filterStatus) return false;
+      if (qNorm && !r.searchBlob.includes(qNorm)) return false;
+      return true;
+    });
+
+    countLabelEl.textContent = filtered.length === items.length
+      ? `(${items.length} mục — bấm vào dòng để sửa)`
+      : `(Hiển thị ${filtered.length} / ${items.length} mục — bấm vào dòng để sửa)`;
+
+    if (!items.length) {
+      tableHost.replaceChildren(
+        h('div', { class: 'empty', style: 'padding: 28px;' },
+          h('p', { style: 'font-weight: 600; margin: 0 0 6px;' }, 'Bộ thẻ chưa có mục nào.'),
+          h('p', { class: 'muted', style: 'margin: 0 0 14px; font-size: 13px;' }, 'Mở trình soạn để thêm câu hỏi hoặc thẻ mới.'),
+          h('button', { type: 'button', class: 'ux-btn primary sm', onclick: () => actions.openEditor(entry) }, '✏ Mở trình soạn'))
+      );
+      return;
+    }
+
+    if (!filtered.length) {
+      tableHost.replaceChildren(
+        h('div', { class: 'empty', style: 'padding: 24px;' },
+          h('p', { class: 'muted', style: 'margin: 0 0 10px;' }, 'Không có mục nào khớp với bộ lọc hiện tại.'),
+          h('button', {
+            type: 'button',
+            class: 'ux-btn sm',
+            onclick: () => {
+              searchQuery = '';
+              filterType = 'all';
+              filterTopic = 'all';
+              filterStatus = 'all';
+              searchInput.value = '';
+              clearSearchBtn.hidden = true;
+              typeSelect.value = 'all';
+              if (topicSelect) topicSelect.value = 'all';
+              statusSelect.value = 'all';
+              renderTableBody();
+            },
+          }, 'Xoá bộ lọc'))
+      );
+      return;
+    }
+
+    tableHost.replaceChildren(
+      h('div', { class: 'table-wrap' },
+        h('table', { class: 'items deck-items-table' },
+          h('thead', null, h('tr', null,
+            h('th', { class: 'num' }, '#'),
+            h('th', { style: 'width: 120px;' }, 'Dạng'),
+            h('th', null, 'Nội dung'),
+            h('th', { style: 'width: 150px;' }, 'Chủ đề'),
+            h('th', { style: 'width: 160px;' }, 'Nhãn'),
+            h('th', { style: 'width: 150px;' }, 'Trạng thái'))),
+          h('tbody', null, filtered.map(r =>
+            h('tr', {
+              class: 'deck-item-tr',
+              tabindex: '0',
+              role: 'button',
+              title: 'Bấm để mở trình soạn tại mục này',
+              onclick: () => actions.openEditor(entry, r.item.id),
+              onkeydown: ev => {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                  ev.preventDefault();
+                  actions.openEditor(entry, r.item.id);
+                }
+              },
+            },
+              h('td', { class: 'num' }, r.index),
+              h('td', null, h('span', { class: `chip type-badge type-${r.type}` }, r.typeLabel)),
+              h('td', null,
+                h('div', { class: 'item-cell-main line-clamp-2' }, r.main || '(Chưa có nội dung)'),
+                r.answer ? h('div', { class: 'item-cell-ans muted line-clamp-1' }, `→ ${r.answer}`) : null),
+              h('td', null, r.topic ? h('span', { class: 'ux-chip', style: 'cursor: pointer;' }, r.topic) : h('span', { class: 'muted' }, '—')),
+              h('td', null, r.tags.length ? r.tags.map(t => h('span', { class: 'tag' }, t)) : h('span', { class: 'muted' }, '—')),
+              h('td', null, h('span', { class: `item-status-pill ${r.status.cls}` }, r.status.label)))))))
+    );
+  }
+
+  renderTableBody();
+
+  const itemsPanel = h('section', { class: 'panel' },
+    h('div', { class: 'deck-table-head' },
+      h('h2', { style: 'margin: 0;' }, 'Danh sách mục', countLabelEl),
+      h('div', { class: 'deck-table-filters' },
+        searchWrap,
+        typeSelect,
+        topicSelect,
+        statusSelect)),
+    tableHost);
 
   root.replaceChildren(
-    h('header', { class: 'page-head' },
-      h('div', null,
-        h('button', { class: 'btn ghost back', onclick: actions.home }, '← Về trang chủ'),
-        h('h1', null,
-          h('span', { class: 'ux-kind-badge', 'data-kind': kind, style: 'margin-right: 10px; vertical-align: middle;' }, kInfo?.icon || '📝', kindLabel(kind)),
-          meta.title,
-          entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu')),
-        meta.description ? h('p', { class: 'muted', style: 'margin: 4px 0 8px;' }, meta.description) : null,
-        h('p', { class: 'deck-meta' },
-          h('span', null, `${items.length} mục học được`),
-          h('span', { class: `badge srs-counts ${dueToday > 0 ? 'has-due' : ''}` },
-            `Mới ${st.new} (hôm nay ${st.newLeftToday}) · Đang học ${st.learning} · Đến hạn ${st.due} · Đã thuộc ${st.mastered}`),
-          skipped ? h('span', { class: 'error-text' }, `${skipped} mục bị bỏ qua`) : null,
-          h('span', null, `${entry.assetCount ?? 0} ảnh`))),
-      h('div', { class: 'toolbar' },
-        totalValid > 0 ? h('button', {
-          class: 'btn primary',
-          onclick: () => actions.startSrsSession(entry),
-        }, totalToday > 0 ? `▶ Ôn hôm nay · ${totalToday}` : '▶ Ôn hôm nay') : null,
-        items.length ? h('button', { class: 'btn', onclick: () => actions.openSessionSetup(entry) }, 'Học tuỳ chọn') : null,
-        h('button', { class: 'btn', onclick: () => actions.openEditor(entry) }, '✏ Sửa bộ thẻ'),
-        entry.path ? null : h('button', { class: 'btn', onclick: () => actions.saveAs(entry) }, 'Lưu thành .sdeck…'),
-        h('button', { class: 'btn ghost', onclick: () => actions.remove(entry) }, 'Gỡ khỏi danh sách'))),
-    h('section', { class: 'panel' },
-      h('h2', null, `Cảnh báo / mục bị bỏ qua (${issues.length})`),
-      issueList(issues)),
-    h('section', { class: 'panel' },
-      h('h2', null, `Các mục (${items.length})`),
-      itemTable(items)));
+    headerEl,
+    statsSection,
+    modesSection,
+    renderCollapsibleIssues(issues),
+    itemsPanel
+  );
+
   root.ownerDocument.title = `${meta.title} — ${fileName(entry.path) || 'Study App'}`;
 }

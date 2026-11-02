@@ -45,6 +45,7 @@ theo file study-app.md. Tuân thủ:
 | 2B | Nội dung phong phú | Công thức LaTeX (KaTeX) + ảnh svg/png/jpg trong câu hỏi, đáp án, giải thích |
 | 2C | Deck Editor | Tạo / thêm / xoá / sửa câu hỏi và ảnh bằng giao diện, lưu ra file `.sdeck` |
 | 3 | Lưu tiến độ & SRS | Lịch ôn SM-2, màn hình "ôn hôm nay" |
+| 3B | Phân loại bộ thẻ & giao diện học/quản lý | Phân loại `meta.kind` (`qa`/`quiz`/`vocab`), `core/deckkinds.js`, `core/deckstats.js`, làm lại Home, Deck view, Session, Result |
 | 4 | Vocab & tiếng Anh | Nhập CSV/Quizlet/Markdown (→ `.sdeck`), Editor cho vocab + nhập hàng loạt, sinh câu hỏi tự động, 2 chiều, TTS, cloze |
 | 5 | Learn & Match | Chế độ Learn thích ứng, Match, Exam |
 | 6 | Thống kê & tiện ích | Stats, leech, sao/ghi chú, phím tắt, dark mode, backup |
@@ -226,11 +227,20 @@ Viết test srs và một script mô phỏng 60 ngày (test/simulate.js) in ra s
 
 ---
 
+## Giai đoạn 3B — Phân loại bộ thẻ & giao diện học/quản lý
+
+> **Đặc tả đầy đủ:** Xem **`study-app-phase3b.md`** (chia 2 lượt: Lượt 1 dữ liệu `core/deckkinds.js`, `core/deckstats.js` & Editor; Lượt 2 làm lại giao diện Home, Deck view, Session, Result dùng chung `tokens.css` và `controls.css`).
+
+**Mục tiêu:** phân loại bộ thẻ theo `meta.kind` (`qa` — Thẻ ghi nhớ, `quiz` — Đề luyện thi, `vocab` — Từ vựng), đồng bộ giao diện Home / Deck view / Session / Result với hệ thống thiết kế của Editor và loại bỏ thuật ngữ kỹ thuật trên giao diện.
+
+---
+
 ## Giai đoạn 4 — Vocab & tiếng Anh
 
-**Mục tiêu:** học từ vựng kiểu Quizlet.
+**Mục tiêu:** học từ vựng kiểu Quizlet (dựa vào `meta.kind = "vocab"`, xem `study-app-phase3b.md`).
 
 **Việc cần làm**
+- Dựa vào `meta.kind` (`study-app-phase3b.md`): bật `KINDS.vocab.available = true` (bỏ nhãn *"Có ở bản sau"* trong hộp thoại tạo bộ thẻ mới) và bổ sung các chế độ học từ vựng vào `modesFor('vocab')` trong `src/core/deckkinds.js`.
 - `parser.js`: thêm CSV/TSV (có xử lý dấu ngoặc kép), định dạng Quizlet export, Markdown `## term | definition` + `- key: value`. `id` sinh bằng hash ổn định của `term` (SHA-1 rút gọn) để import lại không mất tiến độ. Các định dạng này là **định dạng nhập**: kết quả được chuyển thành gói `.sdeck` rồi lưu bằng `deck:save` (nhập vào bộ thẻ mới hoặc vào bộ thẻ đang mở trong Editor).
 - **Editor cho vocab**: form `term / definition / phonetic / pos (danh sách chọn) / example / forms (chip) / synonyms / tags / image`, nút loa nghe thử; cảnh báo khi `example` không chứa `term` hoặc `forms` (cloze sẽ bị bỏ qua).
 - **Nhập hàng loạt** trong Editor: dán văn bản (TSV/CSV/Quizlet/Markdown quiz) hoặc chọn file → xem trước dạng bảng, bỏ chọn dòng không muốn → thêm vào bộ thẻ đang soạn; id ổn định theo hash `term`, bỏ qua mục trùng với mục đã có.
@@ -260,7 +270,7 @@ thêm TTS và chế độ Nghe–Gõ. Thêm form vocab và Nhập hàng loạt v
 
 ## Giai đoạn 5 — Learn, Match, Exam
 
-**Mục tiêu:** các chế độ học phối hợp.
+**Mục tiêu:** các chế độ học phối hợp (dựa vào `meta.kind`, xem `study-app-phase3b.md`: mở thêm `Learn`, `Match` cho `qa`/`vocab` và `Exam` cho `quiz` trong `modesFor(kind)`).
 
 **Việc cần làm**
 - **Learn** (mục 6.1): `planner.js` thêm mastery 0→4 qua các stage `preview → mc-en-vi → mc-vi-en → write-vi-en → cloze`; sai thì tụt 1 bậc; không để 2 câu cùng item đứng liền nhau; đạt mastery cuối thì đẩy vào SRS. Deck quiz (LPIC) bỏ bước preview, ưu tiên `single/multi` rồi `command/fill`.

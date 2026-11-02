@@ -1,11 +1,21 @@
-// src/views/session.js — màn hình phiên học & kết quả (single, multi, fill, command, card + SRS).
-// GĐ2B: hỗ trợ KaTeX, ảnh qua asset://, choices {text, image}, answerDisplay, lightbox.
-// GĐ3: tích hợp SRS (Again/Hard/Good/Easy), planner due→learning→new, chèn lại câu sai sau 3–7 câu, persist:false cho Học thử.
+// src/views/session.js — Màn hình phiên học & kết quả (GĐ3B Lượt 2).
+// - Nhãn dạng tiếng Việt (Thẻ, Trắc nghiệm, Điền, Lệnh), không lộ chữ kỹ thuật (card/fill/SRS/Again).
+// - Thanh tiến độ chia đoạn theo câu (xanh = đúng, đỏ = sai, viền nổi = câu hiện tại).
+// - Thoát (Esc): chỉ hỏi xác nhận khi đã trả lời >= 1 câu ("Tiến độ đã được lưu theo từng câu...").
+// - Thẻ lật: nút lớn "Hiện đáp án (Space)", hiệu ứng lật ~150ms, 4 nút chấm tiếng Việt kèm thời gian dự kiến & phím 1-4.
+// - Phản hồi Điền/Lệnh: hai cột "Bạn trả lời" và "Đáp án đúng" (mỗi đáp án là một chip), thông báo thời gian hỏi lại tự nhiên.
+// - Trắc nghiệm: sau khi nộp đánh dấu xanh + ✓ cho đáp án đúng, đỏ + ✗ cho lựa chọn sai đã chọn.
+// - Màn Kết quả: vòng tròn tỉ lệ đúng SVG, thời gian, thông báo thẻ kế tiếp đến hạn, danh sách câu sai bấm xem lại, nút Học lại câu sai & Về trang chủ.
+// - Học thử từ Editor (persist:false): dải "Học thử — không lưu tiến độ" ở đầu màn.
+
 import { h } from './dom.js';
 import { makeRich, assetUrl } from '../core/richtext.js';
 import { buildSessionQuestions } from '../core/builder.js';
 import { gradeText, gradeChoices } from '../core/grader.js';
+import { itemTypeLabel } from '../core/deckkinds.js';
 import {
+  DAY,
+  MINUTE,
   RATING,
   cardKey,
   newCard,
@@ -18,11 +28,11 @@ let activeCleanup = null;
 
 const choiceText = c => typeof c === 'string' ? c : [c?.text, c?.image ? `[ảnh ${c.image}]` : ''].filter(Boolean).join(' ');
 
-const RATING_LABELS = {
-  1: 'Quên (Again)',
-  2: 'Khó (Hard)',
-  3: 'Tốt (Good)',
-  4: 'Dễ (Easy)',
+const RATING_VN_LABELS = {
+  1: 'Quên',
+  2: 'Khó',
+  3: 'Tốt',
+  4: 'Dễ',
 };
 
 // Tạo phần tử chứa HTML đã qua DOMPurify
@@ -36,6 +46,110 @@ function richEl(tag, attrs, htmlContent) {
   }
   el.innerHTML = htmlContent;
   return el;
+}
+
+function formatDurationMs(totalMs) {
+  const totalSec = Math.max(1, Math.round((totalMs || 0) / 1000));
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  if (mins === 0) return `${secs} giây`;
+  return `${mins} phút ${secs} giây`;
+}
+
+// Tính khoảng thời gian hẹn hỏi lại từ thẻ vừa cập nhật hoặc dự kiến
+function formatNextIntervalText(card, now) {
+  if (!card || !card.due) return '1 phút';
+  const diffMs = Math.max(0, card.due - now);
+  if (card.state === 'learning' || card.state === 'relearning') {
+    const mins = Math.max(1, Math.round(diffMs / MINUTE));
+    return `${mins} phút`;
+  }
+  const days = Math.max(1, card.interval || Math.round(diffMs / DAY));
+  return `${days} ngày`;
+}
+
+// Tính dòng thông báo "Thẻ kế tiếp đến hạn: ..." trên màn Kết quả
+function computeNextDueSummary(deck, progress, now) {
+  const deckId = deck?.meta?.id || 'deck';
+  const cards = progress?.cards || {};
+  const items = deck?.items || [];
+  const scheduled = [];
+
+  for (const it of items) {
+    if (!it?.id) continue;
+    const c = cards[cardKey(deckId, it.id, 'fwd')] || cards[it.id];
+    if (c && c.state !== 'new' && Number.isFinite(c.due) && c.due > 0) {
+      scheduled.push(c);
+    }
+  }
+
+  if (!scheduled.length) {
+    return 'Thẻ kế tiếp đến hạn: ngày mai (0 thẻ)';
+  }
+
+  // Tìm mốc ngày đến hạn sớm nhất
+  let minBucketDays = Infinity;
+  const bucketCounts = new Map();
+
+  for (const c of scheduled) {
+    const diffMs = c.due - now;
+    const days = diffMs <= 0 ? 0 : Math.max(1, Math.ceil(diffMs / DAY));
+    if (days < minBucketDays) minBucketDays = days;
+    bucketCounts.set(days, (bucketCounts.get(days) || 0) + 1);
+  }
+
+  const count = bucketCounts.get(minBucketDays) || 1;
+  if (minBucketDays === 0) {
+    return `Thẻ kế tiếp đến hạn: hôm nay (${count} thẻ)`;
+  }
+  if (minBucketDays === 1) {
+    return `Thẻ kế tiếp đến hạn: ngày mai (${count} thẻ)`;
+  }
+  return `Thẻ kế tiếp đến hạn: sau ${minBucketDays} ngày (${count} thẻ)`;
+}
+
+// Vẽ vòng tròn phần trăm bằng SVG thuần
+function createScoreRingSvg(pct) {
+  const size = 128;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.max(0, Math.min(100, pct)) / 100) * c;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('class', 'result-ring-svg');
+
+  const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  bgCircle.setAttribute('cx', String(size / 2));
+  bgCircle.setAttribute('cy', String(size / 2));
+  bgCircle.setAttribute('r', String(r));
+  bgCircle.setAttribute('fill', 'none');
+  bgCircle.setAttribute('stroke', 'var(--c-surface-3)');
+  bgCircle.setAttribute('stroke-width', String(stroke));
+
+  const fgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  fgCircle.setAttribute('cx', String(size / 2));
+  fgCircle.setAttribute('cy', String(size / 2));
+  fgCircle.setAttribute('r', String(r));
+  fgCircle.setAttribute('fill', 'none');
+  fgCircle.setAttribute('stroke', pct >= 80 ? 'var(--c-ok)' : pct >= 50 ? 'var(--c-primary)' : 'var(--c-warn)');
+  fgCircle.setAttribute('stroke-width', String(stroke));
+  fgCircle.setAttribute('stroke-linecap', 'round');
+  fgCircle.setAttribute('stroke-dasharray', String(c));
+  fgCircle.setAttribute('stroke-dashoffset', String(offset));
+  fgCircle.setAttribute('transform', `rotate(-90 ${size / 2} ${size / 2})`);
+
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', '50%');
+  text.setAttribute('y', '52%');
+  text.setAttribute('dominant-baseline', 'middle');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('class', 'result-ring-text');
+  text.textContent = `${pct}%`;
+
+  svg.append(bgCircle, fgCircle, text);
+  return svg;
 }
 
 // Lightbox xem ảnh phóng to (Esc hoặc bấm ngoài để đóng)
@@ -54,6 +168,7 @@ function showLightbox(src, alt) {
   function onEsc(e) {
     if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       close();
     }
   }
@@ -62,7 +177,7 @@ function showLightbox(src, alt) {
     if (e.target === backdrop) close();
   };
 
-  window.addEventListener('keydown', onEsc);
+  window.addEventListener('keydown', onEsc, true);
   document.body.append(backdrop);
 }
 
@@ -81,6 +196,24 @@ function attachImageHandlers(container) {
       img.replaceWith(missing);
     };
   });
+}
+
+// Tạo danh sách chip đáp án chấp nhận (không nối bằng dấu |)
+function buildAcceptedAnswerChips(q, rich) {
+  const chips = [];
+  const seen = new Set();
+  if (q.answerDisplay && String(q.answerDisplay).trim()) {
+    const disp = String(q.answerDisplay).trim();
+    seen.add(disp);
+    chips.push(richEl('span', { class: 'answer-chip correct-chip' }, rich.inline(disp)));
+  }
+  for (const ans of (q.answers || [])) {
+    const s = String(ans ?? '').trim();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    chips.push(richEl('span', { class: 'answer-chip correct-chip' }, rich.inline(s)));
+  }
+  return chips;
 }
 
 export function renderSession(root, { entry, config = {}, progress, settings, onRecordReview }, actions) {
@@ -111,21 +244,28 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         deckKind,
       });
 
+  const trialBanner = !persist
+    ? h('div', { class: 'trial-banner', role: 'status' },
+        h('span', { class: 'trial-banner-dot' }, '●'),
+        h('span', null, 'Học thử — không lưu tiến độ'))
+    : null;
+
   if (!questions.length) {
     root.replaceChildren(
       h('div', { class: 'session-container' },
+        trialBanner,
         h('div', { class: 'empty' },
-          h('h2', null, isSrsMode ? '🎉 Bạn đã hoàn thành lịch ôn hôm nay!' : 'Không có câu hỏi nào để học'),
+          h('h2', null, isSrsMode ? '🎉 Bạn đã hoàn thành lịch ôn hôm nay!' : 'Không có mục nào để học'),
           h('p', { class: 'muted' },
             isSrsMode
-              ? 'Hiện không còn thẻ nào đến hạn ôn tập hoặc thẻ mới trong hạn mức hôm nay. Bạn có thể quay lại vào ngày mai hoặc chọn học tự do.'
-              : 'Bộ thẻ không có câu hỏi hợp lệ hoặc danh sách câu cần học rỗng.'),
+              ? 'Hiện không còn thẻ nào đến hạn ôn tập hoặc thẻ mới trong hạn mức hôm nay. Bạn có thể quay lại vào ngày mai hoặc chọn luyện tập tự do.'
+              : 'Bộ thẻ không có mục hợp lệ hoặc danh sách mục cần học đang trống.'),
           h('div', { class: 'toolbar', style: 'justify-content: center; margin-top: 16px;' },
             isSrsMode
-              ? h('button', { class: 'btn primary', onclick: () => actions.openSessionSetup(entry) }, 'Học tuỳ chọn')
+              ? h('button', { type: 'button', class: 'ux-btn primary', onclick: () => actions.openSessionSetup(entry) }, 'Luyện tập tự do')
               : null,
-            h('button', { class: isSrsMode ? 'btn' : 'btn primary', onclick: () => actions.openDeckView(entry) }, '← Quay lại bộ thẻ'),
-            h('button', { class: 'btn ghost', onclick: actions.home }, 'Về Home'))))
+            h('button', { type: 'button', class: isSrsMode ? 'ux-btn' : 'ux-btn primary', onclick: () => actions.openDeckView(entry) }, '← Quay lại bộ thẻ'),
+            h('button', { type: 'button', class: 'ux-btn ghost', onclick: actions.home }, 'Về trang chủ'))))
     );
     return;
   }
@@ -137,8 +277,10 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     submitted: false,
     cardFlipped: false,
     grade: null, // { ok, near, rating }
+    nextIntervalText: '',
     questionStartedAt: Date.now(),
-    history: [], // { question, userAnswer, grade, rating, ms }
+    history: [], // { question, userAnswer, grade, rating, ms, qIndex }
+    slotResults: new Map(), // index -> boolean (true = đúng, false = sai)
   };
 
   function currentQ() {
@@ -154,6 +296,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     const q = currentQ();
     session.submitted = false;
     session.grade = null;
+    session.nextIntervalText = '';
     session.cardFlipped = false;
     session.questionStartedAt = Date.now();
     if (q.kind === 'multi') {
@@ -167,7 +310,18 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
   initAnswerForCurrent();
 
-  // ── Chấm điểm, SRS & Nộp bài ─────────────────────────────────────────────
+  // Thoát phiên học (chỉ hỏi khi đã trả lời >= 1 câu)
+  function requestExit() {
+    if (session.history.length >= 1 && session.index < session.questions.length) {
+      const msg = persist
+        ? 'Tiến độ đã được lưu theo từng câu. Bạn có muốn thoát phiên học ngay bây giờ?'
+        : 'Bạn đang ở chế độ Học thử (không lưu tiến độ). Bạn có muốn thoát phiên học ngay bây giờ?';
+      if (!window.confirm(msg)) return;
+    }
+    actions.openDeckView(entry);
+  }
+
+  // ── Chấm điểm & Nộp bài ───────────────────────────────────────────────────
 
   function submitCurrent(explicitRating) {
     if (session.submitted) return;
@@ -192,8 +346,10 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
     const now = Date.now();
     const ms = Math.max(0, now - (session.questionStartedAt || now));
+    const prevCard = currentCardState(q);
+    session.nextIntervalText = previewIntervalLabel(prevCard, rating, now, { learnSteps });
 
-    // Cập nhật tiến độ SRS và ghi log (bỏ qua nếu persist === false khi Học thử từ Editor)
+    // Cập nhật tiến độ và ghi log (bỏ qua nếu persist === false khi Học thử từ Editor)
     if (onRecordReview) {
       const res = onRecordReview({
         deckId,
@@ -205,8 +361,13 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         learnSteps,
         persist,
       });
-      if (res?.card) q.card = res.card;
+      if (res?.card) {
+        q.card = res.card;
+        session.nextIntervalText = formatNextIntervalText(res.card, now);
+      }
     }
+
+    session.slotResults.set(session.index, Boolean(session.grade.ok));
 
     // Câu sai: chèn lại sau 3–7 câu khác trong cùng phiên (tối đa 3 lần lặp lại mỗi câu trong 1 phiên)
     if (!session.grade.ok && (q.retryCount || 0) < 3) {
@@ -240,17 +401,23 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
   function onKeyDown(ev) {
     if (document.querySelector('.lightbox-backdrop')) {
-      return; // Đang mở lightbox thì không chuyển câu
+      return;
     }
 
-    // Nếu đang ở màn hình kết quả
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      requestExit();
+      return;
+    }
+
+    // Đang ở màn hình kết quả
     if (session.index >= session.questions.length) {
       if (ev.key === 'Enter') {
         const wrongIds = [...new Set(session.history.filter(h => !h.grade.ok).map(h => h.question.id))];
         if (wrongIds.length) {
           actions.startSession(entry, { ...config, mode: 'custom', itemIds: wrongIds });
         } else {
-          actions.openDeckView(entry);
+          actions.home();
         }
       }
       return;
@@ -328,7 +495,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
   window.addEventListener('keydown', onKeyDown);
   activeCleanup = () => window.removeEventListener('keydown', onKeyDown);
 
-  // ── Render màn hình kết quả ───────────────────────────────────────────────
+  // ── Render màn hình kết quả (Result view) ─────────────────────────────────
 
   function renderResultView() {
     const total = session.history.length;
@@ -336,75 +503,104 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     const near = session.history.filter(h => h.grade.ok && h.grade.near).length;
     const wrong = session.history.filter(h => !h.grade.ok).length;
     const pct = total ? Math.round(((correct + near) / total) * 100) : 100;
+    const totalMs = session.history.reduce((acc, h) => acc + (h.ms || 0), 0);
     const wrongItems = session.history.filter(h => !h.grade.ok);
     const uniqueWrongIds = [...new Set(wrongItems.map(h => h.question.id))];
+    const nextDueMsg = computeNextDueSummary(entry.deck, progress, Date.now());
 
     root.replaceChildren(
       h('div', { class: 'session-container' },
+        trialBanner,
         h('header', { class: 'page-head' },
           h('div', null,
             h('p', { class: 'eyebrow' }, 'KẾT QUẢ PHIÊN HỌC'),
-            h('h1', null, entry.deck.meta.title,
-              !persist ? h('span', { class: 'badge unsaved' }, 'Học thử · không lưu tiến độ') : null))),
+            h('h1', null, entry.deck.meta.title))),
+
         h('div', { class: 'result-card panel' },
-          h('div', { class: 'score-summary' },
-            h('div', { class: 'score-big' }, `${pct}%`),
-            h('div', { class: 'score-breakdown' },
-              h('p', { class: 'score-text' }, `Đạt ${correct + near}/${total} lượt trả lời`),
-              h('div', { class: 'badges-row' },
-                h('span', { class: 'badge ok' }, `✓ Đúng: ${correct}`),
-                near ? h('span', { class: 'badge warn' }, `≈ Gần đúng: ${near}`) : null,
-                h('span', { class: 'badge error' }, `✕ Sai: ${wrong}`)))),
+          h('div', { class: 'result-hero' },
+            createScoreRingSvg(pct),
+            h('div', { class: 'result-stats-grid' },
+              h('div', { class: 'result-stat-box' },
+                h('div', { class: 'result-stat-label' }, 'Đúng / Tổng'),
+                h('div', { class: 'result-stat-value ok-text' }, `${correct + near} / ${total}`),
+                near ? h('div', { class: 'muted', style: 'font-size: 12px;' }, `Trong đó gần đúng: ${near}`) : null),
+              h('div', { class: 'result-stat-box' },
+                h('div', { class: 'result-stat-label' }, 'Thời gian'),
+                h('div', { class: 'result-stat-value' }, formatDurationMs(totalMs))),
+              h('div', { class: 'result-stat-box' },
+                h('div', { class: 'result-stat-label' }, 'Cần ôn lại'),
+                h('div', { class: `result-stat-value ${uniqueWrongIds.length ? 'error-text' : ''}` }, `${uniqueWrongIds.length} mục`)))),
+
+          h('div', { class: 'result-next-due-banner' },
+            h('span', null, '📅 '),
+            h('span', null, nextDueMsg)),
+
           pct === 100
-            ? h('div', { class: 'success-banner' }, '🎉 Xuất sắc! Bạn đã trả lời đúng toàn bộ câu hỏi.')
+            ? h('div', { class: 'success-banner' }, '🎉 Xuất sắc! Bạn đã hoàn thành chính xác toàn bộ câu hỏi.')
             : null,
+
           h('div', { class: 'result-actions toolbar' },
             uniqueWrongIds.length
               ? h('button', {
-                  class: 'btn primary',
+                  type: 'button',
+                  class: 'ux-btn primary',
                   onclick: () => actions.startSession(entry, { ...config, mode: 'custom', itemIds: uniqueWrongIds }),
-                }, `Học lại câu sai (${uniqueWrongIds.length})`)
+                }, `↻ Học lại câu sai (${uniqueWrongIds.length})`)
               : null,
             h('button', {
-              class: uniqueWrongIds.length ? 'btn' : 'btn primary',
+              type: 'button',
+              class: uniqueWrongIds.length ? 'ux-btn' : 'ux-btn primary',
+              onclick: actions.home,
+            }, 'Về trang chủ'),
+            h('button', {
+              type: 'button',
+              class: 'ux-btn',
+              onclick: () => actions.openDeckView(entry),
+            }, 'Về bộ thẻ'),
+            h('button', {
+              type: 'button',
+              class: 'ux-btn ghost',
               onclick: () => actions.startSession(entry, config),
-            }, 'Học lại phiên này'),
-            h('button', { class: 'btn ghost', onclick: () => actions.openDeckView(entry) }, 'Về bộ thẻ'),
-            h('button', { class: 'btn ghost', onclick: actions.home }, 'Về Home'))),
+            }, 'Học lại phiên này'))),
+
         wrongItems.length ? h('div', { class: 'wrong-list panel' },
-          h('h2', null, `Chi tiết các lượt cần lưu ý (${wrongItems.length})`),
+          h('h2', null, `Danh sách câu sai — bấm để xem lại (${wrongItems.length})`),
           h('div', { class: 'wrong-items' }, wrongItems.map((item, idx) => {
             const q = item.question;
-            const ansDisplay = q.answerDisplay
-              ? q.answerDisplay
-              : (q.kind === 'single' || q.kind === 'multi')
-                ? q.answers.map(i => choiceText(q.choices[i])).join(' · ')
-                : (q.kind === 'card')
-                  ? q.back
-                  : q.answers.join(' | ');
+            const userStr = q.kind === 'single'
+              ? choiceText(q.choices[item.userAnswer])
+              : q.kind === 'multi'
+                ? (item.userAnswer || []).map(i => choiceText(q.choices[i])).join(' · ') || '(để trống)'
+                : q.kind === 'card'
+                  ? 'Chưa nhớ'
+                  : String(item.userAnswer || '(để trống)');
 
-            return h('div', { class: 'wrong-item-box' },
-              h('div', { class: 'wrong-item-head' },
-                h('span', { class: 'chip' }, `#${idx + 1}`),
-                q.topic ? h('span', { class: 'chip' }, q.topic) : null),
-              richEl('div', { class: 'wrong-item-prompt' }, rich.html(q.prompt)),
-              h('div', { class: 'wrong-item-detail' },
-                item.userAnswer !== null && item.userAnswer !== undefined && q.kind !== 'card'
-                  ? h('div', { class: 'user-ans' },
-                      h('span', { class: 'muted' }, 'Bạn chọn/nhập: '),
-                      h('span', { class: 'error-text' },
-                        q.kind === 'single'
-                          ? choiceText(q.choices[item.userAnswer])
-                          : q.kind === 'multi'
-                            ? (item.userAnswer || []).map(i => choiceText(q.choices[i])).join(' · ') || '(để trống)'
-                            : String(item.userAnswer || '(để trống)')))
-                  : null,
-                h('div', { class: 'correct-ans' },
-                  h('span', { class: 'muted' }, 'Đáp án đúng: '),
-                  richEl('span', null, rich.inline(ansDisplay)))),
-              q.explanation
-                ? richEl('div', { class: 'explanation-box' }, rich.html(q.explanation))
-                : null);
+            const acceptedChips = (q.kind === 'fill' || q.kind === 'command')
+              ? buildAcceptedAnswerChips(q, rich)
+              : (q.kind === 'single' || q.kind === 'multi')
+                ? q.answers.map(i => richEl('span', { class: 'answer-chip correct-chip' }, rich.inline(choiceText(q.choices[i]))))
+                : [richEl('span', { class: 'answer-chip correct-chip' }, rich.inline(q.back || ''))];
+
+            return h('details', { class: 'wrong-item-box', open: idx === 0 },
+              h('summary', { class: 'wrong-item-summary' },
+                h('span', { class: `chip type-badge type-${q.kind}` }, itemTypeLabel(q.kind)),
+                q.topic ? h('span', { class: 'ux-chip' }, q.topic) : null,
+                richEl('span', { class: 'wrong-item-title' }, rich.inline(q.prompt || q.front || '')),
+                h('span', { class: 'muted', style: 'margin-left: auto; font-size: 12px;' }, 'Xem chi tiết ▾')),
+              h('div', { class: 'wrong-item-body' },
+                h('div', { class: 'feedback-compare-grid' },
+                  h('div', { class: 'feedback-compare-col' },
+                    h('div', { class: 'feedback-col-label' }, 'Bạn trả lời'),
+                    h('div', { class: 'answer-chips-wrap' },
+                      h('span', { class: 'answer-chip wrong-chip' }, userStr))),
+                  h('div', { class: 'feedback-compare-col' },
+                    h('div', { class: 'feedback-col-label' }, 'Đáp án đúng'),
+                    h('div', { class: 'answer-chips-wrap' }, ...acceptedChips))),
+                q.explanation
+                  ? h('div', { class: 'explanation-box' },
+                      h('h4', null, 'Giải thích'),
+                      richEl('div', { class: 'explanation-body' }, rich.html(q.explanation)))
+                  : null));
           }))) : null)
     );
 
@@ -429,10 +625,16 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             : session.userAnswer === i;
 
           let stateClass = '';
+          let statusMark = null;
           if (session.submitted) {
             const isCorrect = q.answers.includes(i);
-            if (isCorrect) stateClass = 'choice-correct';
-            else if (isSelected) stateClass = 'choice-wrong';
+            if (isCorrect) {
+              stateClass = 'choice-correct';
+              statusMark = h('span', { class: 'choice-mark mark-ok', title: 'Đáp án đúng' }, '✓');
+            } else if (isSelected) {
+              stateClass = 'choice-wrong';
+              statusMark = h('span', { class: 'choice-mark mark-wrong', title: 'Lựa chọn sai' }, '✗');
+            }
           } else if (isSelected) {
             stateClass = 'choice-selected';
           }
@@ -462,13 +664,14 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             }),
             h('div', { class: 'choice-content' },
               imgUrl ? h('img', { class: 'rich-img choice-img', src: imgUrl, alt: text || `Lựa chọn ${i + 1}` }) : null,
-              text ? richEl('span', { class: 'choice-text' }, rich.inline(text)) : null));
+              text ? richEl('span', { class: 'choice-text' }, rich.inline(text)) : null),
+            statusMark);
         }));
     }
 
     if (q.kind === 'fill' || q.kind === 'command') {
       const isCmd = q.kind === 'command';
-      let inputClass = 'input-text answer-input';
+      let inputClass = 'ux-input answer-input';
       if (isCmd) inputClass += ' font-mono';
       if (session.submitted) {
         inputClass += session.grade?.ok
@@ -508,12 +711,9 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             richEl('div', { class: 'card-content' }, rich.html(q.front)),
             frontImgUrl ? h('img', { class: 'rich-img card-img', src: frontImgUrl, alt: 'Hình ảnh mặt trước' }) : null),
           session.cardFlipped ? h('div', { class: 'card-face card-back' },
-            h('span', { class: 'card-badge' }, 'Mặt sau'),
+            h('span', { class: 'card-badge card-badge-back' }, 'Mặt sau · Đáp án'),
             richEl('div', { class: 'card-content' }, rich.html(q.back)),
-            backImgUrl ? h('img', { class: 'rich-img card-img', src: backImgUrl, alt: 'Hình ảnh mặt sau' }) : null) : null),
-        !session.cardFlipped
-          ? h('div', { class: 'card-hint' }, 'Bấm Space hoặc chạm vào thẻ để lật xem đáp án')
-          : null);
+            backImgUrl ? h('img', { class: 'rich-img card-img', src: backImgUrl, alt: 'Hình ảnh mặt sau' }) : null) : null));
     }
 
     return null;
@@ -524,6 +724,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
   function renderFeedback(q) {
     if (!session.submitted) return null;
     const g = session.grade || { ok: false, near: false };
+    const waitText = session.nextIntervalText || '1 phút';
 
     let bannerClass = 'feedback-banner ';
     let icon = '';
@@ -533,32 +734,42 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
       if (g.rating === RATING.AGAIN) {
         bannerClass += 'feedback-wrong';
         icon = '↻';
-        title = `Đã chọn: ${RATING_LABELS[g.rating]} — Thẻ sẽ được nhắc lại sau vài câu`;
+        title = `Đã chọn: ${RATING_VN_LABELS[g.rating]} — Sẽ hỏi lại sau ~${waitText}`;
       } else {
         bannerClass += 'feedback-ok';
         icon = '✓';
-        title = `Đã chấm: ${RATING_LABELS[g.rating]}`;
+        title = `Đã chọn: ${RATING_VN_LABELS[g.rating]} — Hỏi lại sau ${waitText}`;
       }
     } else if (g.ok && !g.near) {
       bannerClass += 'feedback-ok';
       icon = '✓';
-      title = 'Chính xác! (SRS: Tốt / Good)';
+      title = `Chính xác! — Hỏi lại sau ${waitText}`;
     } else if (g.ok && g.near) {
       bannerClass += 'feedback-near';
       icon = '≈';
-      title = 'Gần đúng — hãy chú ý lỗi chính tả / cách viết! (SRS: Tốt / Good)';
+      const standardAns = q.answerDisplay || (q.answers && q.answers[0]) || '';
+      title = `Gần đúng — chú ý chính tả: ${standardAns} · Hỏi lại sau ${waitText}`;
     } else {
       bannerClass += 'feedback-wrong';
       icon = '✕';
-      title = 'Chưa chính xác — câu hỏi sẽ quay lại sau vài câu (SRS: Học lại / Again)';
+      title = `Chưa chính xác — Sẽ hỏi lại sau ~${waitText}`;
     }
 
-    let correctDisplay = null;
+    // Phản hồi hai cột cho Điền / Lệnh: "Bạn trả lời" và "Đáp án đúng" (mỗi đáp án chấp nhận là 1 chip)
+    let compareGrid = null;
     if (q.kind === 'fill' || q.kind === 'command') {
-      const ansDisplay = q.answerDisplay || q.answers.join(' | ');
-      correctDisplay = h('div', { class: 'correct-display' },
-        h('span', { class: 'muted' }, 'Đáp án đúng: '),
-        richEl('strong', null, rich.inline(ansDisplay)));
+      const userText = String(session.userAnswer || '').trim() || '(để trống)';
+      const userChipCls = g.ok ? (g.near ? 'near-chip' : 'correct-chip') : 'wrong-chip';
+      const acceptedChips = buildAcceptedAnswerChips(q, rich);
+
+      compareGrid = h('div', { class: 'feedback-compare-grid' },
+        h('div', { class: 'feedback-compare-col' },
+          h('div', { class: 'feedback-col-label' }, 'Bạn trả lời'),
+          h('div', { class: 'answer-chips-wrap' },
+            h('span', { class: `answer-chip ${userChipCls} ${q.kind === 'command' ? 'font-mono' : ''}` }, userText))),
+        h('div', { class: 'feedback-compare-col' },
+          h('div', { class: 'feedback-col-label' }, 'Đáp án đúng'),
+          h('div', { class: 'answer-chips-wrap' }, ...acceptedChips)));
     }
 
     const answerImgUrl = q.answerImage && q.kind !== 'card' ? assetUrl(q.answerImage, entry.deckKey) : null;
@@ -567,7 +778,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
       h('div', { class: bannerClass },
         h('span', { class: 'feedback-icon' }, icon),
         h('span', { class: 'feedback-text' }, title)),
-      correctDisplay,
+      compareGrid,
       answerImgUrl ? h('div', { class: 'answer-img-wrap' },
         h('img', { class: 'rich-img', src: answerImgUrl, alt: 'Hình ảnh đáp án' })) : null,
       q.explanation
@@ -575,6 +786,23 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             h('h4', null, 'Giải thích'),
             richEl('div', { class: 'explanation-body' }, rich.html(q.explanation)))
         : null);
+  }
+
+  // ── Render thanh tiến độ chia đoạn theo câu ───────────────────────────────
+
+  function renderSegmentedProgressBar(total) {
+    const segs = [];
+    for (let i = 0; i < total; i++) {
+      let cls = 'session-seg';
+      if (session.slotResults.has(i)) {
+        cls += session.slotResults.get(i) ? ' seg-ok' : ' seg-wrong';
+      }
+      if (i === session.index) {
+        cls += ' seg-current';
+      }
+      segs.push(h('div', { class: cls, title: `Câu ${i + 1}` }));
+    }
+    return h('div', { class: 'session-seg-bar', role: 'progressbar', 'aria-valuenow': session.index + 1, 'aria-valuemax': total }, ...segs);
   }
 
   // ── Render chính ─────────────────────────────────────────────────────────
@@ -588,26 +816,30 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     const q = currentQ();
     const total = session.questions.length;
     const num = session.index + 1;
-    const progressPct = Math.round((num / total) * 100);
     const isLast = session.index === total - 1;
 
     // Các nút điều khiển dưới câu hỏi
     let actionsRow = null;
+    let shortcutFooter = null;
+
     if (!session.submitted) {
       if (q.kind === 'card') {
         if (!session.cardFlipped) {
-          actionsRow = h('div', { class: 'session-actions' },
+          actionsRow = h('div', { class: 'session-actions session-actions-center' },
             h('button', {
-              class: 'btn primary',
+              type: 'button',
+              class: 'ux-btn primary flashcard-reveal-btn',
               onclick: () => { session.cardFlipped = true; render(); },
-            }, 'Lật thẻ (Space)'));
+            }, 'Hiện đáp án (Space)'));
+          shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: Space / Enter để hiện đáp án · Esc để thoát');
         } else {
           const cardState = currentCardState(q);
           const now = Date.now();
           const makeRateBtn = (rating, keyHint, label, cls) => {
             const nextLabel = previewIntervalLabel(cardState, rating, now, { learnSteps });
             return h('button', {
-              class: `btn srs-rate-btn ${cls}`,
+              type: 'button',
+              class: `ux-btn srs-rate-btn ${cls}`,
               onclick: () => submitCurrent(rating),
             },
               h('span', { class: 'srs-rate-time' }, nextLabel),
@@ -615,10 +847,11 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
           };
 
           actionsRow = h('div', { class: 'session-actions card-eval-buttons' },
-            makeRateBtn(RATING.AGAIN, '1', 'Again (Quên)', 'rate-again'),
-            makeRateBtn(RATING.HARD, '2', 'Hard (Khó)', 'rate-hard'),
-            makeRateBtn(RATING.GOOD, '3', 'Good (Tốt)', 'rate-good'),
-            makeRateBtn(RATING.EASY, '4', 'Easy (Dễ)', 'rate-easy'));
+            makeRateBtn(RATING.AGAIN, '1', 'Quên', 'rate-again'),
+            makeRateBtn(RATING.HARD, '2', 'Khó', 'rate-hard'),
+            makeRateBtn(RATING.GOOD, '3', 'Tốt', 'rate-good'),
+            makeRateBtn(RATING.EASY, '4', 'Dễ', 'rate-easy'));
+          shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: 1 Quên · 2 Khó · 3 Tốt (hoặc Space) · 4 Dễ · Esc Thoát');
         }
       } else {
         const canSubmit = q.kind === 'multi'
@@ -629,47 +862,49 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
         actionsRow = h('div', { class: 'session-actions' },
           h('button', {
-            class: 'btn primary',
+            type: 'button',
+            class: 'ux-btn primary',
             disabled: !canSubmit,
             onclick: () => submitCurrent(),
           }, 'Nộp bài (Enter)'));
+        shortcutFooter = h('div', { class: 'session-key-hints' },
+          (q.kind === 'single' || q.kind === 'multi')
+            ? 'Phím tắt: 1–9 chọn đáp án · Enter nộp bài · Esc thoát'
+            : 'Phím tắt: Enter nộp bài · Esc thoát');
       }
     } else {
       actionsRow = h('div', { class: 'session-actions' },
         h('button', {
-          class: 'btn primary',
+          type: 'button',
+          class: 'ux-btn primary',
           onclick: nextQuestion,
         }, isLast ? 'Xem kết quả (Enter) →' : 'Tiếp tục (Enter) →'));
+      shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: Enter tiếp tục · Esc thoát');
     }
 
     const questionImgUrl = q.image && q.kind !== 'card' ? assetUrl(q.image, entry.deckKey) : null;
-    const catLabels = { due: 'Đến hạn', learning: 'Đang học', new: 'Thẻ mới' };
+    const catLabels = { due: 'Đến hạn', learning: 'Đang học', new: 'Mục mới' };
 
     root.replaceChildren(
       h('div', { class: 'session-container' },
+        trialBanner,
         // Topbar
         h('div', { class: 'session-topbar' },
           h('button', {
-            class: 'btn ghost small',
-            onclick: () => {
-              if (window.confirm('Bạn có chắc muốn thoát phiên học hiện tại?')) {
-                actions.openDeckView(entry);
-              }
-            },
-          }, '✕ Thoát'),
-          h('div', { class: 'session-deck-title' },
-            entry.deck.meta.title,
-            !persist ? h('span', { class: 'badge unsaved' }, 'Học thử · không lưu tiến độ') : null),
+            type: 'button',
+            class: 'ux-btn ghost sm',
+            onclick: requestExit,
+          }, '✕ Thoát (Esc)'),
+          h('div', { class: 'session-deck-title' }, entry.deck.meta.title),
           h('div', { class: 'session-progress-text' }, `Câu ${num} / ${total}`)),
 
-        // Progress bar
-        h('div', { class: 'progress-bar-wrap' },
-          h('div', { class: 'progress-bar-fill', style: `width: ${progressPct}%` })),
+        // Thanh tiến độ chia đoạn
+        renderSegmentedProgressBar(total),
 
-        // Question Box
+        // Khung câu hỏi
         h('div', { class: 'question-card panel' },
           h('div', { class: 'question-meta' },
-            h('span', { class: `chip type-${q.kind}` }, q.kind),
+            h('span', { class: `chip type-badge type-${q.kind}` }, itemTypeLabel(q.kind)),
             q.category ? h('span', { class: `badge srs-cat-${q.category}` }, catLabels[q.category] || q.category) : null,
             q.retry ? h('span', { class: 'badge warn' }, '↻ Ôn lại câu sai') : null,
             q.topic ? h('span', { class: 'chip' }, q.topic) : null,
@@ -679,7 +914,8 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             h('img', { class: 'rich-img', src: questionImgUrl, alt: 'Hình ảnh câu hỏi' })) : null,
           renderQuestionBody(q),
           renderFeedback(q),
-          actionsRow))
+          actionsRow,
+          shortcutFooter))
     );
 
     attachImageHandlers(root);

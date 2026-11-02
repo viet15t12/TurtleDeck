@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -195,6 +195,15 @@ handle('deck:save', async (event, args) => {
 });
 
 handle('deck:close', (_e, deckKey) => packages.delete(deckKey));
+
+// Hiện file .sdeck trong trình quản lý thư mục của hệ điều hành
+handle('deck:showInFolder', (_e, filePath) => {
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    return { ok: false, error: 'Bộ thẻ chưa có file trên đĩa.' };
+  }
+  shell.showItemInFolder(path.resolve(filePath));
+  return { ok: true };
+});
 
 // Tạo bộ thẻ mới trong bộ nhớ
 handle('deck:new', async () => {
