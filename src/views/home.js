@@ -37,7 +37,9 @@ function deckRow(entry, actions) {
         warn ? h('span', { class: 'badge warn', title: 'Số cảnh báo / mục bị bỏ qua' }, `⚠ ${warn} cảnh báo`) : null),
       h('div', { class: 'deck-path' }, entry.path || `Nhập từ: ${entry.source}`)),
     h('div', { class: 'deck-actions' },
-      entry.path ? null : h('button', { class: 'btn small primary',
+      items.length ? h('button', { class: 'btn small primary',
+        onclick: ev => { ev.stopPropagation(); actions.openSessionSetup(entry); } }, 'Học') : null,
+      entry.path ? null : h('button', { class: 'btn small',
         onclick: ev => { ev.stopPropagation(); actions.saveAs(entry); } }, 'Lưu thành .sdeck…'),
       remove));
 }

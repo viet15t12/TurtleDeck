@@ -2,13 +2,14 @@
 import { h, fileName } from './views/dom.js';
 import { renderHome } from './views/home.js';
 import { renderDeck } from './views/deck.js';
+import { renderSession } from './views/session.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
 const notices = document.querySelector('#notices');
 
 // entries: { uid, path|null, status: 'loading'|'ok'|'error'|'missing', deckKey, deckText, deck, issues, error, source, assetCount }
-const state = { settings: { version: 1, decks: [] }, entries: [], route: { name: 'home' }, busy: false };
+const state = { settings: { version: 1, decks: [] }, entries: [], route: { name: 'home' }, modal: null, busy: false };
 let uidSeq = 0;
 const newEntry = fields => ({ uid: ++uidSeq, issues: [], ...fields });
 
@@ -127,7 +128,76 @@ const actions = {
     await persistDeckPaths();
     render();
   },
+
+  openSessionSetup(entry) {
+    state.modal = renderSessionModal(
+      entry,
+      config => actions.startSession(entry, config),
+      () => { state.modal = null; render(); }
+    );
+    render();
+  },
+
+  startSession(entry, config = {}) {
+    state.modal = null;
+    state.route = { name: 'session', uid: entry.uid, config };
+    render();
+  },
 };
+
+function renderSessionModal(entry, onStart, onCancel) {
+  const items = entry.deck.items || [];
+  let selectedCount = items.length;
+  let shuffleOrder = false;
+
+  const countOptions = [
+    { value: items.length, label: `Tất cả (${items.length} câu)` },
+  ];
+  if (items.length > 5) countOptions.push({ value: 5, label: '5 câu' });
+  if (items.length > 10) countOptions.push({ value: 10, label: '10 câu' });
+  if (items.length > 20) countOptions.push({ value: 20, label: '20 câu' });
+
+  const selectEl = h('select', {
+    class: 'form-control',
+    onchange: ev => { selectedCount = Number(ev.target.value); },
+  }, countOptions.map(opt => h('option', { value: opt.value }, opt.label)));
+
+  const fileOrderRadio = h('input', {
+    type: 'radio',
+    name: 'order',
+    value: 'file',
+    checked: true,
+    onchange: () => { shuffleOrder = false; },
+  });
+
+  const randomOrderRadio = h('input', {
+    type: 'radio',
+    name: 'order',
+    value: 'random',
+    onchange: () => { shuffleOrder = true; },
+  });
+
+  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
+    h('div', { class: 'modal-dialog' },
+      h('h2', null, 'Bắt đầu phiên học'),
+      h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' }, entry.deck.meta.title),
+      h('div', { class: 'form-group' },
+        h('label', null, 'Số lượng câu hỏi:'),
+        selectEl),
+      h('div', { class: 'form-group' },
+        h('label', null, 'Thứ tự câu hỏi:'),
+        h('div', { class: 'radio-group' },
+          h('label', { class: 'radio-label' }, fileOrderRadio, 'Theo file'),
+          h('label', { class: 'radio-label' }, randomOrderRadio, 'Ngẫu nhiên'))),
+      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px;' },
+        h('button', { class: 'btn ghost', onclick: onCancel }, 'Huỷ'),
+        h('button', {
+          class: 'btn primary',
+          onclick: () => onStart({ count: selectedCount, shuffle: shuffleOrder }),
+        }, 'Bắt đầu học'))));
+
+  return modal;
+}
 
 // Lưu thành .sdeck (hộp thoại chọn nơi lưu do main hiển thị)
 async function saveEntry(entry, saveAs) {
@@ -142,13 +212,30 @@ async function saveEntry(entry, saveAs) {
 // ── Router ────────────────────────────────────────────────────────────────
 
 function render() {
-  if (state.route.name === 'deck') {
+  if (state.route.name === 'session') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
-    if (entry?.status === 'ok') return renderDeck(root, entry, actions);
+    if (entry?.status === 'ok') {
+      document.title = `Học: ${entry.deck.meta.title} — Study App`;
+      renderSession(root, { entry, config: state.route.config }, actions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
     state.route = { name: 'home' };
   }
+
+  if (state.route.name === 'deck') {
+    const entry = state.entries.find(e => e.uid === state.route.uid);
+    if (entry?.status === 'ok') {
+      renderDeck(root, entry, actions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
+    state.route = { name: 'home' };
+  }
+
   document.title = 'Study App';
   renderHome(root, { entries: state.entries, busy: state.busy }, actions);
+  if (state.modal) root.append(state.modal);
 }
 
 // bấm ra ngoài thì đóng mọi menu thả xuống

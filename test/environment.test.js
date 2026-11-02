@@ -22,3 +22,11 @@ test('Phase 1 core modules, views and dev tool are present', () => {
   const corePkg = JSON.parse(fs.readFileSync(path.join(root, 'src/core/package.json'), 'utf8'));
   assert.equal(corePkg.type, 'module');
 });
+
+test('Phase 2 core modules and views are present', () => {
+  for (const file of [
+    'src/core/grader.js', 'src/core/builder.js', 'src/core/richtext.js', 'src/views/session.js',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});
