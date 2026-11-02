@@ -6,13 +6,15 @@ import { renderSession } from './views/session.js';
 import { renderEditor } from './views/editor.js';
 import { renderSettings } from './views/settings.js';
 import { newDeck, newItem, newItemId, newItemLike, addItem, newDeckId } from './core/deckmodel.js';
-import { KINDS, kindOf, kindLabel, mismatchedItems, formatMismatchWarning } from './core/deckkinds.js';
-import { setLearnSteps, recordReview, DEFAULT_LEARN_STEPS } from './core/srs.js';
+import { setLearnSteps, recordReview, clearProgress, DEFAULT_LEARN_STEPS } from './core/srs.js';
 import { DEFAULT_NEW_CARDS_PER_DAY } from './core/planner.js';
+import { notify } from './views/notify.js';
+import { renderSessionModal } from './views/modals/sessionsetup.js';
+import { renderNewDeckModal } from './views/modals/newdeck.js';
+import { renderDeckInfoModal } from './views/modals/deckinfo.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
-const notices = document.querySelector('#notices');
 
 // entries: { uid, path|null, status: 'loading'|'ok'|'error'|'missing', deckKey, deckText, deck, issues, error, source, assetCount }
 const state = {
@@ -36,16 +38,6 @@ const state = {
 
 let uidSeq = 0;
 const newEntry = fields => ({ uid: ++uidSeq, issues: [], ...fields });
-
-// ── Thông báo ──────────────────────────────────────────────────────────────
-
-function notify(text, level = 'info', timeout = level === 'error' ? 0 : 6000) {
-  const box = h('div', { class: `notice ${level}`, role: level === 'error' ? 'alert' : 'status' },
-    h('span', { class: 'notice-text' }, text),
-    h('button', { class: 'notice-close', title: 'Đóng', onclick: () => box.remove() }, '✕'));
-  notices.append(box);
-  if (timeout) setTimeout(() => box.remove(), timeout);
-}
 
 // ── Lưu danh sách đường dẫn vào settings.json (hợp nhất) ──────────────────
 
@@ -143,6 +135,24 @@ const actions = {
     setLearnSteps(state.settings.learnSteps);
     notify('Đã lưu cài đặt thành công.', 'success');
     state.route = { name: 'home' };
+    render();
+  },
+
+  async resetProgress(targetDeckId = 'all') {
+    state.progress = clearProgress(state.progress, targetDeckId);
+    const r = await api.saveProgress(state.progress);
+    if (r && r.ok === false) {
+      notify('Không thể lưu trạng thái đặt lại tiến trình: ' + (r.error || 'Lỗi'), 'error');
+      return;
+    }
+    const targetEntry = targetDeckId && targetDeckId !== 'all'
+      ? state.entries.find(e => e.deck?.meta?.id === targetDeckId)
+      : null;
+    if (targetEntry) {
+      notify(`Đã đặt lại tiến trình của bộ thẻ "${targetEntry.deck.meta.title}".`, 'success');
+    } else {
+      notify('Đã đặt lại toàn bộ tiến trình học tập của tất cả bộ thẻ.', 'success');
+    }
     render();
   },
 
@@ -333,279 +343,6 @@ const actions = {
   },
 };
 
-function renderSessionModal(entry, onStart, onCancel) {
-  const items = entry.deck.items || [];
-  let selectedCount = items.length;
-  let shuffleOrder = false;
-
-  const countOptions = [
-    { value: items.length, label: `Tất cả (${items.length} câu)` },
-  ];
-  if (items.length > 5) countOptions.push({ value: 5, label: '5 câu' });
-  if (items.length > 10) countOptions.push({ value: 10, label: '10 câu' });
-  if (items.length > 20) countOptions.push({ value: 20, label: '20 câu' });
-
-  const selectEl = h('select', {
-    class: 'ux-select',
-    style: 'width: 100%;',
-    onchange: ev => { selectedCount = Number(ev.target.value); },
-  }, countOptions.map(opt => h('option', { value: opt.value }, opt.label)));
-
-  const fileOrderRadio = h('input', {
-    type: 'radio',
-    name: 'order',
-    value: 'file',
-    checked: true,
-    onchange: () => { shuffleOrder = false; },
-  });
-
-  const randomOrderRadio = h('input', {
-    type: 'radio',
-    name: 'order',
-    value: 'random',
-    onchange: () => { shuffleOrder = true; },
-  });
-
-  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
-    h('div', { class: 'modal-dialog' },
-      h('h2', null, 'Bắt đầu phiên luyện tập'),
-      h('p', { class: 'muted', style: 'margin-top: -8px; margin-bottom: 16px;' }, entry.deck.meta.title),
-      h('div', { class: 'form-group' },
-        h('label', null, 'Số lượng mục:'),
-        selectEl),
-      h('div', { class: 'form-group' },
-        h('label', null, 'Thứ tự hiển thị:'),
-        h('div', { class: 'radio-group' },
-          h('label', { class: 'radio-label' }, fileOrderRadio, 'Theo thứ tự bộ thẻ'),
-          h('label', { class: 'radio-label' }, randomOrderRadio, 'Ngẫu nhiên'))),
-      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 24px;' },
-        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
-        h('button', {
-          type: 'button',
-          class: 'ux-btn primary',
-          onclick: () => onStart({ mode: 'custom', count: selectedCount, shuffle: shuffleOrder }),
-        }, 'Bắt đầu học'))));
-
-  return modal;
-}
-
-function renderNewDeckModal(onCreate, onCancel, preselectedKind) {
-  let title = '';
-  let kind = (typeof preselectedKind === 'string' && KINDS[preselectedKind]?.available) ? preselectedKind : 'quiz';
-  let description = '';
-  let lang = 'vi';
-  let errorText = '';
-
-  const kindGridHost = h('div', { class: 'ux-kind-grid' });
-  const errEl = h('div', { class: 'ux-field-msg error', hidden: true });
-  const descCountEl = h('span', { class: 'muted', style: 'font-size: 12px;' }, '0/200');
-
-  const titleInput = h('input', {
-    type: 'text',
-    class: 'ux-input',
-    value: title,
-    placeholder: 'Ví dụ: Giải tích 1, Lệnh Linux cơ bản…',
-    oninput: ev => {
-      title = ev.target.value;
-      if (title.trim()) {
-        errorText = '';
-        errEl.hidden = true;
-      }
-    },
-    onkeydown: ev => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        submit();
-      }
-    },
-  });
-
-  function renderKindCards() {
-    kindGridHost.replaceChildren(
-      ...['qa', 'quiz', 'vocab'].map(k => {
-        const info = KINDS[k];
-        const disabled = !info.available;
-        const active = kind === k;
-        return h('button', {
-          type: 'button',
-          class: `ux-kind-card ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`,
-          'data-kind': k,
-          disabled,
-          onclick: () => {
-            if (disabled) return;
-            kind = k;
-            renderKindCards();
-            titleInput.focus();
-          },
-        },
-          h('div', { class: 'ux-kind-card-head' },
-            h('span', { class: 'ux-kind-icon' }, info.icon),
-            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : null),
-          h('div', { class: 'ux-kind-title' }, info.label),
-          h('div', { class: 'ux-kind-desc' }, info.description));
-      })
-    );
-  }
-
-  function submit() {
-    const cleanTitle = title.trim();
-    if (!cleanTitle) {
-      errorText = 'Vui lòng nhập tên bộ thẻ.';
-      errEl.textContent = errorText;
-      errEl.hidden = false;
-      titleInput.focus();
-      return;
-    }
-    onCreate({
-      title: cleanTitle,
-      kind,
-      description: description.trim().slice(0, 200),
-      lang: lang.trim() || 'vi',
-    });
-  }
-
-  renderKindCards();
-  queueMicrotask(() => titleInput.focus());
-
-  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
-    h('div', { class: 'modal-dialog', style: 'max-width: 620px; width: 94vw;' },
-      h('h2', null, 'Bộ thẻ mới'),
-      h('p', { class: 'muted', style: 'margin-top: -6px; margin-bottom: 16px;' },
-        'Chọn loại bộ thẻ phù hợp với nội dung bạn muốn học, sau đó đặt tên để bắt đầu soạn.'),
-      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
-        h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, '1. Chọn loại bộ thẻ'),
-        kindGridHost),
-      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
-        h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, '2. Tên bộ thẻ'),
-        titleInput,
-        errEl),
-      h('div', { class: 'form-group', style: 'margin-bottom: 14px;' },
-        h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;' },
-          h('label', { style: 'font-weight: 600; font-size: 13px;' }, 'Mô tả ngắn (tuỳ chọn)'),
-          descCountEl),
-        h('textarea', {
-          class: 'ux-textarea',
-          rows: '2',
-          maxLength: 200,
-          placeholder: 'Mô tả ngắn gọn nội dung bộ thẻ (tối đa 200 ký tự)…',
-          oninput: ev => {
-            description = ev.target.value.slice(0, 200);
-            descCountEl.textContent = `${description.length}/200`;
-          },
-        })),
-      h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 20px; gap: 8px;' },
-        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
-        h('button', {
-          type: 'button',
-          class: 'ux-btn primary',
-          onclick: submit,
-        }, 'Tạo & Mở trình soạn'))));
-
-  return modal;
-}
-
-function renderDeckInfoModal(deck, onSave, onCancel) {
-  const meta = deck?.meta || {};
-  let title = meta.title || '';
-  let description = meta.description || '';
-  let lang = meta.lang || 'vi';
-  let kind = kindOf(deck);
-
-  const kindGridHost = h('div', { class: 'ux-kind-grid' });
-  const mismatchHost = h('div');
-  const descCountEl = h('span', { class: 'muted', style: 'font-size: 12px;' }, `${description.length}/200`);
-
-  function renderKindCardsAndWarning() {
-    kindGridHost.replaceChildren(
-      ...['qa', 'quiz', 'vocab'].map(k => {
-        const info = KINDS[k];
-        const disabled = !info.available && kindOf(deck) !== k;
-        const active = kind === k;
-        return h('button', {
-          type: 'button',
-          class: `ux-kind-card ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`,
-          'data-kind': k,
-          disabled,
-          onclick: () => {
-            if (disabled) return;
-            kind = k;
-            renderKindCardsAndWarning();
-          },
-        },
-          h('div', { class: 'ux-kind-card-head' },
-            h('span', { class: 'ux-kind-icon' }, info.icon),
-            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : null),
-          h('div', { class: 'ux-kind-title' }, info.label),
-          h('div', { class: 'ux-kind-desc' }, info.description));
-      })
-    );
-
-    const mismatched = mismatchedItems(deck, kind);
-    if (mismatched.length > 0) {
-      mismatchHost.replaceChildren(
-        h('div', { class: 'ux-mismatch-banner', style: 'margin-top: 8px;' },
-          h('span', { style: 'font-weight: 700;' }, '⚠'),
-          h('div', null,
-            h('div', { style: 'font-weight: 600;' }, formatMismatchWarning(deck, kind)),
-            h('div', { style: 'font-size: 12px; margin-top: 2px;' },
-              `Có ${mismatched.length} mục lệch loại với "${kindLabel(kind)}". Các mục này không bị xoá hay tự chuyển đổi.`)))
-      );
-    } else {
-      mismatchHost.replaceChildren();
-    }
-  }
-
-  renderKindCardsAndWarning();
-
-  const modal = h('div', { class: 'modal-backdrop', onclick: ev => { if (ev.target === modal) onCancel(); } },
-    h('div', { class: 'modal-dialog', style: 'max-width: 600px; width: 94vw;' },
-      h('h2', null, 'Thông tin bộ thẻ'),
-      h('div', { style: 'display: flex; flex-direction: column; gap: 14px; margin: 14px 0 20px;' },
-        h('div', { class: 'form-group' },
-          h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Tên bộ thẻ'),
-          h('input', {
-            type: 'text',
-            class: 'ux-input',
-            value: title,
-            oninput: ev => { title = ev.target.value; },
-          })),
-        h('div', { class: 'form-group' },
-          h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Loại bộ thẻ'),
-          kindGridHost,
-          mismatchHost),
-        h('div', { class: 'form-group' },
-          h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;' },
-            h('label', { style: 'font-weight: 600; font-size: 13px;' }, 'Mô tả (tuỳ chọn, tối đa 200 ký tự)'),
-            descCountEl),
-          h('textarea', {
-            class: 'ux-textarea',
-            rows: '2',
-            maxLength: 200,
-            value: description,
-            oninput: ev => {
-              description = ev.target.value.slice(0, 200);
-              descCountEl.textContent = `${description.length}/200`;
-            },
-          }))),
-      h('div', { class: 'toolbar', style: 'justify-content: flex-end; gap: 8px;' },
-        h('button', { type: 'button', class: 'ux-btn ghost', onclick: onCancel }, 'Huỷ'),
-        h('button', {
-          type: 'button',
-          class: 'ux-btn primary',
-          onclick: () => {
-            if (!title.trim()) return;
-            onSave({
-              title: title.trim(),
-              kind,
-              description: description.trim().slice(0, 200),
-              lang: lang.trim() || 'vi',
-            });
-          },
-        }, 'Lưu thông tin'))));
-
-  return modal;
-}
-
 // Lưu thành .sdeck (hộp thoại chọn nơi lưu do main hiển thị)
 async function saveEntry(entry, saveAs) {
   const r = await api.saveDeck(entry.deckKey, entry.deckText, { saveAs });
@@ -622,7 +359,11 @@ function render() {
   document.body.classList.toggle('in-editor', state.route.name === 'editor');
 
   if (state.route.name === 'settings') {
-    renderSettings(root, { settings: state.settings }, actions);
+    renderSettings(root, {
+      settings: state.settings,
+      progress: state.progress,
+      entries: state.entries,
+    }, actions);
     if (state.modal) root.append(state.modal);
     return;
   }

@@ -215,13 +215,26 @@ select.form-control {
   border-color: transparent;
 }
 
-/* Nút nguy hiểm: chỉ đỏ khi hover (§12) */
+/* Nút nguy hiểm: chỉ đỏ khi hover (§12) hoặc nguy hiểm trực tiếp */
 .ux-btn.danger-hover:hover:not(:disabled),
 .btn.error:hover:not(:disabled) {
   color: var(--c-danger);
   border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
   background: var(--c-danger-soft);
 }
+
+.ux-btn.danger {
+  color: var(--c-danger);
+  border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
+  background: var(--c-danger-soft);
+}
+
+.ux-btn.danger:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--c-danger);
+  border-color: var(--c-danger);
+}
+
 
 /* Nút icon ≥ 32px */
 .ux-icon-btn {

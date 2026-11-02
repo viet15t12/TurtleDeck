@@ -15,6 +15,7 @@ import {
 import { deckStats } from '../core/deckstats.js';
 import { cardKey, DAY } from '../core/srs.js';
 import { stripAccents } from '../core/deckmodel.js';
+import { renderStackedBar } from './components/stackedbar.js';
 
 const choiceText = c => typeof c === 'string' ? c : [c?.text, c?.image ? `[ảnh ${c.image}]` : ''].filter(Boolean).join(' ');
 
@@ -96,22 +97,6 @@ function getItemStudyStatus(deckId, item, progress, now) {
     return { key: 'mastered', label: dueText, cls: 'status-mastered' };
   }
   return { key: 'new', label: 'Mới', cls: 'status-new' };
-}
-
-function renderStackedBar(st) {
-  const total = st.new + st.learning + st.due + st.mastered;
-  if (total <= 0) {
-    return h('div', { class: 'deck-stacked-bar empty-bar' });
-  }
-  const pct = n => `${Math.max(0, (n / total) * 100).toFixed(2)}%`;
-  return h('div', {
-    class: 'deck-stacked-bar',
-    title: `Đã thuộc: ${st.mastered} · Đến hạn: ${st.due} · Đang học: ${st.learning} · Mới: ${st.new}`,
-  },
-    st.mastered > 0 ? h('div', { class: 'seg seg-mastered', style: `width: ${pct(st.mastered)}` }) : null,
-    st.due > 0 ? h('div', { class: 'seg seg-due', style: `width: ${pct(st.due)}` }) : null,
-    st.learning > 0 ? h('div', { class: 'seg seg-learning', style: `width: ${pct(st.learning)}` }) : null,
-    st.new > 0 ? h('div', { class: 'seg seg-new', style: `width: ${pct(st.new)}` }) : null);
 }
 
 function renderCollapsibleIssues(issues) {

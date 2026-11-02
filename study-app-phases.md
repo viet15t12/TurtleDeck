@@ -46,6 +46,7 @@ theo file study-app.md. Tuân thủ:
 | 2C | Deck Editor | Tạo / thêm / xoá / sửa câu hỏi và ảnh bằng giao diện, lưu ra file `.sdeck` |
 | 3 | Lưu tiến độ & SRS | Lịch ôn SM-2, màn hình "ôn hôm nay" |
 | 3B | Phân loại bộ thẻ & giao diện học/quản lý | Phân loại `meta.kind` (`qa`/`quiz`/`vocab`), `core/deckkinds.js`, `core/deckstats.js`, làm lại Home, Deck view, Session, Result |
+| 3C | Tái cấu trúc (Refactor) | Tổ chức lại `src/` (tách CSS theo màn, tách modal/component/result khỏi app.js và session.js), 100% giữ nguyên hành vi |
 | 4 | Vocab & tiếng Anh | Nhập CSV/Quizlet/Markdown (→ `.sdeck`), Editor cho vocab + nhập hàng loạt, sinh câu hỏi tự động, 2 chiều, TTS, cloze |
 | 5 | Learn & Match | Chế độ Learn thích ứng, Match, Exam |
 | 6 | Thống kê & tiện ích | Stats, leech, sao/ghi chú, phím tắt, dark mode, backup |
@@ -232,6 +233,38 @@ Viết test srs và một script mô phỏng 60 ngày (test/simulate.js) in ra s
 > **Đặc tả đầy đủ:** Xem **`study-app-phase3b.md`** (chia 2 lượt: Lượt 1 dữ liệu `core/deckkinds.js`, `core/deckstats.js` & Editor; Lượt 2 làm lại giao diện Home, Deck view, Session, Result dùng chung `tokens.css` và `controls.css`).
 
 **Mục tiêu:** phân loại bộ thẻ theo `meta.kind` (`qa` — Thẻ ghi nhớ, `quiz` — Đề luyện thi, `vocab` — Từ vựng), đồng bộ giao diện Home / Deck view / Session / Result với hệ thống thiết kế của Editor và loại bỏ thuật ngữ kỹ thuật trên giao diện.
+
+---
+
+## Giai đoạn 3C — Tái cấu trúc (Refactor, không thêm tính năng)
+
+**Mục tiêu:** dọn dẹp và chuẩn hoá cấu trúc mã nguồn trong `src/` (JS & CSS) trước khi bước vào Giai đoạn 4, bảo đảm mỗi file làm đúng một trách nhiệm, loại bỏ code trùng lặp, giữ nguyên 100% hành vi và định dạng dữ liệu.
+
+**Việc đã làm:**
+- **Module hoá CSS:** Tách file đơn khối `src/styles.css` (>2200 dòng) thành các file CSS chuyên biệt theo màn hình/thành phần trong `src/styles/`:
+  - `src/styles/base.css`: Reset, layout ứng dụng chung, modal dialog, lightbox ảnh, KaTeX typography.
+  - `src/styles/home.css`: Dải Hôm nay, thanh lọc/tìm/sắp xếp, lưới thẻ bộ thẻ, trạng thái trống.
+  - `src/styles/deck.css`: Bảng thống kê bộ thẻ, danh sách chế độ học, bảng mục câu hỏi, cảnh báo lỗi.
+  - `src/styles/session.css`: Tiến độ học phân đoạn, thẻ câu hỏi, lật flashcard, phản hồi 2 cột, SRS buttons.
+  - `src/styles/result.css`: Vòng tròn điểm SVG, thẻ thống kê phiên, bảng điểm lại mục sai, thanh thao tác.
+  - `src/styles/settings.css`: Cài đặt bước học, panel đặt lại tiến trình học.
+  - Loại bỏ ~500 dòng CSS thừa cũ của Editor trong `styles.css` (đã có `src/styles/editor.css` quản lý riêng).
+- **Tách Modal Dialog khỏi `src/app.js`:**
+  - `src/views/modals/sessionsetup.js`: Hộp thoại thiết lập phiên học (chế độ, phạm vi, xáo trộn).
+  - `src/views/modals/newdeck.js`: Hộp thoại tạo bộ thẻ mới chọn 3 ô loại thẻ.
+  - `src/views/modals/deckinfo.js`: Hộp thoại xem/sửa thông tin bộ thẻ (tên, loại thẻ, mô tả) và cảnh báo lệch mục.
+  - `src/views/notify.js`: Hàm hiển thị thông báo toast nổi cho app.
+  - Giảm kích thước `src/app.js` từ 742 dòng xuống 461 dòng, chỉ tập trung vào store, router và IPC.
+- **Tách màn hình Kết quả khỏi `src/views/session.js`:**
+  - `src/views/result.js`: Render màn hình kết quả sau phiên học, tách biệt hoàn toàn DOM và tính toán SVG vòng tròn điểm.
+- **Tái sử dụng Component dùng chung:**
+  - `src/views/components/stackedbar.js`: Gộp chung hàm vẽ thanh tiến độ xếp chồng (`renderStackedBar`) dùng ở cả `home.js` và `deck.js`.
+  - `src/views/components/lightbox.js`: Quản lý hiển thị phóng to ảnh dùng chung.
+
+**Nghiệm thu:**
+- [x] Không thay đổi định dạng dữ liệu (`.sdeck`, `deck.json`, `progress.json`, `settings.json`) và IPC API.
+- [x] Logic thuần trong `src/core/` giữ nguyên, test tự động đạt 100% (114/114 tests).
+- [x] Kiểm thử giao diện headless Electron ở độ phân giải 1920×1080 và 1280×720 không có lỗi hiển thị hay tương tác.
 
 ---
 

@@ -117,8 +117,10 @@ export function createPreviewPane({ container, deckKey, rich, getAssets, onToggl
                 stateClass += ' choice-selected';
               }
 
-              return h('label', {
+              return h('div', {
                 class: `choice-label ${stateClass}`,
+                role: isMulti ? 'checkbox' : 'radio',
+                'aria-checked': isSelected,
                 onclick: () => {
                   if (showAnswerState) return;
                   if (isMulti) {
@@ -138,6 +140,7 @@ export function createPreviewPane({ container, deckKey, rich, getAssets, onToggl
                   name: `preview-choice-${q.id}`,
                   checked: showAnswerState ? (submitted ? isSelected : isCorrect) : isSelected,
                   disabled: showAnswerState,
+                  tabindex: '-1',
                 }),
                 h('div', { class: 'choice-content' },
                   imgUrl ? h('img', { class: 'rich-img choice-img', src: imgUrl, alt: text || `Lựa chọn ${i + 1}` }) : null,

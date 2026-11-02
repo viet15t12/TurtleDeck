@@ -4,6 +4,7 @@ import { h, fileName } from './dom.js';
 import { KINDS, kindOf, kindLabel, modesFor } from '../core/deckkinds.js';
 import { deckStats, countReviewedToday } from '../core/deckstats.js';
 import { stripAccents } from '../core/deckmodel.js';
+import { renderStackedBar } from './components/stackedbar.js';
 
 const countIssues = e => (e.issues || []).filter(i => i.level === 'warn' || i.level === 'error').length;
 
@@ -36,22 +37,6 @@ function closeAllDropdowns(except) {
   document.querySelectorAll('.menu, .ux-popover[data-dropdown]').forEach(el => {
     if (el !== except) el.hidden = true;
   });
-}
-
-function renderStackedBar(st) {
-  const total = st.new + st.learning + st.due + st.mastered;
-  if (total <= 0) {
-    return h('div', { class: 'deck-stacked-bar empty-bar', title: 'Bộ thẻ chưa có mục hợp lệ' });
-  }
-  const pct = n => `${Math.max(0, (n / total) * 100).toFixed(2)}%`;
-  return h('div', {
-    class: 'deck-stacked-bar',
-    title: `Đã thuộc: ${st.mastered} · Đến hạn: ${st.due} · Đang học: ${st.learning} · Mới: ${st.new}`,
-  },
-    st.mastered > 0 ? h('div', { class: 'seg seg-mastered', style: `width: ${pct(st.mastered)}` }) : null,
-    st.due > 0 ? h('div', { class: 'seg seg-due', style: `width: ${pct(st.due)}` }) : null,
-    st.learning > 0 ? h('div', { class: 'seg seg-learning', style: `width: ${pct(st.learning)}` }) : null,
-    st.new > 0 ? h('div', { class: 'seg seg-new', style: `width: ${pct(st.new)}` }) : null);
 }
 
 function renderDeckCard(entry, st, actions) {

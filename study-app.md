@@ -375,8 +375,18 @@ study-app/
 │   └── sdeck.mjs           # CLI cho dev: pack / unpack / check / pack-all
 ├── src/
 │   ├── index.html
-│   ├── styles.css
-│   ├── app.js              # router màn hình
+│   ├── styles.css          # aggregator import các stylesheet bên dưới
+│   ├── styles/             # CSS phân rã theo trách nhiệm
+│   │   ├── tokens.css      # design tokens (màu sắc, spacing, typography)
+│   │   ├── controls.css    # UI controls dùng chung (btn, input, switch, checkbox...)
+│   │   ├── base.css        # reset, layout ứng dụng, modal dialog cơ sở, lightbox, katex
+│   │   ├── home.css        # giao diện Home (dải hôm nay, lưới deck, bộ lọc/tìm kiếm)
+│   │   ├── deck.css        # màn hình chi tiết bộ thẻ (thống kê, chế độ học, bảng câu)
+│   │   ├── session.css     # màn hình phiên học (tiến độ phân đoạn, câu hỏi, flashcard, feedback)
+│   │   ├── result.css      # màn hình kết quả (vòng tròn điểm SVG, bảng câu sai, thống kê)
+│   │   ├── editor.css      # giao diện Deck Editor (soạn thảo, quản lý ảnh, math snippets)
+│   │   └── settings.css    # màn hình cài đặt (bước học, reset tiến trình)
+│   ├── app.js              # router màn hình, store ứng dụng, IPC glue
 │   ├── core/               # logic thuần, test được; có package.json {"type":"module"}
 │   │   ├── sdeck.js        # đọc/ghi gói .sdeck (fflate), kiểm tra tên entry, giới hạn, nhận dạng ảnh
 │   │   ├── parser.js       # deck.json + nhập csv/md -> items
@@ -390,7 +400,21 @@ study-app/
 │   │   ├── planner.js      # chọn câu, learn mastery
 │   │   ├── stats.js
 │   │   └── richtext.js     # Markdown + LaTeX (KaTeX) + ảnh, sanitize
-│   ├── views/              # home, deck, editor, session, result, stats, settings
+│   ├── views/              # các màn hình và thành phần giao diện
+│   │   ├── home.js         # màn hình Thư viện / Trang chủ
+│   │   ├── deck.js         # màn hình chi tiết bộ thẻ
+│   │   ├── session.js      # màn hình phiên học
+│   │   ├── result.js       # màn hình tổng kết phiên học
+│   │   ├── editor.js       # màn hình Deck Editor
+│   │   ├── settings.js     # màn hình Cài đặt
+│   │   ├── notify.js       # toast notifications
+│   │   ├── components/     # component dùng chung giữa các màn hình
+│   │   │   ├── stackedbar.js # thanh tiến độ xếp chồng 4 trạng thái
+│   │   │   └── lightbox.js   # popup phóng to xem ảnh
+│   │   └── modals/         # các hộp thoại tương tác
+│   │       ├── sessionsetup.js # hộp thoại thiết lập phiên học
+│   │       ├── newdeck.js      # hộp thoại tạo bộ thẻ mới (3 loại kind)
+│   │       └── deckinfo.js     # hộp thoại xem/sửa thông tin bộ thẻ
 │   └── tts.js              # speechSynthesis wrapper
 ├── data/
 │   ├── samples-src/        # deck mẫu dạng thư mục (deck.json + img/), chỉ dùng để build
@@ -984,7 +1008,7 @@ function registerAssetProtocol() {                  // gọi trong app.whenReady
 4. **Session**: tiến trình, câu hỏi (Markdown), vùng trả lời, phản hồi + giải thích, phím tắt.
 5. **Result**: điểm, thời gian, câu sai → *Học lại câu sai*.
 6. **Stats**: % đúng theo deck/topic, heatmap, leech.
-7. **Settings**: thư mục Thư viện, số thẻ mới/ngày, learning steps, giọng TTS, theme, backup.
+7. **Settings**: thư mục Thư viện, số thẻ mới/ngày, learning steps, quản lý & đặt lại tiến trình (tất cả hoặc theo từng bộ thẻ), giọng TTS, theme, backup.
 
 - **Nguyên tắc bố cục rộng rãi (Full-width Responsive):**
   - Giao diện trải rộng theo chiều ngang màn hình máy tính (tối đa ~1400px), không ép hẹp vào một cột giữa nhỏ khiến giao diện bị dồn cục hoặc tạo cảm giác zoom in chật chội.

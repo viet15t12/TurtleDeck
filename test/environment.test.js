@@ -73,3 +73,24 @@ test('Phase 3B Lượt 1 deckkinds and deckstats modules are present', () => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });
+
+test('Phase 3C refactored modules and styles are present', () => {
+  for (const file of [
+    'src/views/result.js',
+    'src/views/notify.js',
+    'src/views/components/stackedbar.js',
+    'src/views/components/lightbox.js',
+    'src/views/modals/sessionsetup.js',
+    'src/views/modals/newdeck.js',
+    'src/views/modals/deckinfo.js',
+    'src/styles/base.css',
+    'src/styles/home.css',
+    'src/styles/deck.css',
+    'src/styles/session.css',
+    'src/styles/result.css',
+    'src/styles/settings.css',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});
+

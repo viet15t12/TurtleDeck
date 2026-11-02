@@ -178,4 +178,11 @@ Liệt kê file đã tạo/sửa, cách chạy, việc chưa làm.
 
 **Sau khi xong:** thêm dòng `3B — Phân loại bộ thẻ & giao diện học/quản lý` vào bảng "Tổng quan các giai đoạn" của `study-app-phases.md` (chèn giữa 3 và 4), và trong GĐ4/GĐ5 ghi thêm "dựa vào `meta.kind`, xem `study-app-phase3b.md`".
 
+**Hiện trạng hoàn thành (GĐ3B):**
+- Đã hoàn thành toàn bộ Lượt 1 (logic `deckkinds`, `deckstats`, parser, Editor theo kind) và Lượt 2 (làm lại Home, Deck view, Session, Result).
+- Đã bổ sung tính năng **Đặt lại tiến trình học** trong Cài đặt (`src/views/settings.js`, `actions.resetProgress`, `core/srs.js` hàm `clearProgress` hỗ trợ xoá tất cả hoặc từng bộ thẻ).
+- Đã sửa tương tác câu hỏi trắc nghiệm / nhiều đáp án: nhấp trực tiếp vào bất kỳ vị trí nào trên thẻ lựa chọn đều chọn/bỏ chọn chính xác, kích thước checkbox/radio tăng lên 22px rõ ràng dễ nhìn.
+- Hệ thống sẵn sàng cho **GIAI ĐOẠN 4: Vocab & tiếng Anh**.
+
+
 **Gợi ý model:** lượt 1 (logic thuần + Editor) dùng Sonnet 5.5 mức Medium; lượt 2 (giao diện) cũng Sonnet 5.5, nên đính kèm ảnh để có mốc so sánh.

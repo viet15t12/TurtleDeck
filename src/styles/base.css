@@ -1,0 +1,357 @@
+/* src/styles/base.css — Bố cục cơ sở, typography, header, notices, dialog và rich text */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+
+.app {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--c-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.75rem;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.muted { color: var(--c-text-muted); }
+.error-text { color: var(--c-danger); }
+.ok-text { color: var(--c-ok); }
+
+/* ── Đầu trang và thanh công cụ ────────────────────────────── */
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.back-btn {
+  margin-bottom: 8px;
+  padding-left: 4px;
+  color: var(--c-primary);
+}
+
+.menu-wrap { position: relative; }
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 90;
+  min-width: 240px;
+  padding: 4px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover { background: var(--c-surface-3); }
+
+/* ── Nhãn & Huy hiệu Dạng mục ─────────────────────────────── */
+
+.chip, .tag, .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip { background: var(--c-primary-soft); color: var(--c-primary); }
+.tag { margin: 0 4px 2px 0; background: var(--c-surface-3); color: var(--c-text-muted); }
+.badge.warn { background: var(--c-warn-soft); color: var(--c-warn); }
+.badge.unsaved { background: var(--c-warn-soft); color: var(--c-warn); font-weight: 600; }
+
+.chip.type-badge {
+  font-weight: 600;
+}
+.chip.type-single,
+.chip.type-multi {
+  color: var(--c-type-tn);
+  background: color-mix(in srgb, var(--c-type-tn) 14%, transparent);
+}
+.chip.type-fill {
+  color: var(--c-type-dien);
+  background: color-mix(in srgb, var(--c-type-dien) 14%, transparent);
+}
+.chip.type-command {
+  color: var(--c-type-lenh);
+  background: color-mix(in srgb, var(--c-type-lenh) 14%, transparent);
+}
+.chip.type-card {
+  color: var(--c-type-the);
+  background: color-mix(in srgb, var(--c-type-the) 14%, transparent);
+}
+
+/* ── Thông báo (Toast Notices) ─────────────────────────────── */
+
+.notices {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  display: grid;
+  gap: 8px;
+  width: min(440px, calc(100% - 32px));
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: var(--c-surface);
+  box-shadow: var(--shadow-md);
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+
+.notice.success { border-color: #b9e3c9; background: var(--c-ok-soft); }
+.notice.warn { border-color: #f0d9a8; background: var(--c-warn-soft); }
+.notice.error { border-color: #f3c5c0; background: var(--c-danger-soft); }
+.notice-text { flex: 1; }
+
+.notice-close {
+  border: 0;
+  background: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+/* ── Hộp thoại cơ bản (Modal Base) ─────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 40%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  background: #fff;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  width: min(460px, calc(100% - 32px));
+  padding: 24px 28px;
+  box-shadow: 0 16px 36px rgb(23 32 51 / 18%);
+}
+
+.modal-dialog h2 {
+  margin: 0 0 16px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 18px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* ── Rich Text: LaTeX, hình ảnh và Lightbox (GĐ2B) ────────── */
+
+.rich-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+
+.rich-img:hover {
+  opacity: 0.92;
+}
+
+.choice-img {
+  max-height: 80px;
+  object-fit: contain;
+  margin-right: 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+}
+
+.choice-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.card-img {
+  max-height: 180px;
+  object-fit: contain;
+  margin-top: 10px;
+}
+
+.question-img-wrap, .answer-img-wrap {
+  margin: 12px 0 16px;
+  text-align: center;
+}
+
+.img-missing {
+  display: inline-block;
+  padding: 8px 12px;
+  background: var(--c-danger-soft);
+  border: 1px dashed var(--c-danger);
+  border-radius: 6px;
+  color: var(--c-danger);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.img-bad {
+  color: var(--c-danger);
+  font-style: italic;
+}
+
+/* KaTeX cuộn ngang khi công thức dài */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 0;
+  max-width: 100%;
+}
+
+.katex-display::-webkit-scrollbar {
+  height: 4px;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Lightbox phóng to ảnh */
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 82%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: pointer;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-box {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.lightbox-img {
+  max-width: 100%;
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 60%);
+  object-fit: contain;
+  background: #fff;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: 0;
+  color: #fff;
+  font-size: 1.75rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.lightbox-close:hover {
+  color: #fca5a5;
+}
+
+.lightbox-caption {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  margin-top: 10px;
+  text-align: center;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+

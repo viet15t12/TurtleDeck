@@ -1,0 +1,589 @@
+/* src/styles/session.css — Màn hình phiên học (GĐ3B §6): tiến trình chia đoạn, thẻ câu hỏi, trắc nghiệm, điền/lệnh, thẻ lật và phản hồi */
+
+.session-container {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.trial-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: var(--c-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--c-warn) 35%, var(--c-border));
+  color: var(--c-warn);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.trial-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--c-warn);
+  color: #ffffff;
+}
+
+.session-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.session-deck-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--c-text);
+}
+
+.session-progress-text {
+  color: var(--c-text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Thanh tiến độ chia đoạn theo câu */
+.session-seg-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.session-seg {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--c-border);
+  border: 1.5px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.session-seg.seg-ok {
+  background: var(--c-ok);
+}
+
+.session-seg.seg-wrong {
+  background: var(--c-danger);
+}
+
+.session-seg.seg-current {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-primary) 28%, transparent);
+}
+
+.session-seg.seg-current:not(.seg-ok):not(.seg-wrong) {
+  background: var(--c-primary-soft);
+}
+
+.question-card {
+  padding: 28px 32px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.question-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.question-prompt {
+  font-size: 1.25rem;
+  line-height: 1.55;
+  margin-bottom: 22px;
+}
+
+.question-prompt p {
+  margin: 0 0 10px;
+}
+
+.question-prompt pre {
+  padding: 12px;
+  border-radius: 8px;
+  background: #24292e;
+  color: #f6f8fa;
+  overflow-x: auto;
+}
+
+.question-prompt code, .explanation-body code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 6%);
+  font-size: 0.9em;
+}
+
+.choices-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 860px) {
+  .choices-list.choices-multi-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.choice-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--c-surface);
+  user-select: none;
+  transition: border-color 0.14s, background-color 0.14s;
+}
+
+.choice-label input[type="checkbox"],
+.choice-label input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--c-primary);
+  flex-shrink: 0;
+  pointer-events: none;
+  margin: 0;
+}
+
+.choice-label:hover {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+
+.choice-label.choice-selected {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  font-weight: 500;
+}
+
+.choice-label.choice-correct {
+  border-color: var(--c-ok) !important;
+  background: var(--c-ok-soft) !important;
+  color: var(--c-ok);
+  font-weight: 600;
+}
+
+.choice-label.choice-wrong {
+  border-color: var(--c-danger) !important;
+  background: var(--c-danger-soft) !important;
+  color: var(--c-danger);
+}
+
+.choice-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.choice-mark.mark-ok {
+  background: var(--c-ok);
+  color: #ffffff;
+}
+
+.choice-mark.mark-wrong {
+  background: var(--c-danger);
+  color: #ffffff;
+}
+
+.choice-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--c-surface-3);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+
+.choice-text {
+  flex: 1;
+}
+
+.input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.answer-input {
+  flex: 1;
+  height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-family: inherit;
+}
+
+.answer-input.font-mono {
+  font-family: var(--font-mono);
+}
+
+.cmd-prompt {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+}
+
+.answer-input.input-correct {
+  border-color: var(--c-ok) !important;
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+
+.answer-input.input-near {
+  border-color: var(--c-warn) !important;
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+
+.answer-input.input-wrong {
+  border-color: var(--c-danger) !important;
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
+}
+
+/* Flashcard (hiệu ứng lật ~150ms, tắt khi prefers-reduced-motion) */
+.flashcard-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.flashcard {
+  width: 100%;
+  min-height: 300px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 16px;
+  padding: 36px 32px;
+  background: var(--c-surface-2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashcard,
+  .card-face.card-back {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.flashcard:hover {
+  border-color: var(--c-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.flashcard.flipped {
+  background: var(--c-surface);
+  border-color: var(--c-primary);
+}
+
+.card-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.card-face.card-back {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1.5px dashed var(--c-border);
+  animation: cardFlipIn 0.15s ease-out;
+}
+
+@keyframes cardFlipIn {
+  from {
+    opacity: 0;
+    transform: rotateX(-12deg) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: rotateX(0) translateY(0);
+  }
+}
+
+.card-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+  padding: 3px 12px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.card-badge.card-badge-back {
+  color: var(--kind-qa);
+  background: var(--kind-qa-soft);
+}
+
+.card-content {
+  font-size: 1.45rem;
+  line-height: 1.6;
+  max-width: 960px;
+  overflow-wrap: break-word;
+}
+
+.flashcard-reveal-btn {
+  min-width: 240px;
+  height: 44px;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+/* Phản hồi sau khi nộp (2 cột với chip đáp án) */
+.feedback-section {
+  margin: 20px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--c-border);
+}
+
+.feedback-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 14px;
+}
+
+.feedback-ok {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+  border: 1px solid color-mix(in srgb, var(--c-ok) 35%, var(--c-border));
+}
+
+.feedback-near {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+  border: 1px solid color-mix(in srgb, var(--c-warn) 35%, var(--c-border));
+}
+
+.feedback-wrong {
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
+  border: 1px solid color-mix(in srgb, var(--c-danger) 35%, var(--c-border));
+}
+
+.feedback-icon {
+  font-size: 1.15rem;
+}
+
+.feedback-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .feedback-compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feedback-compare-col {
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+}
+
+.feedback-col-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  margin-bottom: 8px;
+}
+
+.answer-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.answer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs);
+  font-weight: 600;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.answer-chip.correct-chip {
+  background: var(--c-ok-soft);
+  border-color: color-mix(in srgb, var(--c-ok) 35%, var(--c-border));
+  color: var(--c-ok);
+}
+
+.answer-chip.near-chip {
+  background: var(--c-warn-soft);
+  border-color: color-mix(in srgb, var(--c-warn) 35%, var(--c-border));
+  color: var(--c-warn);
+}
+
+.answer-chip.wrong-chip {
+  background: var(--c-danger-soft);
+  border-color: color-mix(in srgb, var(--c-danger) 35%, var(--c-border));
+  color: var(--c-danger);
+}
+
+.explanation-box {
+  padding: 12px 16px;
+  background: var(--c-surface-2);
+  border-left: 4px solid var(--c-primary);
+  border-radius: 6px;
+  margin: 12px 0;
+}
+
+.explanation-box h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  color: var(--c-primary);
+}
+
+.explanation-body {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.session-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.session-actions.session-actions-center {
+  justify-content: center;
+}
+
+.session-key-hints {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--c-border);
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+}
+
+/* Đánh giá lặp lại ngắt quãng SM-2 (4 nút) */
+.card-eval-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+@media (max-width: 680px) {
+  .card-eval-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.srs-rate-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 56px;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+
+.srs-rate-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(23 32 51 / 8%);
+}
+
+.srs-rate-time {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.srs-rate-title {
+  font-size: 0.95rem;
+}
+
+.srs-rate-btn.rate-again {
+  background: var(--c-danger-soft);
+  border-color: #f3c5c0;
+  color: var(--c-danger);
+}
+
+.srs-rate-btn.rate-hard {
+  background: var(--c-warn-soft);
+  border-color: #f0d9a8;
+  color: var(--c-warn);
+}
+
+.srs-rate-btn.rate-good {
+  background: var(--c-ok-soft);
+  border-color: #b9e3c9;
+  color: var(--c-ok);
+}
+
+.srs-rate-btn.rate-easy {
+  background: var(--c-primary-soft);
+  border-color: #c3d0f7;
+  color: var(--c-primary);
+}
+

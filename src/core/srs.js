@@ -186,3 +186,40 @@ export function recordReview(progress, {
   };
 }
 
+// Xoá tiến trình học (đặt lại về trạng thái ban đầu).
+// deckId = null hoặc 'all': xoá toàn bộ tiến trình của tất cả bộ thẻ.
+// deckId = string cụ thể: chỉ xoá tiến trình của bộ thẻ đó.
+export function clearProgress(progress, deckId = null) {
+  if (!deckId || deckId === 'all') {
+    return {
+      version: 1,
+      cards: {},
+      meta: {},
+      log: [],
+    };
+  }
+
+  const prefix = `${deckId}:`;
+  const cards = {};
+  for (const [k, v] of Object.entries(progress?.cards || {})) {
+    if (!k.startsWith(prefix)) {
+      cards[k] = v;
+    }
+  }
+
+  const meta = { ...(progress?.meta || {}) };
+  delete meta[deckId];
+
+  const log = Array.isArray(progress?.log)
+    ? progress.log.filter(entry => entry && !String(entry.card || '').startsWith(prefix))
+    : [];
+
+  return {
+    version: 1,
+    cards,
+    meta,
+    log,
+  };
+}
+
+

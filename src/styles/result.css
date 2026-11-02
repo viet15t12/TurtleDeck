@@ -1,0 +1,131 @@
+/* src/styles/result.css — Màn hình Kết quả phiên học (Result view, GĐ3B §6) */
+
+.result-card {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.result-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.result-ring-svg {
+  width: 128px;
+  height: 128px;
+  flex-shrink: 0;
+}
+
+.result-ring-text {
+  font-size: 26px;
+  font-weight: 800;
+  fill: var(--c-text);
+}
+
+.result-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .result-stats-grid {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+}
+
+.result-stat-box {
+  padding: 12px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface-2);
+}
+
+.result-stat-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.result-stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.result-next-due-banner {
+  margin: 20px auto 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  width: fit-content;
+}
+
+.success-banner {
+  margin: 14px auto 0;
+  padding: 10px 18px;
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+  border-radius: var(--radius);
+  font-weight: 600;
+  width: fit-content;
+}
+
+.result-actions {
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.wrong-list {
+  margin-top: 20px;
+}
+
+.wrong-items {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.wrong-item-box {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  overflow: hidden;
+}
+
+.wrong-item-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+  background: var(--c-surface-2);
+}
+
+.wrong-item-summary::-webkit-details-marker {
+  display: none;
+}
+
+.wrong-item-title {
+  font-weight: 600;
+  font-size: var(--fs);
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wrong-item-body {
+  padding: 14px 16px;
+  border-top: 1px solid var(--c-border);
+}
+

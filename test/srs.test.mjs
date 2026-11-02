@@ -204,3 +204,45 @@ test('srs: cardKey, ratingFromGrade và recordReview (kể cả Học thử pers
   });
 });
 
+test('srs: clearProgress đặt lại toàn bộ hoặc theo bộ thẻ cụ thể', async () => {
+  const { clearProgress } = await import('../src/core/srs.js');
+  const sampleProgress = {
+    version: 1,
+    cards: {
+      'deck-a:i1:fwd': { state: 'review', interval: 5 },
+      'deck-a:i2:fwd': { state: 'learning', interval: 1 },
+      'deck-b:i1:fwd': { state: 'review', interval: 10 },
+    },
+    meta: {
+      'deck-a': { lastStudied: 1000 },
+      'deck-b': { lastStudied: 2000 },
+    },
+    log: [
+      { t: 1000, card: 'deck-a:i1:fwd', rating: 3 },
+      { t: 2000, card: 'deck-b:i1:fwd', rating: 4 },
+      { t: 3000, card: 'deck-a:i2:fwd', rating: 1 },
+    ],
+  };
+
+  // Xoá riêng deck-a
+  const clearedA = clearProgress(sampleProgress, 'deck-a');
+  assert.equal(Object.keys(clearedA.cards).length, 1);
+  assert.ok(clearedA.cards['deck-b:i1:fwd']);
+  assert.equal(clearedA.meta['deck-a'], undefined);
+  assert.ok(clearedA.meta['deck-b']);
+  assert.equal(clearedA.log.length, 1);
+  assert.equal(clearedA.log[0].card, 'deck-b:i1:fwd');
+
+  // Xoá tất cả ('all' hoặc null)
+  const clearedAll = clearProgress(sampleProgress, 'all');
+  assert.deepEqual(clearedAll.cards, {});
+  assert.deepEqual(clearedAll.meta, {});
+  assert.deepEqual(clearedAll.log, []);
+
+  const clearedNull = clearProgress(sampleProgress, null);
+  assert.deepEqual(clearedNull.cards, {});
+  assert.deepEqual(clearedNull.meta, {});
+  assert.deepEqual(clearedNull.log, []);
+});
+
+
