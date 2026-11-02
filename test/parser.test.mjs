@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDeck } from '../src/core/parser.js';
+import { parseDeck, parseImport } from '../src/core/parser.js';
+import fs from 'node:fs';
 
 const good = {
   meta: { id: 'lpic-101', title: 'LPIC-1 101', kind: 'quiz' },
@@ -171,5 +172,137 @@ test('GĐ2B: duyệt ảnh tham chiếu, cảnh báo ảnh thiếu/sai đuôi/qu
   // Cảnh báo ảnh thiếu
   assert.ok(r.issues.some(i => i.level === 'warn' && /không tìm thấy ảnh "img\/ans\.jpg"/i.test(i.msg)));
 });
+
+// ── Tests cho parseImport (Giai đoạn 4) ────────────────────────────────────
+
+test('parseImport: TSV 100 từ vựng hợp lệ', () => {
+  const content = fs.readFileSync('test/fixtures/vocab-100.tsv', 'utf8');
+  const res = parseImport(content);
+  assert.equal(res.ok, true);
+  assert.equal(res.format, 'tsv');
+  assert.equal(res.items.length, 100);
+  assert.equal(res.items[0].term, 'word_001');
+  assert.equal(res.items[0].pos, 'verb');
+  assert.deepEqual(res.items[0].forms, ['word_001s', 'word_001ed']);
+  assert.match(res.items[0].id, /^w-[a-f0-9]{10}$/);
+});
+
+test('parseImport: CSV phức tạp (BOM, CRLF, nháy kép, phẩy trong ô, dòng trống, dedupe)', () => {
+  const content = fs.readFileSync('test/fixtures/complex.csv', 'utf8');
+  const res = parseImport(content);
+  assert.equal(res.ok, true);
+  assert.equal(res.format, 'csv');
+  // 4 mục hợp lệ (mitigate, complex, multiline, dedupe) - dòng "Dedupe" thứ hai bị dedupe
+  assert.equal(res.items.length, 4);
+
+  // Ô có dấu phẩy và nháy kép
+  const complexItem = res.items.find(i => i.term === 'complex, term');
+  assert.ok(complexItem);
+  assert.equal(complexItem.definition, 'định nghĩa có "dấu nháy kép" và dấu phẩy,');
+  assert.match(complexItem.example, /Line 1\r?\nLine 2/);
+
+  // Multiline trong ô
+  const multilineItem = res.items.find(i => i.term === 'multiline');
+  assert.ok(multilineItem);
+  assert.match(multilineItem.definition, /Dòng 1 nghĩa\r?\nDòng 2 nghĩa/);
+
+  // Cảnh báo trùng từ (dedupe vs Dedupe)
+  assert.ok(res.issues.some(i => i.level === 'warn' && /trùng trong lần nhập này/i.test(i.msg)));
+});
+
+test('parseImport: Quizlet với dấu phân cách tuỳ ý (cardSep = ;;;, termSep = " - ")', () => {
+  const content = fs.readFileSync('test/fixtures/quizlet-custom.txt', 'utf8');
+  const res = parseImport(content, { format: 'quizlet', cardSep: ';;;', termSep: ' - ' });
+  assert.equal(res.ok, true);
+  assert.equal(res.format, 'quizlet');
+  assert.equal(res.items.length, 3);
+  assert.equal(res.items[0].term, 'ubiquitous');
+  assert.match(res.items[0].definition, /phổ biến/);
+  assert.equal(res.items[1].term, 'ephemeral');
+  assert.match(res.items[1].definition, /sớm nở tối tàn\r?\n\(tồn tại trong thời gian ngắn\)/);
+});
+
+test('parseImport: Markdown vocab (## term | definition + - key: value)', () => {
+  const content = fs.readFileSync('test/fixtures/vocab-sample.md', 'utf8');
+  const res = parseImport(content);
+  assert.equal(res.ok, true);
+  assert.equal(res.format, 'md-vocab');
+  assert.equal(res.items.length, 2);
+
+  const it1 = res.items[0];
+  assert.equal(it1.term, 'mitigate');
+  assert.equal(it1.definition, 'giảm nhẹ, làm dịu');
+  assert.equal(it1.pos, 'verb');
+  assert.deepEqual(it1.forms, ['mitigates', 'mitigated', 'mitigating']);
+  assert.deepEqual(it1.tags, ['ielts', 'environment']);
+
+  const it2 = res.items[1];
+  assert.equal(it2.term, 'resilient');
+  assert.equal(it2.pos, 'adjective');
+  assert.deepEqual(it2.synonyms, ['tough', 'strong']);
+});
+
+test('parseImport: Markdown quiz có LaTeX nguyên vẹn, choices, answer, tolerance', () => {
+  const content = fs.readFileSync('test/fixtures/quiz-latex.md', 'utf8');
+  const res = parseImport(content);
+  assert.equal(res.ok, true);
+  assert.equal(res.format, 'md-quiz');
+  assert.equal(res.items.length, 2);
+
+  const q1 = res.items[0];
+  assert.equal(q1.id, 'm-001');
+  assert.equal(q1.type, 'single');
+  assert.ok(q1.question.includes('$\\int_0^1 x^2\\,dx$'));
+  assert.deepEqual(q1.answer, [1]); // lựa chọn thứ 2 được đánh dấu [x]
+  assert.equal(q1.choices[1], '$\\frac{1}{3}$');
+  assert.ok(q1.explanation.includes('\\left[\\frac{x^3}{3}\\right]'));
+
+  const q2 = res.items[1];
+  assert.equal(q2.id, 'm-002');
+  assert.equal(q2.type, 'fill');
+  assert.deepEqual(q2.answer, ['1.414', '1,414']);
+  assert.equal(q2.match, 'number');
+  assert.equal(q2.tolerance, 0.001);
+});
+
+test('parseImport: các ca lỗi và cảnh báo (ô thiếu, thừa, ảnh thiếu nguồn, audio bị bỏ qua)', () => {
+  // Cột audio bị bỏ qua và có cảnh báo
+  const withAudio = 'term\tdefinition\taudio\napple\tquả táo\taudio/apple.mp3';
+  const rAudio = parseImport(withAudio, { format: 'tsv' });
+  assert.equal(rAudio.items.length, 1);
+  assert.ok(rAudio.issues.some(i => i.level === 'warn' && /chưa hỗ trợ audio/i.test(i.msg)));
+
+  // Cột image khi không có sourceDir (dán văn bản) -> cảnh báo
+  const withImg = 'term\tdefinition\timage\napple\tquả táo\timg/apple.png';
+  const rImg = parseImport(withImg, { format: 'tsv', hasSourceDir: false });
+  assert.equal(rImg.items.length, 1);
+  assert.ok(rImg.issues.some(i => i.level === 'warn' && /cần nhập từ file để lấy ảnh/i.test(i.msg)));
+
+  // Ô thiếu nghĩa
+  const missingDef = 'term\tdefinition\ncat\t\ndog\tchó';
+  const rDef = parseImport(missingDef, { format: 'tsv' });
+  assert.equal(rDef.items.length, 1);
+  assert.equal(rDef.items[0].term, 'dog');
+  assert.ok(rDef.issues.some(i => i.level === 'error' && /thiếu nghĩa/i.test(i.msg)));
+
+  // Ô lệch số lượng so với header
+  const uneven = 'term\tdefinition\tphonetic\nfish\tcá\t/fɪʃ/\tthừa ô';
+  const rUneven = parseImport(uneven, { format: 'tsv' });
+  assert.equal(rUneven.items.length, 1);
+  assert.ok(rUneven.issues.some(i => i.level === 'warn' && /ô/i.test(i.msg)));
+
+  // Dạng card trong md quiz bị báo lỗi
+  const mdQuizCard = '## Q c-001 | card\nFront\nBack';
+  const rCard = parseImport(mdQuizCard, { format: 'md-quiz' });
+  assert.equal(rCard.items.length, 0);
+  assert.ok(rCard.issues.some(i => i.level === 'error' && /chưa được hỗ trợ/i.test(i.msg)));
+
+  // Văn bản quá 5 MB
+  const hugeText = 'a'.repeat(6 * 1024 * 1024);
+  const rHuge = parseImport(hugeText);
+  assert.equal(rHuge.ok, false);
+  assert.ok(rHuge.issues.some(i => i.level === 'error' && /vượt quá giới hạn/i.test(i.msg)));
+});
+
 
 

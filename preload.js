@@ -19,4 +19,7 @@ contextBridge.exposeInMainWorld('api', {
   saveProgress: d => ipcRenderer.invoke('progress:save', d),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: d => ipcRenderer.invoke('settings:save', d),
+  pickImportFile: () => ipcRenderer.invoke('import:pickFile'),
+  previewImport: args => ipcRenderer.invoke('import:preview', args),
+  commitImport:  args => ipcRenderer.invoke('import:commit', args),
 });

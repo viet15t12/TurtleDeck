@@ -4,7 +4,7 @@ import {
   newDeck, newItemId, newItem, addItem, removeItems, duplicateItem,
   moveItem, updateItem, changeType, imageRefs, collectImageRefs,
   unusedAssets, createHistory, newItemLike, setCorrect, splitPastedChoices,
-  normalizeOnLeave, isBlankNewItem, stripAccents,
+  normalizeOnLeave, isBlankNewItem, stripAccents, addImportedItems,
 } from '../src/core/deckmodel.js';
 
 test('deckmodel: newDeck tạo bộ thẻ hợp lệ', () => {
@@ -261,5 +261,32 @@ test('deckmodel: newItemLike, setCorrect, splitPastedChoices, normalizeOnLeave, 
   assert.deepEqual(norm.choices, ['Đáp án A', 'Đáp án B']);
   assert.equal(stripAccents('Giải tích 1 — Đường thẳng'), 'giai tich 1 — duong thang');
 });
+
+test('deckmodel: addImportedItems khử trùng id và term chuẩn hoá, tính là 1 bước undo', () => {
+  const deck = newDeck({ kind: 'vocab' });
+  const d1 = addItem(deck, { id: 'w-1', type: 'vocab', term: 'Apple', definition: 'Quả táo' });
+
+  const imported = [
+    { id: 'w-1', type: 'vocab', term: 'Other', definition: 'Trùng id' },
+    { id: 'w-2', type: 'vocab', term: 'apple', definition: 'Trùng term' },
+    { id: 'w-3', type: 'vocab', term: 'Banana', definition: 'Quả chuối' },
+    { id: 'w-4', type: 'vocab', term: 'Orange', definition: 'Quả cam' },
+  ];
+
+  const res = addImportedItems(d1, imported);
+  assert.equal(res.added.length, 2);
+  assert.equal(res.skipped.length, 2);
+  assert.deepEqual(res.added.map(i => i.term), ['Banana', 'Orange']);
+  assert.equal(res.deck.items.length, 3);
+
+  // Thử nghiệm với History: tính là đúng 1 bước undo
+  const h = createHistory(d1);
+  h.push(res.deck);
+  assert.equal(h.canUndo(), true);
+  const undoneDeck = h.undo();
+  assert.equal(undoneDeck.items.length, 1);
+  assert.equal(undoneDeck.items[0].term, 'Apple');
+});
+
 
 

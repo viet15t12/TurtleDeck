@@ -97,7 +97,8 @@ function normalizePlanArgs(deckOrItems, progress = {}, now = Date.now(), opts = 
     ? Math.floor(Number(rawLimit))
     : DEFAULT_NEW_CARDS_PER_DAY;
 
-  const direction = opts.direction || 'fwd';
+  const defaultDir = deckKind === 'vocab' ? 'both' : 'fwd';
+  const direction = opts.direction || defaultDir;
   const timeZone = opts.timeZone;
 
   return {
@@ -111,6 +112,7 @@ function normalizePlanArgs(deckOrItems, progress = {}, now = Date.now(), opts = 
     direction,
     timeZone,
     count: opts.count,
+    mode: opts.mode,
   };
 }
 
@@ -140,15 +142,21 @@ export function deckDueCounts(deckOrItems, progress = {}, now = Date.now(), opts
   let learning = 0;
   let newAvailable = 0;
 
+  const directions = deckKind === 'vocab'
+    ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
+    : ['fwd'];
+
   for (const item of validItems) {
-    const key = cardKey(deckId, item.id, direction);
-    const card = cards[key] || newCard();
-    if (card.state === 'review') {
-      if (card.due <= now) due++;
-    } else if (card.state === 'learning' || card.state === 'relearning') {
-      learning++;
-    } else {
-      newAvailable++;
+    for (const d of directions) {
+      const key = cardKey(deckId, item.id, d);
+      const card = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : newCard());
+      if (card.state === 'review') {
+        if (card.due <= now) due++;
+      } else if (card.state === 'learning' || card.state === 'relearning') {
+        learning++;
+      } else {
+        newAvailable++;
+      }
     }
   }
 
@@ -163,7 +171,7 @@ export function deckDueCounts(deckOrItems, progress = {}, now = Date.now(), opts
     newAvailable,
     newStudiedToday,
     newToday,
-    total: validItems.length,
+    total: validItems.length * directions.length,
   };
 }
 
@@ -199,35 +207,41 @@ export function planSession(deckOrItems, progress = {}, now = Date.now(), opts =
       .map(e => e.card)
   );
 
+  const directions = deckKind === 'vocab'
+    ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
+    : ['fwd'];
+
   validItems.forEach((item, index) => {
-    const q = buildQuestion(item);
-    if (!q) return;
-    const key = cardKey(deckId, item.id, direction);
-    const rawCard = cards[key] || (cards[item.id] ? cards[item.id] : null);
-    const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
+    for (const d of directions) {
+      const q = buildQuestion(item, { mode: opts.mode, dir: d, allItems: validItems });
+      if (!q) continue;
+      const key = cardKey(deckId, item.id, d);
+      const rawCard = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : null);
+      const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
 
-    const entry = {
-      ...q,
-      item,
-      itemId: item.id,
-      deckId,
-      direction,
-      key,
-      card,
-      due: card.due,
-      _order: index,
-    };
+      const entry = {
+        ...q,
+        item,
+        itemId: item.id,
+        deckId,
+        direction: d,
+        key,
+        card,
+        due: card.due,
+        _order: index * 2 + (d === 'rev' ? 1 : 0),
+      };
 
-    if (card.state === 'review') {
-      if (card.due <= now) {
-        dueBucket.push({ ...entry, category: 'due' });
+      if (card.state === 'review') {
+        if (card.due <= now) {
+          dueBucket.push({ ...entry, category: 'due' });
+        }
+      } else if (card.state === 'learning' || card.state === 'relearning') {
+        learningBucket.push({ ...entry, category: 'learning' });
+      } else if (!rawCard && loggedTodayKeys.has(key)) {
+        // Đã được học hôm nay trong log
+      } else {
+        newBucket.push({ ...entry, category: 'new' });
       }
-    } else if (card.state === 'learning' || card.state === 'relearning') {
-      learningBucket.push({ ...entry, category: 'learning' });
-    } else if (!rawCard && loggedTodayKeys.has(key)) {
-      // Đã được học hôm nay trong log
-    } else {
-      newBucket.push({ ...entry, category: 'new' });
     }
   });
 
@@ -247,6 +261,20 @@ export function planSession(deckOrItems, progress = {}, now = Date.now(), opts =
     delete copy._order;
     return copy;
   });
+
+  // Đảm bảo không xếp 2 câu cùng itemId cạnh nhau nếu có thể
+  if (planned.length > 2) {
+    for (let i = 0; i < planned.length - 1; i++) {
+      if (planned[i].itemId === planned[i + 1].itemId) {
+        const swapIdx = planned.findIndex((e, idx) => idx > i + 1 && e.itemId !== planned[i].itemId);
+        if (swapIdx !== -1) {
+          const temp = planned[i + 1];
+          planned[i + 1] = planned[swapIdx];
+          planned[swapIdx] = temp;
+        }
+      }
+    }
+  }
 
   const maxCount = Number(count);
   if (maxCount > 0 && maxCount < planned.length) {

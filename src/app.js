@@ -308,11 +308,12 @@ const actions = {
     render();
   },
 
-  openSessionSetup(entry) {
+  openSessionSetup(entry, opts = {}) {
     state.modal = renderSessionModal(
       entry,
       config => actions.startSession(entry, { ...config, persist: true }),
-      () => { state.modal = null; render(); }
+      () => { state.modal = null; render(); },
+      opts
     );
     render();
   },

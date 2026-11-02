@@ -5,6 +5,7 @@ import { buildQuestion } from '../../core/builder.js';
 import { gradeText, gradeChoices } from '../../core/grader.js';
 import { validateItem, hasError, friendlyIssue } from '../../core/validate.js';
 import { isBlankNewItem } from '../../core/deckmodel.js';
+import { speak } from '../../tts.js';
 
 function richEl(tag, attrs, htmlContent) {
   const el = document.createElement(tag);
@@ -199,7 +200,18 @@ export function createPreviewPane({ container, deckKey, rich, getAssets, onToggl
               },
             },
               h('div', { class: 'card-face card-front' },
-                h('span', { class: 'card-badge' }, 'Mặt trước'),
+                h('div', { style: 'display: flex; justify-content: space-between; align-items: center; width: 100%;' },
+                  h('span', { class: 'card-badge' }, 'Mặt trước'),
+                  (item.term || q.rawItem?.term) ? h('button', {
+                    type: 'button',
+                    class: 'ux-btn ghost sm',
+                    style: 'padding: 0 6px; height: 22px;',
+                    title: 'Phát âm (Web Speech TTS)',
+                    onclick: ev => {
+                      ev.stopPropagation();
+                      speak(item.term || q.rawItem?.term);
+                    },
+                  }, '🔊') : null),
                 (q.front || '').trim()
                   ? richEl('div', { class: 'card-content' }, rich.html(q.front))
                   : h('div', { class: 'card-content muted', style: 'font-style: italic;' }, '(Chưa nhập mặt trước)'),

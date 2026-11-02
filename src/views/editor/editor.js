@@ -28,6 +28,7 @@ import { createListPane } from './list.js';
 import { createFormPane } from './form.js';
 import { createPreviewPane } from './preview.js';
 import { renderImageManagerModal } from './imagemanager.js';
+import { renderBulkImportModal } from './bulkimport.js';
 import { closeMathPopover } from './mathpopover.js';
 
 function formatTimeHHMM(date) {
@@ -393,6 +394,7 @@ export function renderEditor(root, { entry, initialItemId }, actions) {
       },
     }),
     onOpenAssetManager: () => openImageManager(),
+    onOpenBulkImport: () => openBulkImportModal(),
   });
 
   const formPane = createFormPane({
@@ -809,6 +811,14 @@ export function renderEditor(root, { entry, initialItemId }, actions) {
         onclick: () => {
           saveMenuOpen = false;
           renderTopbar();
+          openBulkImportModal();
+        },
+      }, 'Nhập hàng loạt…'),
+      h('button', {
+        class: 'ux-popover-item',
+        onclick: () => {
+          saveMenuOpen = false;
+          renderTopbar();
           openImageManager();
         },
       }, `Quản lý ảnh (${assetsList.length})…`),
@@ -1142,6 +1152,27 @@ export function renderEditor(root, { entry, initialItemId }, actions) {
       onMarkDirty: () => {
         dirty = true;
         renderTopbar();
+      },
+      onClose: closeModal,
+      showToast,
+    });
+    shellEl.append(activeModalEl);
+  }
+
+  function openBulkImportModal() {
+    closeModal();
+    activeModalEl = renderBulkImportModal({
+      deckKey,
+      deck: getDeck(),
+      onImportSuccess: (newDeck, count) => {
+        applyDeckMutation(newDeck, {
+          preserveActive: true,
+          label: `Nhập hàng loạt ${count} mục`,
+        });
+        showToast(`Đã thêm ${count} mục vào bộ thẻ.`);
+        listPane.render();
+        formPane.render();
+        previewPane.render(getActiveItem(), { immediate: true });
       },
       onClose: closeModal,
       showToast,

@@ -25,6 +25,7 @@ import {
 import { planSession, reinsertWrong } from '../core/planner.js';
 import { renderResult, formatNextIntervalText } from './result.js';
 import { attachImageHandlers } from './components/lightbox.js';
+import { speak } from '../tts.js';
 
 let activeCleanup = null;
 
@@ -122,10 +123,12 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     return;
   }
 
+  let autoPlayAudio = true;
+
   const session = {
     index: 0,
     questions,
-    userAnswer: null, // single: index, multi: array of indices, fill/command: string, card: boolean
+    userAnswer: null, // single: index, multi: array of indices, fill/command/listen: string, card: boolean
     submitted: false,
     cardFlipped: false,
     grade: null, // { ok, near, rating }
@@ -153,10 +156,16 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     session.questionStartedAt = Date.now();
     if (q.kind === 'multi') {
       session.userAnswer = [];
-    } else if (q.kind === 'fill' || q.kind === 'command') {
+    } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
       session.userAnswer = '';
     } else {
       session.userAnswer = null;
+    }
+
+    if (q.kind === 'listen' && autoPlayAudio && q.listenText) {
+      setTimeout(() => {
+        speak(q.listenText, settings?.ttsLang || 'en-US');
+      }, 150);
     }
   }
 
@@ -184,9 +193,9 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
       session.grade = gradeChoices([session.userAnswer], q.answers);
     } else if (q.kind === 'multi') {
       session.grade = gradeChoices(session.userAnswer || [], q.answers);
-    } else if (q.kind === 'fill' || q.kind === 'command') {
+    } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
       const inputVal = typeof session.userAnswer === 'string' ? session.userAnswer : '';
-      session.grade = gradeText(inputVal, q.answers, q.match, { tolerance: q.tolerance });
+      session.grade = gradeText(inputVal, q.answers, q.match || 'text', { tolerance: q.tolerance });
     } else if (q.kind === 'card') {
       const r = explicitRating ?? (session.userAnswer ? RATING.GOOD : RATING.AGAIN);
       session.userAnswer = r !== RATING.AGAIN;
@@ -277,6 +286,14 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
     const q = currentQ();
 
+    // Phím tắt Alt+L để nghe lại phát âm (cho Listen mode, Flashcard hoặc câu có từ vựng)
+    if (ev.altKey && (ev.key === 'l' || ev.key === 'L')) {
+      ev.preventDefault();
+      const t = q?.listenText || q?.rawItem?.term || (q?.kind === 'card' ? q?.rawItem?.term || q?.front : null);
+      if (t) speak(t, settings?.ttsLang || 'en-US');
+      return;
+    }
+
     if (session.submitted) {
       if (ev.key === 'Enter' || (q.kind === 'card' && (ev.code === 'Space' || ev.key === ' '))) {
         ev.preventDefault();
@@ -314,7 +331,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         ev.preventDefault();
         submitCurrent();
       }
-    } else if (q.kind === 'fill' || q.kind === 'command') {
+    } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         submitCurrent();
@@ -446,6 +463,52 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         }));
     }
 
+    if (q.kind === 'listen') {
+      let inputClass = 'ux-input answer-input';
+      if (session.submitted) {
+        inputClass += session.grade?.ok
+          ? (session.grade.near ? ' input-near' : ' input-correct')
+          : ' input-wrong';
+      }
+
+      const playAudio = (slow = false) => {
+        if (q.listenText) {
+          speak(q.listenText, settings?.ttsLang || 'en-US', { rate: slow ? 0.75 : 1.0 });
+        }
+      };
+
+      return h('div', { class: 'listen-mode-box', style: 'display: flex; flex-direction: column; gap: 16px;' },
+        h('div', { style: 'display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--c-surface-2); padding: 10px 14px; border-radius: var(--radius-md);' },
+          h('button', {
+            type: 'button',
+            class: 'ux-btn primary',
+            onclick: () => playAudio(false),
+          }, '🔊 Nghe lại (Alt+L)'),
+          h('button', {
+            type: 'button',
+            class: 'ux-btn',
+            onclick: () => playAudio(true),
+          }, '🐢 Nghe chậm (0.75x)'),
+          h('label', { style: 'margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;' },
+            h('input', {
+              type: 'checkbox',
+              checked: autoPlayAudio,
+              onchange: ev => { autoPlayAudio = ev.target.checked; },
+            }),
+            'Tự động phát khi chuyển câu')),
+        h('div', { class: 'input-area' },
+          h('input', {
+            type: 'text',
+            class: inputClass,
+            placeholder: 'Gõ từ hoặc cụm từ bạn nghe được...',
+            value: session.userAnswer || '',
+            disabled: session.submitted,
+            autofocus: true,
+            oninput: ev => { session.userAnswer = ev.target.value; },
+          }))
+      );
+    }
+
     if (q.kind === 'card') {
       const frontImgUrl = q.image ? assetUrl(q.image, entry.deckKey) : null;
       const backImgUrl = q.answerImage ? assetUrl(q.answerImage, entry.deckKey) : null;
@@ -461,7 +524,18 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
           },
         },
           h('div', { class: 'card-face card-front' },
-            h('span', { class: 'card-badge' }, 'Mặt trước'),
+            h('div', { style: 'display: flex; justify-content: space-between; align-items: center; width: 100%;' },
+              h('span', { class: 'card-badge' }, 'Mặt trước'),
+              q.rawItem?.term ? h('button', {
+                type: 'button',
+                class: 'ux-btn ghost sm',
+                style: 'padding: 0 6px; height: 22px;',
+                title: 'Phát âm (Web Speech TTS)',
+                onclick: ev => {
+                  ev.stopPropagation();
+                  speak(q.rawItem.term, settings?.ttsLang || 'en-US');
+                },
+              }, '🔊 Phát âm') : null),
             richEl('div', { class: 'card-content' }, rich.html(q.front)),
             frontImgUrl ? h('img', { class: 'rich-img card-img', src: frontImgUrl, alt: 'Hình ảnh mặt trước' }) : null),
           session.cardFlipped ? h('div', { class: 'card-face card-back' },
@@ -509,9 +583,9 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
       title = `Chưa chính xác — Sẽ hỏi lại sau ~${waitText}`;
     }
 
-    // Phản hồi hai cột cho Điền / Lệnh: "Bạn trả lời" và "Đáp án đúng" (mỗi đáp án chấp nhận là 1 chip)
+    // Phản hồi hai cột cho Điền / Lệnh / Nghe–Gõ: "Bạn trả lời" và "Đáp án đúng" (mỗi đáp án chấp nhận là 1 chip)
     let compareGrid = null;
-    if (q.kind === 'fill' || q.kind === 'command') {
+    if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
       const userText = String(session.userAnswer || '').trim() || '(để trống)';
       const userChipCls = g.ok ? (g.near ? 'near-chip' : 'correct-chip') : 'wrong-chip';
       const acceptedChips = buildAcceptedAnswerChips(q, rich);
@@ -526,6 +600,29 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
           h('div', { class: 'answer-chips-wrap' }, ...acceptedChips)));
     }
 
+    // Khối thông tin từ vựng bổ sung khi trả lời xong câu Nghe–Gõ hoặc câu có từ vựng
+    let vocabExtra = null;
+    if (q.rawItem && (q.kind === 'listen' || q.rawItem.term)) {
+      const it = q.rawItem;
+      const itImg = it.image ? assetUrl(it.image, entry.deckKey) : null;
+      vocabExtra = h('div', { class: 'vocab-feedback-extra', style: 'margin-top: 14px; padding: 12px 16px; background: var(--c-surface-2); border-radius: var(--radius-md); border-left: 3px solid var(--c-primary);' },
+        it.term ? h('div', { style: 'display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;' },
+          h('span', null, it.term),
+          it.pos ? h('span', { class: 'muted', style: 'font-weight: normal; font-size: 13px;' }, `(${it.pos})`) : null,
+          it.phonetic ? h('span', { style: 'color: var(--c-primary); font-size: 13px;' }, `/${it.phonetic}/`) : null,
+          h('button', {
+            type: 'button',
+            class: 'ux-btn ghost sm',
+            style: 'padding: 0 6px; height: 22px;',
+            title: 'Phát âm (Web Speech TTS)',
+            onclick: () => speak(it.term, settings?.ttsLang || 'en-US'),
+          }, '🔊')) : null,
+        it.definition ? h('div', { style: 'margin-top: 6px; font-size: 14px;' }, richEl('span', null, rich.inline(it.definition))) : null,
+        it.example ? h('div', { class: 'muted', style: 'margin-top: 6px; font-style: italic; font-size: 13px;' }, richEl('span', null, rich.inline(it.example))) : null,
+        itImg ? h('img', { class: 'rich-img', src: itImg, alt: 'Ảnh minh hoạ', style: 'max-height: 120px; margin-top: 8px;' }) : null
+      );
+    }
+
     const answerImgUrl = q.answerImage && q.kind !== 'card' ? assetUrl(q.answerImage, entry.deckKey) : null;
 
     return h('div', { class: 'feedback-section' },
@@ -533,6 +630,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
         h('span', { class: 'feedback-icon' }, icon),
         h('span', { class: 'feedback-text' }, title)),
       compareGrid,
+      vocabExtra,
       answerImgUrl ? h('div', { class: 'answer-img-wrap' },
         h('img', { class: 'rich-img', src: answerImgUrl, alt: 'Hình ảnh đáp án' })) : null,
       q.explanation
@@ -674,8 +772,8 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
     attachImageHandlers(root);
 
-    // Auto-focus input nếu là câu điền / gõ lệnh
-    if (!session.submitted && (q.kind === 'fill' || q.kind === 'command')) {
+    // Auto-focus input nếu là câu điền / gõ lệnh / nghe-gõ
+    if (!session.submitted && (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen')) {
       const inputEl = root.querySelector('.answer-input');
       if (inputEl) inputEl.focus();
     }

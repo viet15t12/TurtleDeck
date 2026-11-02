@@ -12,19 +12,22 @@ const progressFile = () => path.join(app.getPath('userData'), 'progress.json');
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 
 // core là ES module → nạp bằng import() động (study-app.md mục 7.1)
-let sdeck, parser, fsutil, assetprotocol;
+let sdeck, parser, fsutil, assetprotocol, deckmodel, deckkinds;
 async function loadCore() {
-  [sdeck, parser, fsutil, assetprotocol] = await Promise.all([
+  [sdeck, parser, fsutil, assetprotocol, deckmodel, deckkinds] = await Promise.all([
     import('./src/core/sdeck.js'),
     import('./src/core/parser.js'),
     import('./src/core/fsutil.js'),
     import('./src/core/assetprotocol.js'),
+    import('./src/core/deckmodel.js'),
+    import('./src/core/deckkinds.js'),
   ]);
 }
 
 // Các gói đang mở: deckKey -> { file: string|null, assets: Map<'img/x.png', Uint8Array>, sourceDir? }
 // deckKey ngẫu nhiên (a-f0-9), sẽ dùng làm "host" của asset:// ở GĐ2B
 const packages = new Map();
+const tempImports = new Map(); // importId -> { assets: Map, sourceDir }
 const newKey = () => crypto.randomBytes(6).toString('hex');
 
 const SDECK_FILTER = [{ name: 'Bộ thẻ (.sdeck)', extensions: ['sdeck'] }];
@@ -115,40 +118,163 @@ handle('deck:open', async (event, filePath) => {
   return out;
 });
 
+async function collectImportAssets(sourceDir, items) {
+  const assets = new Map();
+  const issues = [];
+  if (!sourceDir || !items) return { assets, issues };
+
+  let rootPrefix = sourceDir;
+  try {
+    const realRoot = await fs.realpath(sourceDir);
+    rootPrefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+  } catch {}
+
+  for (const item of items) {
+    const refs = deckmodel.imageRefs(item);
+    for (const ref of refs) {
+      if (/^[a-z][a-z0-9+.-]*:/i.test(ref) || ref.startsWith('//')) {
+        issues.push({ level: 'warn', msg: `Bỏ qua ảnh ngoài gói: ${ref}` });
+        continue;
+      }
+      if (!/\.(png|jpe?g|gif|webp|svg)$/i.test(ref)) {
+        issues.push({ level: 'warn', msg: `Bỏ qua ảnh không hợp lệ: ${ref}` });
+        continue;
+      }
+      try {
+        const fullPath = path.resolve(sourceDir, ...ref.split('/'));
+        const real = await fs.realpath(fullPath);
+        if (!real.startsWith(rootPrefix)) {
+          issues.push({ level: 'warn', msg: `Bỏ qua ảnh nằm ngoài thư mục nguồn: ${ref}` });
+          continue;
+        }
+        const st = await fs.stat(real);
+        if (!st.isFile() || st.size > sdeck.LIMITS.image) {
+          issues.push({ level: 'warn', msg: `Bỏ qua ${ref}: tập tin không hợp lệ hoặc lớn hơn 5 MB.` });
+          continue;
+        }
+        const buf = await fs.readFile(real);
+        if (!sdeck.detectImageType(buf)) {
+          issues.push({ level: 'warn', msg: `Bỏ qua ${ref}: nội dung không phải ảnh thật.` });
+          continue;
+        }
+        const normRef = ref.startsWith('img/') ? ref : `img/${ref}`;
+        assets.set(normRef, new Uint8Array(buf));
+      } catch {
+        issues.push({ level: 'warn', msg: `Không tìm thấy ảnh: ${ref}` });
+      }
+    }
+  }
+  return { assets, issues };
+}
+
 // Nhập .json hoặc thư mục (deck.json + img/) → gói trong bộ nhớ, chưa có file; sau đó renderer gọi deck:save.
-// Trên Linux hộp thoại không chọn được cả file lẫn thư mục cùng lúc → renderer truyền kind: 'file' | 'dir'.
-// GĐ4 thêm csv/tsv/md.
+// Trên Linux hộp thoại không chọn được cả file lẫn thư mục cùng lúc → renderer truyền kind: 'file' | 'dir' | 'text'.
+// GĐ4 thêm csv/tsv/txt/md.
 handle('deck:import', async (event, kind) => {
   const isDirPick = kind === 'dir';
-  const r = await dialog.showOpenDialog(winOf(event), isDirPick
-    ? { title: 'Chọn thư mục chứa deck.json (và img/)', properties: ['openDirectory'] }
-    : { title: 'Chọn file deck .json', properties: ['openFile'], filters: [{ name: 'Nguồn bộ thẻ (.json)', extensions: ['json'] }] });
+  const isTextPick = kind === 'text';
+
+  let dialogOptions;
+  if (isDirPick) {
+    dialogOptions = { title: 'Chọn thư mục chứa deck.json (và img/)', properties: ['openDirectory'] };
+  } else if (isTextPick) {
+    dialogOptions = {
+      title: 'Chọn file dữ liệu (.csv, .tsv, .txt, .md)',
+      properties: ['openFile'],
+      filters: [
+        { name: 'File dữ liệu (.csv, .tsv, .txt, .md)', extensions: ['csv', 'tsv', 'txt', 'md'] },
+        { name: 'Tất cả tập tin', extensions: ['*'] },
+      ],
+    };
+  } else {
+    dialogOptions = {
+      title: 'Chọn file nguồn bộ thẻ',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Nguồn bộ thẻ (.json, .csv, .tsv, .txt, .md)', extensions: ['json', 'csv', 'tsv', 'txt', 'md'] },
+      ],
+    };
+  }
+
+  const r = await dialog.showOpenDialog(winOf(event), dialogOptions);
   if (r.canceled || !r.filePaths.length) return null;
 
   const src = r.filePaths[0];
   const fail = error => ({ ok: false, source: src, error, issues: [{ level: 'error', msg: error }] });
-  let isDir, jsonFile;
+  let isDir, targetFile;
   try {
     isDir = (await fs.stat(src)).isDirectory();
-    jsonFile = isDir ? path.join(src, 'deck.json') : src;
-    const st = await fs.stat(jsonFile);
-    if (st.size > sdeck.LIMITS.deckJson) return fail('deck.json quá lớn (hơn 20 MB).');
+    targetFile = isDir ? path.join(src, 'deck.json') : src;
+    const st = await fs.stat(targetFile);
+    if (st.size > sdeck.LIMITS.deckJson) return fail('Tập tin quá lớn (hơn 20 MB).');
   } catch (e) {
     if (e.code === 'ENOENT') return fail(isDir ? 'Thư mục này không có deck.json.' : 'Không tìm thấy file.');
     return fail('Không đọc được nguồn: ' + errMsg(e));
   }
-  // đọc các ảnh được tham chiếu từ thư mục nguồn: realpath phải nằm trong `dir`, đúng đuôi/nội dung ảnh, ≤ 5 MB
+
   const dir = isDir ? src : path.dirname(src);
-  const { assets, issues: assetIssues } = await sdeck.collectAssetsFromDir(dir, deckText);
-  const parsed = parser.parseDeck(deckText, { assets });
-  if (!parsed.ok) return { ...fail(parsed.error), issues: [...pkgIssues(assetIssues), ...parsed.issues] };
-  const deckKey = newKey();
-  packages.set(deckKey, { file: null, assets, sourceDir: dir });
-  return {
-    ok: true, source: src, deckKey, deckText, deck: parsed.deck,
-    issues: [...pkgIssues(assetIssues), ...parsed.issues],
-    total: parsed.total, skipped: parsed.skipped, assetCount: assets.size,
-  };
+  const ext = path.extname(targetFile).toLowerCase();
+
+  // Nhập từ định dạng bảng/văn bản (.csv, .tsv, .txt, .md)
+  if (!isDir && ['.csv', '.tsv', '.txt', '.md'].includes(ext)) {
+    try {
+      const content = await fs.readFile(targetFile, 'utf8');
+      const parsed = parser.parseImport(content, { format: 'auto', hasSourceDir: true });
+      if (!parsed.ok || !parsed.items?.length) {
+        return fail('Không tìm thấy mục hợp lệ nào trong file để nhập.');
+      }
+
+      const inferredKind = deckkinds.inferKind(parsed.items);
+      const title = path.basename(targetFile, ext);
+      const deckId = `deck-${crypto.randomBytes(4).toString('hex')}`;
+      const deck = {
+        meta: {
+          id: deckId,
+          title,
+          kind: inferredKind,
+          created: Date.now(),
+        },
+        items: parsed.items,
+      };
+
+      // Thu thập ảnh từ thư mục chứa file
+      const { assets: tempAssets, issues: assetIssues } = await collectImportAssets(dir, parsed.items);
+      const deckKey = newKey();
+      const deckText = JSON.stringify(deck, null, 2);
+      packages.set(deckKey, { file: null, assets: tempAssets, sourceDir: dir });
+
+      return {
+        ok: true,
+        source: src,
+        deckKey,
+        deckText,
+        deck,
+        issues: [...pkgIssues(assetIssues), ...parsed.issues],
+        total: parsed.items.length,
+        skipped: 0,
+        assetCount: tempAssets.size,
+      };
+    } catch (e) {
+      return fail('Lỗi khi đọc file: ' + errMsg(e));
+    }
+  }
+
+  // Nhập từ file deck.json hoặc thư mục deck.json + img/
+  try {
+    const deckText = await fs.readFile(targetFile, 'utf8');
+    const { assets, issues: assetIssues } = await sdeck.collectAssetsFromDir(dir, deckText);
+    const parsed = parser.parseDeck(deckText, { assets });
+    if (!parsed.ok) return { ...fail(parsed.error), issues: [...pkgIssues(assetIssues), ...parsed.issues] };
+    const deckKey = newKey();
+    packages.set(deckKey, { file: null, assets, sourceDir: dir });
+    return {
+      ok: true, source: src, deckKey, deckText, deck: parsed.deck,
+      issues: [...pkgIssues(assetIssues), ...parsed.issues],
+      total: parsed.total, skipped: parsed.skipped, assetCount: assets.size,
+    };
+  } catch (e) {
+    return fail('Không đọc được nguồn: ' + errMsg(e));
+  }
 });
 
 // Lưu. saveAs=true hoặc chưa có file → hộp thoại "Lưu thành…". Luôn kiểm tra lại ở main (không tin renderer).
@@ -297,6 +423,108 @@ handle('progress:save', (_e, data) => fsutil.saveProgressFile(progressFile(), da
 // decks: đường dẫn các .sdeck đã mở (tự nạp lại khi mở app); newCardsPerDay, learnSteps, độ rộng cột Editor...
 handle('settings:load', () => fsutil.loadSettingsFile(settingsFile()));
 handle('settings:save', (_e, data) => fsutil.saveSettingsFile(settingsFile(), data));
+
+// ── Nhập hàng loạt (CSV, TSV, Quizlet, Markdown) ───────────────────────────
+
+// Hộp thoại chọn file nhập dữ liệu (.csv, .tsv, .txt, .md)
+handle('import:pickFile', async event => {
+  const r = await dialog.showOpenDialog(winOf(event), {
+    title: 'Chọn file nhập dữ liệu',
+    properties: ['openFile'],
+    filters: [
+      { name: 'File dữ liệu (.csv, .tsv, .txt, .md)', extensions: ['csv', 'tsv', 'txt', 'md'] },
+      { name: 'Tất cả tập tin', extensions: ['*'] },
+    ],
+  });
+  if (r.canceled || !r.filePaths.length) return { canceled: true };
+  const filePath = r.filePaths[0];
+  const name = path.basename(filePath);
+  const text = await fs.readFile(filePath, 'utf8');
+  return { ok: true, path: filePath, name, text };
+});
+
+// Xem trước dữ liệu nhập và thu thập ảnh tạm thời từ thư mục file nguồn
+handle('import:preview', async (_event, args) => {
+  const { path: filePath, text: rawText, format, options = {} } = args || {};
+  let content = rawText;
+  let hasSourceDir = false;
+  let sourceDir = null;
+
+  if (typeof filePath === 'string' && filePath.trim()) {
+    try {
+      content = await fs.readFile(filePath, 'utf8');
+      sourceDir = path.dirname(path.resolve(filePath));
+      hasSourceDir = true;
+    } catch (e) {
+      return { ok: false, error: 'Không đọc được file: ' + errMsg(e) };
+    }
+  }
+
+  if (typeof content !== 'string') {
+    return { ok: false, error: 'Chưa có nội dung văn bản để nhập.' };
+  }
+
+  const parsed = parser.parseImport(content, { ...options, format, hasSourceDir });
+
+  // Thu thập ảnh từ thư mục nguồn nếu có
+  let tempAssets = new Map();
+  let assetIssues = [];
+
+  if (hasSourceDir && sourceDir) {
+    const collected = await collectImportAssets(sourceDir, parsed.items);
+    tempAssets = collected.assets;
+    assetIssues = collected.issues;
+  }
+
+  const importId = crypto.randomUUID();
+  tempImports.set(importId, { assets: tempAssets, sourceDir, items: parsed.items });
+
+  return {
+    ok: true,
+    format: parsed.format,
+    items: parsed.items,
+    issues: [...assetIssues, ...parsed.issues],
+    importId,
+    assetCount: tempAssets.size,
+  };
+});
+
+// Chuyển ảnh đã chọn vào gói bộ thẻ đang mở
+handle('import:commit', async (_event, args) => {
+  const { deckKey, importId, selectedIds } = args || {};
+  if (!importId || !tempImports.has(importId)) {
+    return { ok: true, assetCount: 0 };
+  }
+  const temp = tempImports.get(importId);
+  tempImports.delete(importId);
+
+  const pkg = deckKey ? packages.get(deckKey) : null;
+  if (!pkg) return { ok: true, assetCount: 0 };
+
+  if (temp?.assets && temp.assets.size > 0) {
+    let allowedRefs = null;
+    if (Array.isArray(selectedIds) && temp.items) {
+      allowedRefs = new Set();
+      const selSet = new Set(selectedIds);
+      for (const item of temp.items) {
+        if (selSet.has(item.id)) {
+          for (const ref of deckmodel.imageRefs(item)) {
+            const normRef = ref.startsWith('img/') ? ref : `img/${ref}`;
+            allowedRefs.add(normRef);
+            allowedRefs.add(ref);
+          }
+        }
+      }
+    }
+
+    for (const [k, v] of temp.assets) {
+      if (!allowedRefs || allowedRefs.has(k) || allowedRefs.has(k.replace(/^img\//, ''))) {
+        pkg.assets.set(k, v);
+      }
+    }
+  }
+  return { ok: true, assetCount: pkg.assets.size };
+});
 
 function registerAssetProtocol() {
   protocol.handle('asset', req => {

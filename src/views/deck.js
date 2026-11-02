@@ -11,11 +11,13 @@ import {
   itemTypeLabel,
   mismatchedItems,
   formatMismatchWarning,
+  checkModeAvailability,
 } from '../core/deckkinds.js';
 import { deckStats } from '../core/deckstats.js';
 import { cardKey, DAY } from '../core/srs.js';
 import { stripAccents } from '../core/deckmodel.js';
 import { renderStackedBar } from './components/stackedbar.js';
+import { speak, hasVoice } from '../tts.js';
 
 const choiceText = c => typeof c === 'string' ? c : [c?.text, c?.image ? `[ảnh ${c.image}]` : ''].filter(Boolean).join(' ');
 
@@ -24,6 +26,10 @@ const MODE_ICONS = {
   all: '🗂',
   practice: '🎯',
   flashcards: '🔤',
+  mc: '🔘',
+  write: '⌨',
+  cloze: '🔲',
+  listen: '🎧',
 };
 
 function createSearchSvg() {
@@ -199,29 +205,38 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
       ...modes.map(m => {
         const isSrs = m.id === 'srs';
         const icon = MODE_ICONS[m.id] || '▶';
-        const countBadgeText = isSrs
+        const avail = checkModeAvailability(m.id, entry.deck, {
+          hasVoice: hasVoice(settings?.ttsLang || 'en-US'),
+        });
+
+        let countBadgeText = isSrs
           ? (totalToday > 0 ? `${totalToday} mục cần ôn hôm nay` : 'Hôm nay đã xong ✓')
           : `${totalValid} mục áp dụng`;
+
+        const disabled = !avail.available || totalValid === 0;
+        if (!avail.available) {
+          countBadgeText = avail.reason;
+        }
         const isPrimaryCard = isSrs && totalToday > 0;
-        const disabled = totalValid === 0;
 
         return h('button', {
           type: 'button',
-          class: `deck-mode-card ${isPrimaryCard ? 'primary-mode' : ''}`,
+          class: `deck-mode-card ${isPrimaryCard ? 'primary-mode' : ''} ${disabled ? 'disabled-mode' : ''}`,
           disabled,
+          title: avail.reason || '',
           onclick: () => {
             if (disabled) return;
             if (m.id === 'srs') actions.startSrsSession(entry);
-            else if (m.id === 'all' || m.id === 'flashcards') {
+            else if (m.id === 'all' || (m.id === 'flashcards' && kind !== 'vocab')) {
               actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
             } else {
-              actions.openSessionSetup(entry);
+              actions.openSessionSetup(entry, { defaultMode: m.id });
             }
           },
         },
           h('div', { class: 'deck-mode-card-top' },
             h('span', { class: 'deck-mode-icon' }, icon),
-            h('span', { class: `ux-chip ${isPrimaryCard ? 'active' : ''}` }, countBadgeText)),
+            h('span', { class: `ux-chip ${isPrimaryCard ? 'active' : ''} ${!avail.available ? 'warn' : ''}` }, countBadgeText)),
           h('div', { class: 'deck-mode-title' }, m.label),
           h('div', { class: 'deck-mode-desc muted' }, m.description));
       })));
@@ -398,7 +413,18 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
               h('td', { class: 'num' }, r.index),
               h('td', null, h('span', { class: `chip type-badge type-${r.type}` }, r.typeLabel)),
               h('td', null,
-                h('div', { class: 'item-cell-main line-clamp-2' }, r.main || '(Chưa có nội dung)'),
+                h('div', { class: 'item-cell-main line-clamp-2', style: 'display: flex; align-items: center; gap: 6px;' },
+                  h('span', null, r.main || '(Chưa có nội dung)'),
+                  r.item.term ? h('button', {
+                    type: 'button',
+                    class: 'ux-btn ghost sm',
+                    style: 'padding: 0 4px; height: 20px; font-size: 11px; flex-shrink: 0;',
+                    title: 'Phát âm (Web Speech TTS)',
+                    onclick: ev => {
+                      ev.stopPropagation();
+                      speak(r.item.term, settings?.ttsLang || 'en-US');
+                    },
+                  }, '🔊') : null),
                 r.answer ? h('div', { class: 'item-cell-ans muted line-clamp-1' }, `→ ${r.answer}`) : null),
               h('td', null, r.topic ? h('span', { class: 'ux-chip', style: 'cursor: pointer;' }, r.topic) : h('span', { class: 'muted' }, '—')),
               h('td', null, r.tags.length ? r.tags.map(t => h('span', { class: 'tag' }, t)) : h('span', { class: 'muted' }, '—')),

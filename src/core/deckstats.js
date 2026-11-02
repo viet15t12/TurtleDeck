@@ -24,7 +24,7 @@ function resolveSettings(settings) {
   if (typeof settings === 'number' && Number.isFinite(settings)) {
     return {
       newCardsPerDay: Math.max(0, Math.floor(settings)),
-      direction: 'fwd',
+      direction: undefined,
       timeZone: undefined,
     };
   }
@@ -35,7 +35,7 @@ function resolveSettings(settings) {
     : DEFAULT_NEW_CARDS_PER_DAY;
   return {
     newCardsPerDay,
-    direction: s.direction || 'fwd',
+    direction: s.direction,
     timeZone: s.timeZone,
   };
 }
@@ -67,21 +67,27 @@ export function deckStats(deck, progress = {}, settings = {}, now = Date.now()) 
   let due = 0;
   let mastered = 0;
 
-  for (const item of validItems) {
-    const key = cardKey(deckId, item.id, direction);
-    const rawCard = cards[key] || (cards[item.id] ? cards[item.id] : null);
-    const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
+  const directions = deckKind === 'vocab'
+    ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
+    : ['fwd'];
 
-    if (card.state === 'review') {
-      if ((card.due || 0) <= ts) {
-        due++;
+  for (const item of validItems) {
+    for (const d of directions) {
+      const key = cardKey(deckId, item.id, d);
+      const rawCard = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : null);
+      const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
+
+      if (card.state === 'review') {
+        if ((card.due || 0) <= ts) {
+          due++;
+        } else {
+          mastered++;
+        }
+      } else if (card.state === 'learning' || card.state === 'relearning') {
+        learning++;
       } else {
-        mastered++;
+        newCount++;
       }
-    } else if (card.state === 'learning' || card.state === 'relearning') {
-      learning++;
-    } else {
-      newCount++;
     }
   }
 

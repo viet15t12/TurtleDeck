@@ -8,26 +8,106 @@
     "formatVersion": 1
   },
   "items": [
-    { "id": "w-0001", "term": "mitigate", "definition": "giảm nhẹ, làm dịu", "phonetic": "/ˈmɪtɪɡeɪt/", "pos": "verb",
-      "example": "Trees help mitigate the effects of climate change.", "forms": ["mitigates", "mitigated", "mitigating"], "tags": ["ielts", "environment"] },
-    { "id": "w-0002", "term": "abundant", "definition": "dồi dào, phong phú", "phonetic": "/əˈbʌndənt/", "pos": "adjective",
-      "example": "The region has abundant natural resources.", "tags": ["ielts"] },
-    { "id": "w-0003", "term": "deteriorate", "definition": "xấu đi, suy giảm", "phonetic": "/dɪˈtɪəriəreɪt/", "pos": "verb",
-      "example": "Air quality continues to deteriorate in big cities.", "forms": ["deteriorates", "deteriorated", "deteriorating"], "tags": ["ielts", "environment"] },
-    { "id": "w-0004", "term": "inevitable", "definition": "không thể tránh khỏi", "phonetic": "/ɪnˈevɪtəbl/", "pos": "adjective",
-      "example": "Change is inevitable in any organisation.", "tags": ["ielts"] },
-    { "id": "w-0005", "term": "scarcity", "definition": "sự khan hiếm", "phonetic": "/ˈskeəsəti/", "pos": "noun",
-      "example": "Water scarcity affects millions of people.", "tags": ["ielts", "environment"] },
-    { "id": "w-0006", "term": "advocate", "definition": "ủng hộ, biện hộ; người ủng hộ", "phonetic": "/ˈædvəkeɪt/", "pos": "verb",
-      "example": "She advocates for equal access to education.", "forms": ["advocates", "advocated", "advocating"], "tags": ["ielts", "education"] },
-    { "id": "w-0007", "term": "substantial", "definition": "đáng kể, lớn", "phonetic": "/səbˈstænʃl/", "pos": "adjective",
-      "example": "The project received substantial funding.", "tags": ["ielts"] },
-    { "id": "w-0008", "term": "consequence", "definition": "hậu quả, kết quả", "phonetic": "/ˈkɒnsɪkwəns/", "pos": "noun",
-      "example": "Pollution has serious consequences for health.", "tags": ["ielts"] },
-    { "id": "w-0009", "term": "enhance", "definition": "nâng cao, cải thiện", "phonetic": "/ɪnˈhɑːns/", "pos": "verb",
-      "example": "Technology can enhance the learning experience.", "forms": ["enhances", "enhanced", "enhancing"], "tags": ["ielts", "education"] },
-    { "id": "w-0010", "term": "sustainable", "definition": "bền vững", "phonetic": "/səˈsteɪnəbl/", "pos": "adjective",
-      "example": "Cities need sustainable transport systems.", "tags": ["ielts", "environment"] }
+    {
+      "id": "w-0001",
+      "term": "mitigate",
+      "definition": "giảm nhẹ, làm dịu",
+      "phonetic": "/ˈmɪtɪɡeɪt/",
+      "pos": "verb",
+      "example": "Trees help mitigate the effects of climate change.",
+      "forms": ["mitigates", "mitigated", "mitigating"],
+      "tags": ["ielts", "environment"],
+      "image": "img/mitigate.svg"
+    },
+    {
+      "id": "w-0002",
+      "term": "abundant",
+      "definition": "dồi dào, phong phú",
+      "phonetic": "/əˈbʌndənt/",
+      "pos": "adjective",
+      "example": "The region has abundant natural resources.",
+      "forms": ["abundantly", "abundance"],
+      "tags": ["ielts", "nature"]
+    },
+    {
+      "id": "w-0003",
+      "term": "deteriorate",
+      "definition": "xấu đi, suy giảm",
+      "phonetic": "/dɪˈtɪəriəreɪt/",
+      "pos": "verb",
+      "example": "Air quality continues to deteriorate in big cities.",
+      "forms": ["deteriorates", "deteriorated", "deteriorating"],
+      "tags": ["ielts", "environment"]
+    },
+    {
+      "id": "w-0004",
+      "term": "inevitable",
+      "definition": "không thể tránh khỏi",
+      "phonetic": "/ɪnˈevɪtəbl/",
+      "pos": "adjective",
+      "example": "Change is inevitable in any organisation.",
+      "forms": ["inevitably"],
+      "tags": ["ielts", "society"]
+    },
+    {
+      "id": "w-0005",
+      "term": "scarcity",
+      "definition": "sự khan hiếm",
+      "phonetic": "/ˈskeəsəti/",
+      "pos": "noun",
+      "example": "Water scarcity affects millions of people.",
+      "forms": ["scarcities", "scarce"],
+      "tags": ["ielts", "environment"]
+    },
+    {
+      "id": "w-0006",
+      "term": "advocate",
+      "definition": "ủng hộ, biện hộ; người ủng hộ",
+      "phonetic": "/ˈædvəkeɪt/",
+      "pos": "verb",
+      "example": "She advocates for equal access to education.",
+      "forms": ["advocates", "advocated", "advocating"],
+      "tags": ["ielts", "education"]
+    },
+    {
+      "id": "w-0007",
+      "term": "substantial",
+      "definition": "đáng kể, lớn",
+      "phonetic": "/səbˈstænʃl/",
+      "pos": "adjective",
+      "example": "The project received substantial funding.",
+      "forms": ["substantially"],
+      "tags": ["ielts", "finance"]
+    },
+    {
+      "id": "w-0008",
+      "term": "consequence",
+      "definition": "hậu quả, kết quả",
+      "phonetic": "/ˈkɒnsɪkwəns/",
+      "pos": "noun",
+      "example": "Pollution has serious consequences for health.",
+      "forms": ["consequences", "consequent"],
+      "tags": ["ielts", "environment"]
+    },
+    {
+      "id": "w-0009",
+      "term": "enhance",
+      "definition": "nâng cao, cải thiện",
+      "phonetic": "/ɪnˈhɑːns/",
+      "pos": "verb",
+      "example": "Technology can enhance the learning experience.",
+      "forms": ["enhances", "enhanced", "enhancing"],
+      "tags": ["ielts", "education"]
+    },
+    {
+      "id": "w-0010",
+      "term": "sustainable",
+      "definition": "bền vững",
+      "phonetic": "/səˈsteɪnəbl/",
+      "pos": "adjective",
+      "example": "Cities need sustainable transport systems.",
+      "forms": ["sustainably", "sustainability"],
+      "tags": ["ielts", "environment"]
+    }
   ]
 }
-

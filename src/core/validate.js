@@ -3,6 +3,7 @@
 
 import { imageRefs } from './deckmodel.js';
 import { kindOf, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
+import { normalizeTerm } from './hash.js';
 
 export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
@@ -115,6 +116,19 @@ export function validateItem(item, { deckKind, assets } = {}) {
     add('warn', 'answerImage', `Thiếu mô tả cho ảnh "${item.answerImage}" (alt text).`);
   }
 
+  // Kiểm tra vocab: example có chứa term hoặc forms không (warn)
+  if (type === 'vocab' && nonEmpty(item.example) && nonEmpty(item.term)) {
+    const candidates = [item.term, ...(Array.isArray(item.forms) ? item.forms : [])].filter(nonEmpty);
+    const hasMatch = candidates.some(w => {
+      const esc = w.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+      const re = new RegExp(`(?:^|[^\\p{L}\\p{N}_])${esc}(?:$|[^\\p{L}\\p{N}_])`, 'iu');
+      return re.test(item.example);
+    });
+    if (!hasMatch) {
+      add('warn', 'example', 'Câu ví dụ không chứa từ vựng hoặc các dạng biến thể trong forms (chế độ Điền chỗ trống Cloze sẽ bị bỏ qua).');
+    }
+  }
+
   // Kiểm tra thiếu mô tả ảnh trong Markdown (warn) và công thức còn ô trống ▢ (warn)
   const checkTextWarnings = (text, fieldName) => {
     if (typeof text !== 'string') return;
@@ -191,8 +205,15 @@ export function friendlyIssue(issue) {
   if (field === 'question') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập câu hỏi.';
   if (field === 'front') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập mặt trước.';
   if (field === 'back') return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : 'Chưa nhập mặt sau.';
-  if (field === 'term') return 'Chưa nhập từ vựng.';
+  if (field === 'term') {
+    if (/trùng/i.test(msg)) return 'Từ vựng bị trùng.';
+    return 'Chưa nhập từ vựng.';
+  }
   if (field === 'definition') return 'Chưa nhập nghĩa.';
+  if (field === 'example') {
+    if (/Cloze|forms/i.test(msg)) return 'Ví dụ chưa chứa từ vựng (bỏ qua Cloze).';
+    return /Công thức/.test(msg) ? 'Công thức còn ô trống.' : /mô tả/.test(msg) ? 'Ảnh chưa có mô tả.' : msg;
+  }
 
   const cm = /^choices\[(\d+)\]$/.exec(field);
   if (cm) {
@@ -256,12 +277,29 @@ export function validateDeck(deck, { assets } = {}) {
     ? meta.kind
     : (effectiveKind === 'vocab' ? 'vocab' : undefined);
   const firstIndex = new Map(), dups = new Map();
+  const seenTerms = new Map();
   deck.items.forEach((it, index) => {
     const id = isObj(it) && nonEmpty(it.id) ? it.id : null;
-    items.push({ index, id, issues: validateItem(it, { deckKind, assets }) });
-    if (id === null) return;
-    if (firstIndex.has(id)) dups.set(id, (dups.get(id) ?? [firstIndex.get(id)]).concat(index));
-    else firstIndex.set(id, index);
+    const itIssues = validateItem(it, { deckKind, assets });
+    items.push({ index, id, issues: itIssues });
+    if (id !== null) {
+      if (firstIndex.has(id)) dups.set(id, (dups.get(id) ?? [firstIndex.get(id)]).concat(index));
+      else firstIndex.set(id, index);
+    }
+    if (isObj(it) && ('term' in it || it.type === 'vocab') && nonEmpty(it.term)) {
+      const norm = normalizeTerm(it.term);
+      if (seenTerms.has(norm)) {
+        const firstTermIdx = seenTerms.get(norm);
+        warnings.push(`Từ vựng "${it.term}" (mục thứ ${index + 1}) bị trùng với mục thứ ${firstTermIdx + 1}.`);
+        itIssues.push({
+          level: 'warn',
+          field: 'term',
+          msg: `Từ vựng "${it.term}" bị trùng với mục thứ ${firstTermIdx + 1}.`,
+        });
+      } else {
+        seenTerms.set(norm, index);
+      }
+    }
   });
   for (const [id, idx] of dups)
     errors.push(`Trùng id "${id}" ở các mục thứ ${idx.map(i => i + 1).join(', ')} — mỗi mục phải có id riêng.`);

@@ -54,8 +54,8 @@ export const KINDS = {
     icon: '🔤',
     allowedTypes: ['vocab'],
     defaultType: 'vocab',
-    available: false,
-    comingSoon: 'Có ở bản sau',
+    available: true,
+    comingSoon: null,
     modes: [
       {
         id: 'srs',
@@ -66,6 +66,26 @@ export const KINDS = {
         id: 'flashcards',
         label: 'Flashcards',
         description: 'Lật thẻ từ vựng hai mặt để ghi nhớ nghĩa và ví dụ',
+      },
+      {
+        id: 'mc',
+        label: 'Trắc nghiệm',
+        description: 'Chọn đáp án đúng giữa các từ vựng',
+      },
+      {
+        id: 'write',
+        label: 'Gõ đáp án',
+        description: 'Gõ từ hoặc nghĩa để luyện phản xạ',
+      },
+      {
+        id: 'cloze',
+        label: 'Điền chỗ trống (Cloze)',
+        description: 'Điền từ vựng thích hợp vào câu ví dụ',
+      },
+      {
+        id: 'listen',
+        label: 'Nghe–Gõ',
+        description: 'Nghe phát âm và gõ lại từ vựng',
       },
     ],
   },
@@ -78,6 +98,7 @@ export const ITEM_TYPE_LABELS = {
   command: 'Lệnh',
   card: 'Thẻ',
   vocab: 'Từ vựng',
+  listen: 'Nghe–Gõ',
 };
 
 export function isValidKind(kind) {
@@ -90,10 +111,14 @@ export function detectItemType(item, deckKind) {
   if (typeof item.type === 'string' && item.type.trim() !== '') {
     return item.type.trim();
   }
-  if ('term' in item || 'definition' in item || deckKind === 'vocab') return 'vocab';
+  if ('term' in item || 'definition' in item) return 'vocab';
+  if ('question' in item || 'choices' in item) return 'single';
   if ('front' in item || 'back' in item) return 'card';
+  if (deckKind === 'vocab') return 'vocab';
   return null;
 }
+
+export const itemType = detectItemType;
 
 // Suy ra loại bộ thẻ từ danh sách items (§2.2 quy tắc 2):
 // - toàn 'card' (khi có ít nhất 1 mục) → 'qa'
@@ -179,4 +204,57 @@ export function formatMismatchWarning(deckOrItems, targetKind) {
   const parts = [...countsByLabel.entries()].map(([lbl, count]) => `${count} mục dạng ${lbl}`);
   return `${parts.join(', ')} nằm trong bộ ${KINDS[kind].label}.`;
 }
+
+// Kiểm tra khả năng sử dụng của một chế độ học đối với bộ thẻ/danh sách mục (§A)
+export function checkModeAvailability(modeId, deckOrItems, { hasVoice = true } = {}) {
+  const items = Array.isArray(deckOrItems)
+    ? deckOrItems
+    : (Array.isArray(deckOrItems?.items) ? deckOrItems.items : []);
+  const k = kindOf(deckOrItems);
+
+  if (k !== 'vocab') {
+    if (items.length === 0) {
+      return { available: false, reason: 'Bộ thẻ chưa có mục nào.' };
+    }
+    return { available: true, reason: '' };
+  }
+
+  // Đối với bộ thẻ Từ vựng (vocab):
+  const vocabItems = items.filter(it => it && typeof it === 'object' && ('term' in it || it.type === 'vocab'));
+
+  if (vocabItems.length === 0) {
+    return { available: false, reason: 'Bộ thẻ chưa có từ vựng nào.' };
+  }
+
+  if (modeId === 'mc') {
+    // Trắc nghiệm cần ≥ 2 từ hợp lệ
+    const validCount = vocabItems.filter(it => it.term && it.definition).length;
+    if (validCount < 2) {
+      return { available: false, reason: 'Trắc nghiệm cần ít nhất 2 từ vựng hợp lệ.' };
+    }
+  }
+
+  if (modeId === 'cloze') {
+    // Cloze cần ≥ 1 từ có example chứa term/forms
+    const hasClozeCandidate = vocabItems.some(it => {
+      if (!it.example || !it.term) return false;
+      const terms = [it.term, ...(Array.isArray(it.forms) ? it.forms : [])].filter(Boolean);
+      const ex = String(it.example).toLowerCase();
+      return terms.some(t => ex.includes(String(t).toLowerCase()));
+    });
+    if (!hasClozeCandidate) {
+      return { available: false, reason: 'Chế độ Điền chỗ trống cần ít nhất 1 từ có câu ví dụ chứa từ vựng.' };
+    }
+  }
+
+  if (modeId === 'listen') {
+    // Nghe–Gõ cần TTS có giọng
+    if (!hasVoice) {
+      return { available: false, reason: 'Chưa tìm thấy giọng đọc trên máy (cần cài đặt speech-dispatcher và espeak-ng).' };
+    }
+  }
+
+  return { available: true, reason: '' };
+}
+
 

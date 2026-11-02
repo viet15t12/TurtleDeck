@@ -1,14 +1,16 @@
-// src/views/settings.js — Màn hình Cài đặt (GĐ3 / GĐ3B: số thẻ mới/ngày, các bước nhắc ngắn).
+// src/views/settings.js — Màn hình Cài đặt (GĐ3 / GĐ3B: số thẻ mới/ngày, các bước nhắc ngắn; GĐ4: giọng đọc TTS).
 // Dùng chung tokens.css + controls.css, ngôn ngữ tiếng Việt thân thiện, không lộ thuật ngữ kỹ thuật.
 import { h } from './dom.js';
 import { parseLearnSteps, DEFAULT_LEARN_STEPS } from '../core/srs.js';
 import { DEFAULT_NEW_CARDS_PER_DAY } from '../core/planner.js';
+import { speak, hasVoice } from '../tts.js';
 
 export function renderSettings(root, { settings, progress, entries }, actions) {
   let newCardsVal = String(settings?.newCardsPerDay ?? DEFAULT_NEW_CARDS_PER_DAY);
   let stepsVal = Array.isArray(settings?.learnSteps) && settings.learnSteps.length
     ? settings.learnSteps.join(', ')
     : DEFAULT_LEARN_STEPS.join(', ');
+  let ttsLangVal = settings?.ttsLang || 'en-US';
   let errorMsg = '';
 
   const errorBox = h('div', { class: 'ux-field-msg error', style: 'margin-bottom: 12px;', hidden: true });
@@ -39,6 +41,17 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
     },
   });
 
+  const ttsLangSelect = h('select', {
+    class: 'ux-select',
+    style: 'width: 100%;',
+    onchange: ev => {
+      ttsLangVal = ev.target.value;
+    },
+  },
+    h('option', { value: 'en-US', selected: ttsLangVal === 'en-US' }, 'Tiếng Anh - Mỹ (en-US)'),
+    h('option', { value: 'en-GB', selected: ttsLangVal === 'en-GB' }, 'Tiếng Anh - Anh (en-GB)')
+  );
+
   function showError(msg) {
     errorMsg = msg;
     errorBox.textContent = errorMsg;
@@ -65,14 +78,17 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
     actions.saveSettings({
       newCardsPerDay: Math.floor(numNew),
       learnSteps: cleanSteps,
+      ttsLang: ttsLangVal,
     });
   }
 
   function handleReset() {
     newCardsVal = String(DEFAULT_NEW_CARDS_PER_DAY);
     stepsVal = DEFAULT_LEARN_STEPS.join(', ');
+    ttsLangVal = 'en-US';
     newCardsInput.value = newCardsVal;
     stepsInput.value = stepsVal;
+    ttsLangSelect.value = ttsLangVal;
     showError('');
   }
 
@@ -146,6 +162,25 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
       h('div', { class: 'toolbar', style: 'justify-content: flex-end; margin-top: 16px;' },
         h('button', { type: 'button', class: 'ux-btn ghost', onclick: actions.home }, 'Huỷ'),
         h('button', { type: 'submit', class: 'ux-btn primary' }, 'Lưu cài đặt'))),
+
+    h('section', { class: 'panel settings-panel', style: 'margin-top: 24px;' },
+      h('h2', null, 'Phát âm & Giọng đọc (Text-to-Speech)'),
+      h('p', { class: 'muted settings-help', style: 'margin-bottom: 16px;' },
+        'Tùy chỉnh giọng phát âm cho bộ thẻ Từ vựng tiếng Anh (hỗ trợ các chế độ Flashcards, Trắc nghiệm, Cloze và Nghe–Gõ).'),
+      h('div', { class: 'settings-grid' },
+        h('div', { class: 'form-group settings-field' },
+          h('label', null, 'Giọng đọc tiếng Anh mặc định'),
+          h('div', { style: 'display: flex; gap: 8px; align-items: center;' },
+            ttsLangSelect,
+            h('button', {
+              type: 'button',
+              class: 'ux-btn sm',
+              onclick: () => {
+                speak('Hello! Welcome to English vocabulary study.', ttsLangVal);
+              },
+            }, '🔊 Nghe thử')),
+          h('p', { class: 'muted settings-help', style: 'margin-top: 8px;' },
+            'Hệ thống dùng bộ tổng hợp giọng nói Web Speech của hệ điều hành. Nếu chưa phát được âm trên Linux, bạn có thể cài gói giọng đọc: `sudo dnf install speech-dispatcher espeak-ng`.')))),
 
     h('section', { class: 'panel settings-panel', style: 'margin-top: 24px;' },
       h('h2', null, 'Tiến trình học tập & Dữ liệu ghi nhớ'),

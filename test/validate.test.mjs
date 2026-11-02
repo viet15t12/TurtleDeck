@@ -165,4 +165,43 @@ test('validateItem: cảnh báo thiếu mô tả ảnh (alt text) và ảnh tham
   assert.equal(friendlyIssue(emptyIssues[0]), 'Lựa chọn B đang trống.');
 });
 
+test('validateItem & validateDeck cho vocab: cảnh báo example không chứa term/forms và term trùng', () => {
+  // 1. Example không chứa term hoặc forms
+  const badExampleItem = {
+    id: 'w-1',
+    type: 'vocab',
+    term: 'mitigate',
+    definition: 'giảm nhẹ',
+    forms: ['mitigates', 'mitigated'],
+    example: 'This sentence talks about something completely unrelated.',
+  };
+  const issues = validateItem(badExampleItem, { deckKind: 'vocab' });
+  assert.ok(issues.some(i => i.level === 'warn' && i.field === 'example' && /Cloze/i.test(i.msg)));
+
+  // 2. Example có chứa dạng trong forms -> không có cảnh báo
+  const goodExampleItem = {
+    id: 'w-2',
+    type: 'vocab',
+    term: 'mitigate',
+    definition: 'giảm nhẹ',
+    forms: ['mitigates', 'mitigated'],
+    example: 'The risks were mitigated successfully.',
+  };
+  const goodIssues = validateItem(goodExampleItem, { deckKind: 'vocab' });
+  assert.ok(!goodIssues.some(i => i.field === 'example'));
+
+  // 3. validateDeck: term trùng term khác trong bộ thẻ
+  const deck = {
+    meta: { id: 'd1', kind: 'vocab' },
+    items: [
+      { id: '1', type: 'vocab', term: 'Mitigate', definition: 'làm dịu' },
+      { id: '2', type: 'vocab', term: 'mitigate', definition: 'giảm nhẹ' },
+    ],
+  };
+  const dRes = validateDeck(deck);
+  assert.ok(dRes.warnings.some(w => /bị trùng/i.test(w)));
+  assert.ok(dRes.items[1].issues.some(i => i.field === 'term' && /trùng/i.test(i.msg)));
+});
+
+
 

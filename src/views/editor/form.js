@@ -8,13 +8,29 @@ import { createImageSlot } from './fields/imageslot.js';
 import { createChoicesSection } from './fields/choices.js';
 import { createChipListField } from './fields/chips.js';
 import { createFillCommandSection } from './fields/graderbox.js';
+import { speak } from '../../tts.js';
+
+const POS_OPTIONS = [
+  { value: '', label: '(Chưa chọn từ loại)' },
+  { value: 'noun', label: 'noun (danh từ)' },
+  { value: 'verb', label: 'verb (động từ)' },
+  { value: 'adj', label: 'adjective (tính từ)' },
+  { value: 'adv', label: 'adverb (trạng từ)' },
+  { value: 'prep', label: 'preposition (giới từ)' },
+  { value: 'conj', label: 'conjunction (liên từ)' },
+  { value: 'pron', label: 'pronoun (đại từ)' },
+  { value: 'interj', label: 'interjection (thán từ)' },
+  { value: 'phrase', label: 'phrase (cụm từ)' },
+  { value: 'idiom', label: 'idiom (thành ngữ)' },
+  { value: 'other', label: 'other (khác)' },
+];
 
 function mapIssueFieldToPath(field, item) {
-  if (!field) return item?.type === 'card' ? 'front' : 'question';
+  if (!field) return item?.type === 'card' ? 'front' : (item?.term ? 'term' : 'question');
   const cm = /^choices\[(\d+)\]$/.exec(field);
   if (cm) return `choices.${cm[1]}`;
   if (/^answer\[\d+\]$/.test(field)) return 'answers.0';
-  if (field === 'question') return item?.type === 'card' ? 'front' : 'question';
+  if (field === 'question') return item?.type === 'card' ? 'front' : (item?.term ? 'term' : 'question');
   if (field === 'choices') return 'choices.0';
   if (field === 'answer' || field === 'answers') {
     return (item?.type === 'single' || item?.type === 'multi') ? 'choices.0' : 'answers.0';
@@ -24,6 +40,7 @@ function mapIssueFieldToPath(field, item) {
 
 function normalizeIssueGroup(field) {
   if (/^answer\[\d+\]$/.test(field)) return 'answer';
+  if (field === 'term' || field === 'definition' || field === 'example') return field;
   return field || 'question';
 }
 
@@ -358,7 +375,193 @@ export function createFormPane({
     const hasAnswerDisplay = (t === 'fill' || t === 'command')
       && (Boolean((item.answerDisplay || '').trim()) || manuallyOpened.has('answerDisplay'));
 
-    if (t === 'card') {
+    if (t === 'vocab') {
+      // Form soạn từ vựng riêng (§6 Vocab)
+      const termBlock = h('div', { class: 'form-field' },
+        createMarkdownField({
+          label: 'Thuật ngữ (Từ vựng)',
+          path: 'term',
+          validateGroup: 'term',
+          value: item.term || '',
+          placeholder: 'Nhập từ hoặc cụm từ tiếng Anh…',
+          minRows: 1,
+          rich,
+          getRecentSnippets,
+          onRecordRecentSnippet,
+          onApplyValue: (p, v, meta) => {
+            applyPathValue(p, v, meta);
+            updateValidationUI();
+          },
+          onBlurValidate: grp => {
+            markFieldTouched(grp);
+            updateValidationUI();
+          },
+          onUploadFile,
+          onPickImageDialog,
+          onSetActiveHelper: onSetActiveTextarea,
+          captureCursor,
+        }),
+        item.term ? h('div', { style: 'margin-top: 4px;' },
+          h('button', {
+            type: 'button',
+            class: 'ux-btn ghost sm',
+            title: 'Phát âm (Web Speech TTS)',
+            onclick: () => speak(item.term),
+          }, '🔊 Phát âm từ này')) : null
+      );
+
+      const defBlock = createMarkdownField({
+        label: 'Định nghĩa / Nghĩa tiếng Việt',
+        path: 'definition',
+        validateGroup: 'definition',
+        value: item.definition || '',
+        placeholder: 'Nhập nghĩa tiếng Việt hoặc giải nghĩa…',
+        minRows: 2,
+        rich,
+        getRecentSnippets,
+        onRecordRecentSnippet,
+        onApplyValue: (p, v, meta) => {
+          applyPathValue(p, v, meta);
+          updateValidationUI();
+        },
+        onBlurValidate: grp => {
+          markFieldTouched(grp);
+          updateValidationUI();
+        },
+        onUploadFile,
+        onPickImageDialog,
+        onSetActiveHelper: onSetActiveTextarea,
+        captureCursor,
+      });
+
+      const phoneticAndPosRow = h('div', { style: 'display: flex; gap: 12px; margin-bottom: 12px;' },
+        h('div', { class: 'form-field', style: 'flex: 1; margin: 0;' },
+          h('label', { class: 'form-label' }, 'Phiên âm (IPA)'),
+          h('input', {
+            type: 'text',
+            class: 'ux-input',
+            placeholder: 'Ví dụ: /ˈæp.əl/…',
+            value: item.phonetic || '',
+            'data-path': 'phonetic',
+            oninput: ev => {
+              onPatchItem(
+                { phonetic: ev.target.value },
+                { mergeKey: 'phonetic', cursor: captureCursor(ev.target, 'phonetic') }
+              );
+            },
+          })),
+        h('div', { class: 'form-field', style: 'flex: 1; margin: 0;' },
+          h('label', { class: 'form-label' }, 'Từ loại (POS)'),
+          h('select', {
+            class: 'ux-select',
+            style: 'width: 100%;',
+            value: item.pos || '',
+            onchange: ev => {
+              onPatchItem({ pos: ev.target.value || undefined });
+            },
+          }, POS_OPTIONS.map(opt => h('option', { value: opt.value, selected: (item.pos || '') === opt.value }, opt.label))))
+      );
+
+      const exampleBlock = createMarkdownField({
+        label: 'Câu ví dụ',
+        path: 'example',
+        validateGroup: 'example',
+        value: item.example || '',
+        placeholder: 'Ví dụ: We need to mitigate the risks… (câu ví dụ nên chứa từ hoặc biến thể của từ để học Cloze)',
+        minRows: 2,
+        rich,
+        getRecentSnippets,
+        onRecordRecentSnippet,
+        onApplyValue: (p, v, meta) => {
+          applyPathValue(p, v, meta);
+          updateValidationUI();
+        },
+        onBlurValidate: grp => {
+          markFieldTouched(grp);
+          updateValidationUI();
+        },
+        onUploadFile,
+        onPickImageDialog,
+        onSetActiveHelper: onSetActiveTextarea,
+        captureCursor,
+      });
+
+      mainNodes.push(termBlock, defBlock, phoneticAndPosRow, exampleBlock);
+
+      const hasForms = Boolean(item.forms?.length) || manuallyOpened.has('forms');
+      if (hasForms) {
+        mainNodes.push(
+          createChipListField({
+            label: 'Biến thể của từ (Forms)',
+            hint: 'Nhấn Enter hoặc dấu phẩy để thêm dạng biến thể (vd: past, plural, -ing, ...)',
+            path: 'forms',
+            values: item.forms || [],
+            placeholder: 'Gõ dạng biến thể rồi nhấn Enter…',
+            splitComma: true,
+            onChangeValues: nextForms => {
+              onPatchItem({ forms: nextForms.length ? nextForms : undefined });
+              render();
+            },
+            onCollapse: () => {
+              manuallyOpened.delete('forms');
+              onPatchItem({ forms: undefined });
+              render();
+            },
+            onFocusPath: focusFieldByPath,
+          })
+        );
+      }
+
+      const hasSynonyms = Boolean(item.synonyms?.length) || manuallyOpened.has('synonyms');
+      if (hasSynonyms) {
+        mainNodes.push(
+          createChipListField({
+            label: 'Từ đồng nghĩa (Synonyms)',
+            hint: 'Nhấn Enter hoặc dấu phẩy để thêm từ đồng nghĩa',
+            path: 'synonyms',
+            values: item.synonyms || [],
+            placeholder: 'Gõ từ đồng nghĩa rồi nhấn Enter…',
+            splitComma: true,
+            onChangeValues: nextSynonyms => {
+              onPatchItem({ synonyms: nextSynonyms.length ? nextSynonyms : undefined });
+              render();
+            },
+            onCollapse: () => {
+              manuallyOpened.delete('synonyms');
+              onPatchItem({ synonyms: undefined });
+              render();
+            },
+            onFocusPath: focusFieldByPath,
+          })
+        );
+      }
+
+      if (hasImage) {
+        mainNodes.push(
+          createImageSlot({
+            label: 'Ảnh minh hoạ',
+            field: 'image',
+            altField: 'imageAlt',
+            value: item.image || '',
+            altValue: item.imageAlt,
+            deckKey,
+            getAssets,
+            onPatchItem,
+            onMarkTouched: markFieldTouched,
+            onUpdateValidationUI: updateValidationUI,
+            onRerenderForm: render,
+            onUploadFile,
+            onPickImageDialog,
+            onCollapse: () => {
+              manuallyOpened.delete('image');
+              onPatchItem({ image: '', imageAlt: undefined });
+              render();
+            },
+            captureCursor,
+          })
+        );
+      }
+    } else if (t === 'card') {
       // §6.4 Thẻ: Hai khối trực quan như hai mặt thẻ (Mặt trước và Mặt sau, mỗi khối có ô Markdown và một ô ảnh kèm)
       const frontBlock = h('div', { class: 'card-editor-face' },
         createMarkdownField({
@@ -690,23 +893,41 @@ export function createFormPane({
 
     // Hàng chip "+ Thêm" cho các trường tuỳ chọn chưa mở (§6.1)
     const addChips = [];
-    if (!hasExplanation) {
-      addChips.push({ key: 'explanation', label: '+ Giải thích', focusPath: 'explanation' });
-    }
-    if (t !== 'card' && !hasImage) {
-      addChips.push({ key: 'image', label: '+ Ảnh kèm đề', focusPath: 'image' });
-    }
-    if (t !== 'card' && !hasAnswerImage) {
-      addChips.push({ key: 'answerImage', label: '+ Ảnh kèm đáp án', focusPath: 'answerImage' });
-    }
-    if ((t === 'fill' || t === 'command') && !hasAnswerDisplay) {
-      addChips.push({ key: 'answerDisplay', label: '+ Hiển thị đáp án đẹp', focusPath: 'answerDisplay' });
-    }
-    if (!hasTopic) {
-      addChips.push({ key: 'topic', label: '+ Chủ đề', focusPath: 'topic' });
-    }
-    if (!hasTags) {
-      addChips.push({ key: 'tags', label: '+ Nhãn', focusPath: 'tags' });
+    if (t === 'vocab') {
+      if (!Boolean(item.forms?.length) && !manuallyOpened.has('forms')) {
+        addChips.push({ key: 'forms', label: '+ Biến thể (Forms)', focusPath: 'forms' });
+      }
+      if (!Boolean(item.synonyms?.length) && !manuallyOpened.has('synonyms')) {
+        addChips.push({ key: 'synonyms', label: '+ Từ đồng nghĩa', focusPath: 'synonyms' });
+      }
+      if (!hasImage) {
+        addChips.push({ key: 'image', label: '+ Ảnh minh hoạ', focusPath: 'image' });
+      }
+      if (!hasTopic) {
+        addChips.push({ key: 'topic', label: '+ Chủ đề', focusPath: 'topic' });
+      }
+      if (!hasTags) {
+        addChips.push({ key: 'tags', label: '+ Nhãn', focusPath: 'tags' });
+      }
+    } else {
+      if (!hasExplanation) {
+        addChips.push({ key: 'explanation', label: '+ Giải thích', focusPath: 'explanation' });
+      }
+      if (t !== 'card' && !hasImage) {
+        addChips.push({ key: 'image', label: '+ Ảnh kèm đề', focusPath: 'image' });
+      }
+      if (t !== 'card' && !hasAnswerImage) {
+        addChips.push({ key: 'answerImage', label: '+ Ảnh kèm đáp án', focusPath: 'answerImage' });
+      }
+      if ((t === 'fill' || t === 'command') && !hasAnswerDisplay) {
+        addChips.push({ key: 'answerDisplay', label: '+ Hiển thị đáp án đẹp', focusPath: 'answerDisplay' });
+      }
+      if (!hasTopic) {
+        addChips.push({ key: 'topic', label: '+ Chủ đề', focusPath: 'topic' });
+      }
+      if (!hasTags) {
+        addChips.push({ key: 'tags', label: '+ Nhãn', focusPath: 'tags' });
+      }
     }
 
     if (addChips.length) {

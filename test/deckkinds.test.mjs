@@ -11,6 +11,7 @@ import {
   mismatchedItems,
   formatMismatchWarning,
   kindLabel,
+  checkModeAvailability,
 } from '../src/core/deckkinds.js';
 
 test('KINDS: đủ 3 loại bộ thẻ chuẩn và thông số đúng', () => {
@@ -25,8 +26,8 @@ test('KINDS: đủ 3 loại bộ thẻ chuẩn và thông số đúng', () => {
 
   assert.deepEqual(KINDS.vocab.allowedTypes, ['vocab']);
   assert.equal(KINDS.vocab.defaultType, 'vocab');
-  assert.equal(KINDS.vocab.available, false);
-  assert.equal(KINDS.vocab.comingSoon, 'Có ở bản sau');
+  assert.equal(KINDS.vocab.available, true);
+  assert.equal(KINDS.vocab.comingSoon, null);
 });
 
 test('inferKind: toàn card -> qa; có vocab -> vocab; còn lại/trống -> quiz', () => {
@@ -69,7 +70,39 @@ test('allowedTypes, defaultTypeFor, modesFor theo loại bộ thẻ', () => {
   assert.deepEqual(quizModes.map(m => m.id), ['srs', 'practice']);
 
   const vocabModes = modesFor('vocab');
-  assert.deepEqual(vocabModes.map(m => m.id), ['srs', 'flashcards']);
+  assert.deepEqual(vocabModes.map(m => m.id), ['srs', 'flashcards', 'mc', 'write', 'cloze', 'listen']);
+});
+
+test('deckkinds: checkModeAvailability kiểm tra điều kiện từng chế độ', () => {
+  const items = [
+    { id: '1', term: 'apple', definition: 'quả táo', example: 'I eat an apple.' },
+  ];
+  // mc cần >= 2 từ
+  const mcRes1 = checkModeAvailability('mc', items);
+  assert.equal(mcRes1.available, false);
+  assert.match(mcRes1.reason, /ít nhất 2 từ/);
+
+  // Thêm từ thứ 2 -> mc ok
+  items.push({ id: '2', term: 'banana', definition: 'quả chuối' });
+  const mcRes2 = checkModeAvailability('mc', items);
+  assert.equal(mcRes2.available, true);
+
+  // cloze: từ 1 có example chứa apple -> ok
+  const clozeRes = checkModeAvailability('cloze', items);
+  assert.equal(clozeRes.available, true);
+
+  // cloze khi không có từ nào có example hợp lệ
+  const clozeFail = checkModeAvailability('cloze', [{ id: '1', term: 'cat', definition: 'mèo' }]);
+  assert.equal(clozeFail.available, false);
+  assert.match(clozeFail.reason, /câu ví dụ/);
+
+  // listen khi không có giọng
+  const listenFail = checkModeAvailability('listen', items, { hasVoice: false });
+  assert.equal(listenFail.available, false);
+  assert.match(listenFail.reason, /giọng đọc/);
+
+  const listenOk = checkModeAvailability('listen', items, { hasVoice: true });
+  assert.equal(listenOk.available, true);
 });
 
 test('mismatchedItems và formatMismatchWarning phát hiện mục lệch loại', () => {

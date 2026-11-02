@@ -115,3 +115,27 @@ test('deckStats: newLeftToday tính theo nửa đêm Asia/Saigon', () => {
   assert.equal(stAfter.new, 4);
   assert.equal(stAfter.newLeftToday, 2);
 });
+
+test('deckStats: vocab đếm theo thẻ (mục × chiều)', () => {
+  const vocabDeck = {
+    meta: { id: 'v-deck', kind: 'vocab' },
+    items: [
+      { id: '1', type: 'vocab', term: 'apple', definition: 'táo' },
+      { id: '2', type: 'vocab', term: 'banana', definition: 'chuối' },
+      { id: '3', type: 'vocab', term: 'orange', definition: 'cam' },
+    ],
+  };
+
+  // Mặc định vocab là 'both' -> 3 mục × 2 chiều = 6 thẻ mới
+  const stBoth = deckStats(vocabDeck);
+  assert.equal(stBoth.new, 6);
+
+  // Khi chọn riêng chiều 'fwd' -> 3 thẻ mới
+  const stFwd = deckStats(vocabDeck, {}, { direction: 'fwd' });
+  assert.equal(stFwd.new, 3);
+
+  // Khi chọn riêng chiều 'rev' -> 3 thẻ mới
+  const stRev = deckStats(vocabDeck, {}, { direction: 'rev' });
+  assert.equal(stRev.new, 3);
+});
+

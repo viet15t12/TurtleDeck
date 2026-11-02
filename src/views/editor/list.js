@@ -3,7 +3,7 @@ import { h } from '../dom.js';
 import { toPlain } from '../../core/richtext.js';
 import { validateItem, hasError, friendlyIssue } from '../../core/validate.js';
 import { stripAccents, isBlankNewItem } from '../../core/deckmodel.js';
-import { kindOf, allowedTypes, detectItemType } from '../../core/deckkinds.js';
+import { kindOf, allowedTypes, detectItemType, itemType } from '../../core/deckkinds.js';
 
 const ROW_H = 56;
 const TYPE_BADGE = {
@@ -57,6 +57,7 @@ export function createListPane({
   onBulkSetTopic,
   onBulkAddTag,
   onOpenAssetManager,
+  onOpenBulkImport,
 }) {
   let searchQuery = '';
   const selectedTypes = new Set();   // 'mc' | 'fill' | 'command' | 'card'
@@ -124,13 +125,14 @@ export function createListPane({
     (deck.items || []).forEach((it, deckIndex) => {
       if (q) {
         const plain = stripAccents(toPlain(it.question || it.front || it.term || '', ' [công thức] '));
+        const def = stripAccents(toPlain(it.definition || it.back || '', ' '));
         const topic = stripAccents(it.topic || '');
         const tags = stripAccents((it.tags || []).join(' '));
-        if (!plain.includes(q) && !topic.includes(q) && !tags.includes(q)) return;
+        if (!plain.includes(q) && !def.includes(q) && !topic.includes(q) && !tags.includes(q)) return;
       }
 
       if (selectedTypes.size > 0) {
-        const t = it.type || 'single';
+        const t = itemType(it);
         const matchAny = TYPE_GROUP_OPTIONS.some(opt => selectedTypes.has(opt.key) && opt.match(t));
         if (!matchAny) return;
       }
@@ -157,13 +159,17 @@ export function createListPane({
     const activeId = getActiveId();
     const isActive = it.id === activeId;
     const isSelected = selectedIds.has(it.id);
-    const t = it.type || 'single';
+    const t = itemType(it);
     const badge = TYPE_BADGE[t] || 'TN';
     const rawPlain = toPlain(it.question || it.front || it.term || '', '∑').trim();
     const isEmpty = !rawPlain;
     const st = itemStatus(it);
 
     const subParts = [];
+    if (it.term && it.definition) {
+      if (it.pos) subParts.push(it.pos);
+      subParts.push(toPlain(it.definition, ''));
+    }
     if (it.topic) subParts.push(it.topic);
     if (it.tags?.length) subParts.push(it.tags.join(', '));
 
@@ -643,11 +649,18 @@ export function createListPane({
             }, `+ Thêm mục (${addTypeOptions[0]?.label || 'Thẻ'})`)),
       h('div', { class: 'list-meta-row' },
         h('span', null, `${total} mục${warnCount ? ` · ${warnCount} ⚠` : ''}`),
-        h('button', {
-          class: 'ux-btn ghost sm',
-          style: 'height: 22px; padding: 0 6px;',
-          onclick: onOpenAssetManager,
-        }, `Ảnh (${assetsCount})`))
+        h('div', { style: 'display: flex; gap: 4px; align-items: center;' },
+          onOpenBulkImport ? h('button', {
+            class: 'ux-btn ghost sm',
+            style: 'height: 22px; padding: 0 6px;',
+            title: 'Nhập hàng loạt từ CSV / TSV / Quizlet / Markdown',
+            onclick: onOpenBulkImport,
+          }, 'Nhập…') : null,
+          h('button', {
+            class: 'ux-btn ghost sm',
+            style: 'height: 22px; padding: 0 6px;',
+            onclick: onOpenAssetManager,
+          }, `Ảnh (${assetsCount})`)))
     );
   }
 

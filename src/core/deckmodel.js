@@ -2,6 +2,7 @@
 // Hỗ trợ Deck Editor (GĐ2C): newDeck, newItem, addItem, removeItems, duplicateItem, moveItem, updateItem, changeType, history...
 
 import { kindOf, allowedTypes, defaultTypeFor, isValidKind } from './deckkinds.js';
+import { normalizeTerm } from './hash.js';
 
 const MD_IMG = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
 
@@ -334,6 +335,9 @@ export function isBlankNewItem(item) {
   if (main) return false;
   if ((item.explanation ?? '').trim() || (item.image ?? '').trim() || (item.answerImage ?? '').trim()) return false;
   if ((item.back ?? '').trim() || (item.definition ?? '').trim()) return false;
+  if ((item.phonetic ?? '').trim() || (item.pos ?? '').trim() || (item.example ?? '').trim()) return false;
+  if (Array.isArray(item.forms) && item.forms.length > 0) return false;
+  if (Array.isArray(item.synonyms) && item.synonyms.length > 0) return false;
   if (Array.isArray(item.choices)) {
     const anyChoice = item.choices.some(c =>
       typeof c === 'string' ? c.trim() !== '' : ((c?.text ?? '').trim() !== '' || (c?.image ?? '').trim() !== '')
@@ -398,8 +402,14 @@ export function normalizeOnLeave(item) {
   if (!item || typeof item !== 'object') return item;
   const out = JSON.parse(JSON.stringify(item));
 
-  for (const f of ['question', 'front', 'back', 'explanation', 'topic', 'answerDisplay', 'term', 'definition']) {
+  for (const f of ['question', 'front', 'back', 'explanation', 'topic', 'answerDisplay', 'term', 'definition', 'phonetic', 'pos', 'example']) {
     if (typeof out[f] === 'string') out[f] = out[f].trim();
+  }
+
+  for (const f of ['forms', 'synonyms', 'tags']) {
+    if (Array.isArray(out[f])) {
+      out[f] = out[f].map(s => String(s ?? '').trim()).filter(Boolean);
+    }
   }
 
   if (Array.isArray(out.choices)) {
@@ -438,6 +448,47 @@ export function normalizeOnLeave(item) {
   }
 
   return out;
+}
+
+// Thêm các mục nhập vào bộ thẻ, khử trùng theo id và term chuẩn hoá (hàm thuần, §C, §D)
+export function addImportedItems(deck, importedItems) {
+  if (!deck || typeof deck !== 'object') {
+    return { deck, added: [], skipped: [] };
+  }
+  const currentItems = [...(deck.items || [])];
+  const existingIds = new Set(currentItems.map(it => it && it.id).filter(Boolean));
+  const existingTerms = new Set(
+    currentItems
+      .filter(it => it && typeof it === 'object' && ('term' in it || it.type === 'vocab'))
+      .map(it => normalizeTerm(it.term))
+  );
+
+  const added = [];
+  const skipped = [];
+
+  for (const it of (importedItems || [])) {
+    if (!it || typeof it !== 'object') continue;
+    const isVocab = 'term' in it || it.type === 'vocab';
+    const norm = isVocab ? normalizeTerm(it.term) : null;
+
+    const isDupId = existingIds.has(it.id);
+    const isDupTerm = Boolean(isVocab && norm && existingTerms.has(norm));
+
+    if (isDupId || isDupTerm) {
+      skipped.push({ item: it, reason: isDupId ? 'trùng id' : 'trùng từ vựng' });
+    } else {
+      existingIds.add(it.id);
+      if (norm) existingTerms.add(norm);
+      added.push(it);
+      currentItems.push(it);
+    }
+  }
+
+  return {
+    deck: { ...deck, items: currentItems },
+    added,
+    skipped,
+  };
 }
 
 // Quản lý Undo / Redo cho Deck Editor, gộp các lần gõ liên tiếp trong 500 ms thành 1 bước,

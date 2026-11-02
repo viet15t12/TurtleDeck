@@ -250,6 +250,7 @@ function renderEmptyHome(busy, actions) {
     h('div', { class: 'home-empty-actions' },
       h('span', { class: 'muted', style: 'font-size: 13px;' }, 'Hoặc mở dữ liệu có sẵn:'),
       h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: actions.openFiles }, '📂 Mở file…'),
+      h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('text') }, 'Nhập từ CSV / TSV / Markdown…'),
       h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('file') }, 'Nhập từ file .json…'),
       h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('dir') }, 'Nhập từ thư mục…')));
 }
@@ -271,7 +272,12 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   }
   const reviewedToday = countReviewedToday(progress, now);
 
-  const importMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 220px;' },
+  const importMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 250px;' },
+    h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      onclick: () => { importMenu.hidden = true; actions.importDeck('text'); },
+    }, 'Từ file bảng / văn bản (.csv, .tsv, .txt, .md)…'),
     h('button', {
       type: 'button',
       class: 'ux-popover-item',
