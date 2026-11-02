@@ -155,7 +155,7 @@ Nhớ: trong JSON dấu \ của LaTeX phải là \\.
 
 ## Giai đoạn 2C — Deck Editor: tạo và sửa bộ thẻ bằng giao diện
 
-> **Đặc tả UX/UI cập nhật (GĐ 2C-fix):** Toàn bộ bố cục, tương tác và kiến trúc của Editor tuân theo **`study-app-editor-ux.md`** (thay thế mục 2.7 và 9.3 của `study-app.md`). Giao diện được module hoá theo nguyên tắc SRP trong `src/views/editor/` (`index.js` orchestrator, `state.js`, `actions.js`, `services.js`, `shortcuts.js`, `list.js`, `form.js`, `preview.js`, `ui/`, `fields/`) kèm hệ thống tokens/controls (`src/styles/tokens.css`, `controls.css`, `editor.css`).
+> **Đặc tả UX/UI cập nhật (GĐ 2C-fix):** Toàn bộ bố cục, tương tác và kiến trúc của Editor tuân theo **`study-app-editor-ux.md`** (thay thế mục 2.7 và 9.3 của `study-app.md`). Giao diện được module hoá theo nguyên tắc SRP trong `src/views/editor/` (`index.js` orchestrator, `state.js`, `actions.js`, `services.js`, `shortcuts.js`, `list.js`, `preview.js`, `imagemanager.js`, `bulkimport.js`, `form.js` re-export `form/` gồm `index.js`, `constants.js`, `validation.js`, `header.js`, `sections/vocab.js`, `sections/card.js`, `sections/question.js`; `ui/`, `fields/`) kèm hệ thống tokens/controls (`src/styles/tokens.css`, `controls.css`, `editor.css`).
 
 **Mục tiêu:** người dùng tạo bộ thẻ mới, thêm / xoá / sửa câu hỏi và ảnh, rồi lưu ra file `.sdeck` — **không phải giải nén hay sửa JSON ở bất kỳ bước nào** (`study-app-editor-ux.md`, `study-app.md` mục 3.0, 7.3b).
 
@@ -164,7 +164,7 @@ Nhớ: trong JSON dấu \ của LaTeX phải là \\.
 - `core/deckmodel.js` (hàm thuần, không sửa state cũ): `newDeck({title, kind, lang})` (sinh `meta.id`), `newItem(type)`, `newItemId(deck)`, `newItemLike(deck, current)` (kế thừa dạng, chủ đề, nhãn), `isBlankNewItem(item)`, `setCorrect(item, choiceIndex)` (tự chuyển `single` ↔ `multi`), `splitPastedChoices(text)`, `normalizeOnLeave(item)`, `stripAccents(str)`, `addItem`, `removeItems`, `duplicateItem` (id mới), `moveItem`, `updateItem`, `changeType` (single↔multi, fill↔command… giữ phần dữ liệu giữ được), `imageRefs` / `collectImageRefs`, `unusedAssets(deck, assets)`, `createHistory(deck, limit = 100)` với `push / undo / redo / canUndo / canRedo / cursor` (gộp các lần gõ liên tiếp trong 500 ms thành một bước và lưu vị trí con trỏ `{ itemId, path, selStart, selEnd }`).
 - `core/mathinput.js` & `core/snippets.js` (hàm thuần): `mathContext(text, pos)`, `findEnclosingMath(text, pos)`, `insertFormula(state, latex, { block })`, `nextPlaceholder(text, pos)` (`jumpToNextPlaceholder`), `handleDollarKey(state)`, `handleMathEnterKey(state)` và danh mục ký hiệu LaTeX 6 tab có tìm kiếm bỏ dấu.
 - Main (mục 7.2): hoàn thiện `deck:new`, `deck:save` (Lưu / Lưu thành…, bản sao nhận `meta.id` mới từ renderer, `.bak`, atomic, dọn ảnh không dùng sau khi hỏi), `asset:add` (hộp thoại nhiều ảnh), `asset:addBytes` (kéo thả / dán clipboard), `asset:list`. Main **tự kiểm** mọi thứ nhận từ renderer (nội dung phải là ảnh thật, ≤ 5 MB, tên đã làm sạch).
-- `src/views/editor/` (bố cục 3 cột `100vh` module hoá theo `study-app-editor-ux.md`: `index.js`, `editor.js` re-export, `state.js`, `actions.js`, `services.js`, `shortcuts.js`, `list.js`, `form.js`, `preview.js`, `imagemanager.js`, `bulkimport.js`, `ui/` gồm `toast.js`, `modals.js`, `topbar.js`, `layout.js`, và `fields/` gồm `mdfield.js`, `choices.js`, `chips.js`, `graderbox.js`, `imageslot.js`):
+- `src/views/editor/` (bố cục 3 cột `100vh` module hoá theo `study-app-editor-ux.md`: `index.js`, `editor.js` re-export, `state.js`, `actions.js`, `services.js`, `shortcuts.js`, `list.js`, `preview.js`, `imagemanager.js`, `bulkimport.js`, `form.js` re-export sang `form/` gồm `index.js`, `constants.js`, `validation.js`, `header.js`, `sections/vocab.js`, `sections/card.js`, `sections/question.js`; `ui/` gồm `toast.js`, `modals.js`, `topbar.js`, `layout.js`, và `fields/` gồm `mdfield.js`, `choices.js`, `chips.js`, `graderbox.js`, `imageslot.js`):
   - **Danh sách mục**: tìm kiếm; lọc topic / tag / dạng / ⚠ chưa hoàn chỉnh; kéo thả sắp xếp; *Thêm* (menu chọn dạng), nhân đôi, xoá (xác nhận khi xoá nhiều, có Undo); chọn nhiều → xoá / gán topic / gán tag.
   - **Form theo dạng**: `single`/`multi` (câu hỏi; danh sách lựa chọn có chữ + ảnh, thêm/xoá/kéo sắp xếp; radio/checkbox đánh dấu đúng; giải thích); `fill`/`command` (danh sách đáp án chấp nhận; `match`; `tolerance` khi `number`; `answerDisplay`; ô *thử đáp án* chạy đúng `grader`); `card` (front/back + ảnh). Chung: topic, tags (chip), explanation, `image`, `answerImage`.
   - **Ô soạn Markdown** có thanh công cụ (đậm, nghiêng, code, `$…$`, `$$…$$`, chèn ảnh) và bảng ký hiệu LaTeX hay dùng bấm để chèn.
@@ -304,6 +304,17 @@ thêm TTS và chế độ Nghe–Gõ. Thêm form vocab và Nhập hàng loạt v
 ## Giai đoạn 5 — Learn, Match, Exam
 
 **Mục tiêu:** các chế độ học phối hợp (dựa vào `meta.kind`, xem `study-app-phase3b.md`: mở thêm `Learn`, `Match` cho `qa`/`vocab` và `Exam` cho `quiz` trong `modesFor(kind)`).
+
+**Chuẩn bị kiến trúc (tái cấu trúc module hoá form trước GĐ 5)**
+- `form.js` được tách thành `src/views/editor/form/` gồm 7 module chuyên biệt (< 200 dòng/file):
+  - `constants.js`: hằng số danh mục (`POS_OPTIONS`).
+  - `validation.js`: logic validation UI, ánh xạ field path, lọc lỗi hiển thị theo trạng thái tương tác (`touchedSet`), cập nhật DOM lỗi.
+  - `header.js`: thanh header sticky điều hướng (trước/sau, chỉ số), popover danh sách lỗi & popover thao tác phụ.
+  - `sections/vocab.js`: form từ vựng (term, definition, phonetic/pos, example, forms, synonyms, image).
+  - `sections/card.js`: form thẻ ghi nhớ 2 mặt (front/back, ảnh đề, ảnh đáp án).
+  - `sections/question.js`: form câu hỏi trắc nghiệm (MCQ single/multi) hoặc điền/lệnh (fill/command).
+  - `index.js`: orchestrator điều phối kết nối state context, quản lý chip mở rộng trường tuỳ chọn và re-export qua `src/views/editor/form.js`.
+- Cấu trúc này cô lập hoàn toàn logic render theo từng dạng câu hỏi, giúp dễ dàng kiểm thử độc lập, sẵn sàng mở rộng các dạng câu hỏi mới, và cho phép tái sử dụng các section/validation logic cho màn hình xem lại hoặc sửa nhanh câu sai của Learn và Exam.
 
 **Việc cần làm**
 - **Learn** (mục 6.1): `planner.js` thêm mastery 0→4 qua các stage `preview → mc-en-vi → mc-vi-en → write-vi-en → cloze`; sai thì tụt 1 bậc; không để 2 câu cùng item đứng liền nhau; đạt mastery cuối thì đẩy vào SRS. Deck quiz (LPIC) bỏ bước preview, ưu tiên `single/multi` rồi `command/fill`.

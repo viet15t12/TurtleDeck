@@ -324,7 +324,16 @@ src/views/editor/
 ├── services.js         # Giao tiếp API (window.api wrapper: nạp/lưu layout, nạp/tải ảnh, lưu deck)
 ├── shortcuts.js        # Xử lý phím tắt và sự kiện toàn cục (Ctrl+S, Ctrl+Z, Ctrl+Enter, v.v.)
 ├── list.js             # Cột danh sách mục (ảo hoá, lọc, kéo thả, chọn nhiều)
-├── form.js             # Cột soạn thảo (form chung, header điều hướng, chip lỗi)
+├── form.js             # Re-export createFormPane từ form/index.js (tương thích ngược)
+├── form/               # Phân rã mô-đun cột soạn thảo (thay thế form.js nguyên khối ~600 dòng):
+│   ├── index.js        # Factory chính (orchestrator kết nối context, optional chips, dynamic sections)
+│   ├── constants.js    # Hằng số (POS_OPTIONS từ loại từ vựng)
+│   ├── validation.js   # Logic validation UI (mapIssueFieldToPath, computeVisibleIssues, updateValidationUI)
+│   ├── header.js       # Render header sticky, popover danh sách lỗi & popover menu tác vụ khác
+│   └── sections/       # Các khối soạn thảo chuyên biệt theo dạng câu hỏi:
+│       ├── vocab.js    # Form từ vựng (term, definition, phonetic/pos, example, forms, synonyms, image)
+│       ├── card.js     # Form thẻ 2 mặt (front/back, ảnh đề, ảnh đáp án)
+│       └── question.js # Form câu hỏi trắc nghiệm (MCQ) hoặc điền/lệnh (fill/command)
 ├── preview.js          # Cột xem trước thời gian thực (bọc component session)
 ├── bulkimport.js       # Hộp thoại Nhập hàng loạt (CSV/TSV/Quizlet/Markdown)
 ├── imagemanager.js     # Hộp thoại Quản lý ảnh
@@ -354,7 +363,17 @@ src/styles/tokens.css, controls.css, editor.css
 - **Modals (`ui/modals.js`)**: Quản lý tập trung các hộp thoại popup của Editor (Meta, Xác nhận xoá, Phím tắt, Unsaved changes, v.v.). Khi GĐ 5 cần thêm modal mới, mở rộng tại đây thay vì nhồi vào view chính.
 - **Shortcuts (`shortcuts.js`)**: Bắt phím tắt tập trung và trả về hàm `cleanup()` dọn dẹp khi unmount.
 - **Orchestrator (`index.js`)**: File điều phối trung tâm cực kỳ gọn gàng (~120 dòng), chỉ có nhiệm vụ kết nối các dependency và trả về phần tử DOM của Editor.
-- **Tương thích ngược (`editor.js`)**: Re-export `renderEditor` từ `index.js`, đảm bảo các router cũ trong app không cần thay đổi đường dẫn import.
+- **Tương thích ngược (`editor.js`, `form.js`)**: Re-export `renderEditor` từ `index.js` và `createFormPane` từ `form/index.js`, đảm bảo các router và import cũ trong app không cần thay đổi đường dẫn.
+- **Mô-đun hoá Form (`form/`)**:
+  - `constants.js`: Quản lý các danh mục lựa chọn (từ loại `POS_OPTIONS`, v.v.).
+  - `validation.js`: Độc lập hóa toàn bộ logic kiểm tra hợp lệ UI, ánh xạ đường dẫn trường lỗi (`mapIssueFieldToPath`), chuẩn hoá nhóm lỗi (`normalizeIssueGroup`), lọc theo trạng thái đã tương tác (`touchedSet`), và cập nhật class/thông báo lỗi trên DOM mà không phụ thuộc vào chu kỳ render của toàn form.
+  - `header.js`: Đảm nhiệm thanh điều hướng mục (trước/sau/chỉ số), popover danh sách lỗi có khả năng click để focus ngay vào trường lỗi, cùng menu tác vụ mở rộng (nhân đôi, xoá, bật/tắt mã kỹ thuật).
+  - `sections/` (`vocab.js`, `card.js`, `question.js`): Cô lập hoàn toàn template render và binding của từng loại thẻ. Mỗi section nhận `{ item, ctx }` (hoặc `{ item, isMC, ctx }`) và trả về mảng DOM Node.
+  - `index.js`: Factory chính orchestrator (~280 dòng), tích hợp `captureCursor`, `applyPathValue`, quản lý chip thêm trường tuỳ chọn (`explanation`, `image`, `answerImage`, `topic`, `tags`, `answerDisplay`, `forms`, `synonyms`).
+  - **Lợi ích mở rộng cho Giai đoạn 5 (Learn, Match, Exam) và tương lai**:
+    + Giúp test UI và logic validation độc lập mà không cần mount cả Editor.
+    + Thêm loại câu hỏi mới (ví dụ dạng câu hỏi nối Match, hoặc dạng bài tập mới) chỉ cần thêm 1 file trong `sections/` mà không làm phình hay rủi ro hỏng các form hiện có.
+    + Cho phép tái sử dụng các sections hoặc validation logic ở các màn hình khác (như xem lại / sửa nhanh câu sai trong Exam và Learn).
 
 ### 13.2 Render, focus và undo
 - Mỗi vùng có hàm dựng riêng (`renderTopbar`, `renderList`, `renderForm`, `renderPreview`). **Khi người dùng gõ**: chỉ cập nhật state → cập nhật xem trước (debounce) → vá đúng một hàng danh sách → cập nhật dòng lỗi. **Không dựng lại ô đang gõ** (tránh mất focus/con trỏ).

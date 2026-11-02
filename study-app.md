@@ -412,7 +412,17 @@ study-app/
 │   │   │   ├── actions.js  # business logic
 │   │   │   ├── services.js # api wrapper
 │   │   │   ├── shortcuts.js# phím tắt toàn cục
-│   │   │   ├── list.js / form.js / preview.js / imagemanager.js / bulkimport.js
+│   │   │   ├── list.js / preview.js / imagemanager.js / bulkimport.js
+│   │   │   ├── form.js     # re-export createFormPane từ form/index.js (tương thích ngược)
+│   │   │   ├── form/       # module hoá cột soạn thảo (SRP)
+│   │   │   │   ├── index.js        # orchestrator điều phối form & context
+│   │   │   │   ├── constants.js    # hằng số POS_OPTIONS
+│   │   │   │   ├── validation.js   # logic validation UI
+│   │   │   │   ├── header.js       # header điều hướng & popovers
+│   │   │   │   └── sections/       # các section theo dạng câu hỏi
+│   │   │   │       ├── vocab.js    # form từ vựng
+│   │   │   │       ├── card.js     # form thẻ 2 mặt
+│   │   │   │       └── question.js # form câu hỏi (MCQ, fill, command)
 │   │   │   ├── fields/     # các widget trường soạn thảo
 │   │   │   └── ui/         # toast, modals, topbar, layout
 │   │   ├── settings.js     # màn hình Cài đặt
