@@ -1,5 +1,5 @@
 // src/core/builder.js — chuyển đổi item về cấu trúc Question thống nhất (hàm thuần, ES module).
-// GĐ2: hỗ trợ single, multi, fill, command, card (và vocab fallback như card).
+// GĐ2 & GĐ2B: hỗ trợ single, multi, fill, command, card (và vocab fallback như card), kèm image, answerImage, answerDisplay.
 
 export function buildQuestion(item) {
   if (!item || typeof item !== 'object') return null;
@@ -14,6 +14,9 @@ export function buildQuestion(item) {
         prompt: item.question ?? '',
         choices: Array.isArray(item.choices) ? [...item.choices] : [],
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
+        image: item.image,
+        answerImage: item.answerImage,
+        answerDisplay: item.answerDisplay,
         explanation: item.explanation ?? '',
         topic: item.topic,
         tags: item.tags,
@@ -27,6 +30,9 @@ export function buildQuestion(item) {
         prompt: item.question ?? '',
         choices: Array.isArray(item.choices) ? [...item.choices] : [],
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
+        image: item.image,
+        answerImage: item.answerImage,
+        answerDisplay: item.answerDisplay,
         explanation: item.explanation ?? '',
         topic: item.topic,
         tags: item.tags,
@@ -41,6 +47,8 @@ export function buildQuestion(item) {
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
         match: item.match ?? 'normalized',
         tolerance: item.tolerance,
+        image: item.image,
+        answerImage: item.answerImage,
         answerDisplay: item.answerDisplay,
         explanation: item.explanation ?? '',
         topic: item.topic,
@@ -55,6 +63,9 @@ export function buildQuestion(item) {
         prompt: item.question ?? '',
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
         match: item.match ?? 'normalized',
+        image: item.image,
+        answerImage: item.answerImage,
+        answerDisplay: item.answerDisplay,
         explanation: item.explanation ?? '',
         topic: item.topic,
         tags: item.tags,
@@ -71,6 +82,7 @@ export function buildQuestion(item) {
         answers: [item.back ?? ''],
         image: item.image,
         answerImage: item.answerImage,
+        answerDisplay: item.answerDisplay,
         explanation: item.explanation ?? '',
         topic: item.topic,
         tags: item.tags,
@@ -86,6 +98,9 @@ export function buildQuestion(item) {
         front: termDisplay,
         back: item.definition ?? '',
         answers: [item.definition ?? ''],
+        image: item.image,
+        answerImage: item.answerImage,
+        answerDisplay: item.answerDisplay,
         explanation: item.example ? `*Ví dụ:* ${item.example}` : '',
         topic: item.pos,
         tags: item.tags,
@@ -126,4 +141,3 @@ export function buildSessionQuestions(items, options = {}) {
 
   return list;
 }
-

@@ -1,18 +1,24 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+
+// Đăng ký scheme asset:// TRƯỚC khi app ready (study-app.md mục 7.10)
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'asset', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
 
 const progressFile = () => path.join(app.getPath('userData'), 'progress.json');
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
 
 // core là ES module → nạp bằng import() động (study-app.md mục 7.1)
-let sdeck, parser, fsutil;
+let sdeck, parser, fsutil, assetprotocol;
 async function loadCore() {
-  [sdeck, parser, fsutil] = await Promise.all([
+  [sdeck, parser, fsutil, assetprotocol] = await Promise.all([
     import('./src/core/sdeck.js'),
     import('./src/core/parser.js'),
     import('./src/core/fsutil.js'),
+    import('./src/core/assetprotocol.js'),
   ]);
 }
 
@@ -39,6 +45,9 @@ function createWindow() {
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    console.log(`[Renderer] ${message} (${sourceId}:${line})`);
+  });
   window.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
@@ -77,7 +86,7 @@ async function openOne(p) {
 
   const pkg = sdeck.readPackage(bytes);
   if (!pkg.ok) return fail(pkg.error);
-  const parsed = parser.parseDeck(pkg.deckText);
+  const parsed = parser.parseDeck(pkg.deckText, { assets: pkg.assets });
   if (!parsed.ok) return fail(parsed.error, { issues: [...pkgIssues(pkg.issues), ...parsed.issues] });
 
   const deckKey = newKey();
@@ -128,13 +137,11 @@ handle('deck:import', async (event, kind) => {
     if (e.code === 'ENOENT') return fail(isDir ? 'Thư mục này không có deck.json.' : 'Không tìm thấy file.');
     return fail('Không đọc được nguồn: ' + errMsg(e));
   }
-  const deckText = (await fs.readFile(jsonFile, 'utf8')).replace(/^\uFEFF/, '');
-  const parsed = parser.parseDeck(deckText);
-  if (!parsed.ok) return { ...fail(parsed.error), issues: parsed.issues };
-
   // đọc các ảnh được tham chiếu từ thư mục nguồn: realpath phải nằm trong `dir`, đúng đuôi/nội dung ảnh, ≤ 5 MB
   const dir = isDir ? src : path.dirname(src);
   const { assets, issues: assetIssues } = await sdeck.collectAssetsFromDir(dir, deckText);
+  const parsed = parser.parseDeck(deckText, { assets });
+  if (!parsed.ok) return { ...fail(parsed.error), issues: [...pkgIssues(assetIssues), ...parsed.issues] };
   const deckKey = newKey();
   packages.set(deckKey, { file: null, assets, sourceDir: dir });
   return {
@@ -220,8 +227,23 @@ handle('settings:save', async (_e, data) => {
   return { ok: true };
 });
 
+function registerAssetProtocol() {
+  protocol.handle('asset', req => {
+    try {
+      const res = assetprotocol.handleAssetUrl(req.url, packages);
+      if (res.status === 200) {
+        return new Response(res.data, { headers: res.headers });
+      }
+      return new Response('Not found', { status: 404 });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
+
 app.whenReady().then(async () => {
   await loadCore();
+  registerAssetProtocol();
   createWindow();
 
   app.on('activate', () => {

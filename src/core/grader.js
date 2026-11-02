@@ -18,6 +18,27 @@ export function lev(a, b) {
   return dp[a.length][b.length];
 }
 
+export function gradeNumber(input, answers, tol = 1e-9) {
+  const x = parseNumber(input);
+  const list = Array.isArray(answers) ? answers : [answers];
+  const ok = !Number.isNaN(x) && list.some(a => {
+    const na = parseNumber(a);
+    return !Number.isNaN(na) && Math.abs(na - x) <= tol;
+  });
+  return { ok, near: false };
+}
+
+export const normLatex = s => String(s ?? '')
+  .replace(/\\left|\\right/g, '')
+  .replace(/\\[dt]frac/g, '\\frac')
+  .replace(/\s+/g, '');
+
+export function gradeLatex(input, answers) {
+  const x = normLatex(input);
+  const list = Array.isArray(answers) ? answers : [answers];
+  return { ok: list.some(a => normLatex(a) === x), near: false };
+}
+
 // returns { ok: boolean, near: boolean }
 export function gradeText(input, answers, mode = 'normalized', options = {}) {
   const rawInput = String(input ?? '');
@@ -40,13 +61,12 @@ export function gradeText(input, answers, mode = 'normalized', options = {}) {
   }
 
   if (mode === 'number') {
-    const x = parseNumber(rawInput);
     const tol = options?.tolerance ?? 1e-9;
-    const ok = !Number.isNaN(x) && ansList.some(a => {
-      const na = parseNumber(a);
-      return !Number.isNaN(na) && Math.abs(na - x) <= tol;
-    });
-    return { ok, near: false };
+    return gradeNumber(rawInput, ansList, tol);
+  }
+
+  if (mode === 'latex') {
+    return gradeLatex(rawInput, ansList);
   }
 
   // normalized (mặc định)
@@ -78,6 +98,5 @@ export function gradeChoices(selected, correct) {
   const normList = arr => [...new Set((arr || []).map(Number))].sort((x, y) => x - y);
   const a = normList(selected).join(',');
   const b = normList(correct).join(',');
-  return { ok: a === b, near: false };
+  return { ok: a !== '' && a === b, near: false };
 }
-

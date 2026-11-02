@@ -1,8 +1,12 @@
 // src/core/parser.js — deckText (deck.json trong gói) → { ok, deck, issues[] }. Hàm thuần, chạy ở main.
 // Lỗi cấp bộ thẻ (JSON hỏng, thiếu meta.id/items, id trùng, formatVersion quá mới) → ok:false + error tiếng Việt.
 // Lỗi cấp item → bỏ qua item đó, ghi vào issues (kèm id, vị trí, lý do); các item còn lại vẫn học được.
-// GĐ4 sẽ bổ sung các định dạng nhập CSV/TSV/Quizlet/Markdown.
+// GĐ2B: kiểm tra ảnh tham chiếu (![..](path), image, answerImage, choices[].image) → cảnh báo nếu thiếu/sai đuôi/>5MB.
 import { validateDeck, itemType, hasError } from './validate.js';
+import { imageRefs } from './deckmodel.js';
+
+const IMG_EXT = /\.(png|jpe?g|gif|webp|svg)$/i;
+const MAX_IMG_SIZE = 5 * 1024 * 1024;
 
 // vị trí lỗi JSON → "dòng X, cột Y"
 function jsonErrorLocation(text, err) {
@@ -17,7 +21,7 @@ function jsonErrorLocation(text, err) {
 
 const failDeck = error => ({ ok: false, error, issues: [{ level: 'error', msg: error }] });
 
-export function parseDeck(deckText) {
+export function parseDeck(deckText, { assets } = {}) {
   if (typeof deckText !== 'string') return failDeck('Không đọc được nội dung bộ thẻ (deck.json).');
   const text = deckText.replace(/^\uFEFF/, '');
   if (!text.trim()) return failDeck('deck.json rỗng.');
@@ -44,7 +48,39 @@ export function parseDeck(deckText) {
       continue;
     }
     for (const i of its) issues.push({ level: i.level, ...where, field: i.field, msg: i.msg });
-    items.push(raw.items[index]);
+
+    const rawItem = raw.items[index];
+    items.push(rawItem);
+
+    // Kiểm tra ảnh tham chiếu trong item (GĐ2B)
+    const refs = imageRefs(rawItem);
+    for (const ref of refs) {
+      if (!IMG_EXT.test(ref)) {
+        issues.push({
+          level: 'warn',
+          ...where,
+          field: 'image',
+          msg: `Ảnh "${ref}" có định dạng không được hỗ trợ (chỉ nhận png, jpg, jpeg, gif, webp, svg).`,
+        });
+      } else if (assets) {
+        const data = assets.get(ref);
+        if (!data) {
+          issues.push({
+            level: 'warn',
+            ...where,
+            field: 'image',
+            msg: `Không tìm thấy ảnh "${ref}" trong gói bộ thẻ.`,
+          });
+        } else if (data.byteLength > MAX_IMG_SIZE) {
+          issues.push({
+            level: 'warn',
+            ...where,
+            field: 'image',
+            msg: `Ảnh "${ref}" vượt quá dung lượng cho phép (> 5 MB).`,
+          });
+        }
+      }
+    }
   }
 
   const meta = { ...raw.meta };
@@ -60,4 +96,3 @@ export function parseDeck(deckText) {
     skipped: raw.items.length - items.length,
   };
 }
-

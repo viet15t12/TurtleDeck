@@ -108,3 +108,39 @@ test('không sửa đối tượng đầu vào / giữ trường lạ của item
   assert.equal(r.deck.items[0].note, 'giữ lại');
 });
 
+test('GĐ2B: duyệt ảnh tham chiếu, cảnh báo ảnh thiếu/sai đuôi/quá 5MB mà không chặn nạp deck', () => {
+  const deckWithImages = {
+    meta: { id: 'math-img', title: 'Math with images' },
+    items: [
+      {
+        id: '1',
+        type: 'single',
+        question: 'Xem hình: ![Đồ thị](img/graph.svg)',
+        choices: [
+          { text: 'A', image: 'img/choice_a.png' },
+          { text: 'B', image: 'img/choice_b.badext' },
+        ],
+        answer: [0],
+        answerImage: 'img/ans.jpg',
+      },
+    ],
+  };
+
+  const assets = new Map([
+    ['img/graph.svg', new Uint8Array([1, 2, 3])],
+    ['img/choice_a.png', new Uint8Array([4, 5, 6])],
+    // img/ans.jpg bị thiếu trong assets
+    // img/huge.png quá 5 MB
+  ]);
+
+  const r = parseDeck(JSON.stringify(deckWithImages), { assets });
+  assert.equal(r.ok, true);
+  assert.equal(r.deck.items.length, 1); // Item VẪN được nạp!
+
+  // Cảnh báo đuôi sai
+  assert.ok(r.issues.some(i => i.level === 'warn' && /định dạng không được hỗ trợ/i.test(i.msg)));
+  // Cảnh báo ảnh thiếu
+  assert.ok(r.issues.some(i => i.level === 'warn' && /không tìm thấy ảnh "img\/ans\.jpg"/i.test(i.msg)));
+});
+
+

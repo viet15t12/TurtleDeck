@@ -28,7 +28,7 @@ test('sdeck.mjs pack / check / unpack / pack-all', async () => {
 
     const all = path.join(tmp, 'all');
     assert.match(run('pack-all', path.join(root, 'data', 'samples-src'), all), /vocab-sample\.sdeck/);
-    assert.deepEqual((await fs.readdir(all)).sort(), ['lpic-sample.sdeck', 'vocab-sample.sdeck']);
+    assert.deepEqual((await fs.readdir(all)).sort(), ['lpic-sample.sdeck', 'math-sample.sdeck', 'vocab-sample.sdeck']);
 
     // file không phải gói → check báo lỗi, mã thoát khác 0
     await fs.writeFile(path.join(tmp, 'bad.sdeck'), 'hello');

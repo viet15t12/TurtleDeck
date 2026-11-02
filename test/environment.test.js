@@ -30,3 +30,22 @@ test('Phase 2 core modules and views are present', () => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });
+
+test('Phase 2B modules, vendor assets and sample math deck are present', () => {
+  for (const file of [
+    'src/core/assetprotocol.js',
+    'src/vendor/katex/katex.min.css',
+    'src/vendor/katex/fonts',
+    'src/vendor/katex/katex.mjs',
+    'src/vendor/marked.esm.js',
+    'src/vendor/purify.es.mjs',
+    'src/vendor/marked-katex.js',
+    'data/samples-src/math-sample/deck.json',
+    'data/samples-src/math-sample/img/x2-graph.svg',
+    'data/samples-src/math-sample/img/triangle.png',
+    'data/samples-src/math-sample/img/circle.jpg',
+    'data/samples/math-sample.sdeck',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});

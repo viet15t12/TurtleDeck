@@ -69,9 +69,19 @@ test('gradeText: mode regex', () => {
 test('gradeText: mode number', () => {
   assert.deepEqual(gradeText('1.414', ['1.414'], 'number'), { ok: true, near: false });
   assert.deepEqual(gradeText('1,414', ['1.414'], 'number'), { ok: true, near: false }); // dấu phẩy thập phân
+  assert.deepEqual(gradeText('0,5', ['0.5'], 'number'), { ok: true, near: false });
+  assert.deepEqual(gradeText('1/3', ['0.3333'], 'number', { tolerance: 0.001 }), { ok: true, near: false });
   assert.deepEqual(gradeText('1/3', ['0.333333333'], 'number', { tolerance: 1e-4 }), { ok: true, near: false });
   assert.deepEqual(gradeText('2.5', ['1.414'], 'number'), { ok: false, near: false });
   assert.deepEqual(gradeText('abc', ['1.414'], 'number'), { ok: false, near: false });
+});
+
+test('gradeText: mode latex', () => {
+  assert.deepEqual(gradeText('\\dfrac{1}{2}', ['\\frac{1}{2}'], 'latex'), { ok: true, near: false });
+  assert.deepEqual(gradeText('\\tfrac{1}{2}', ['\\frac{1}{2}'], 'latex'), { ok: true, near: false });
+  assert.deepEqual(gradeText('\\left( x \\right)', ['(x)'], 'latex'), { ok: true, near: false });
+  assert.deepEqual(gradeText(' \\frac{ 1 }{ 2 } ', ['\\frac{1}{2}'], 'latex'), { ok: true, near: false });
+  assert.deepEqual(gradeText('\\frac{1}{3}', ['\\frac{1}{2}'], 'latex'), { ok: false, near: false });
 });
 
 test('gradeChoices: single & multi choice (chính xác, thiếu, thừa, thứ tự)', () => {

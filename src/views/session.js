@@ -1,6 +1,7 @@
 // src/views/session.js — màn hình phiên học & kết quả (single, multi, fill, command, card).
+// GĐ2B: hỗ trợ KaTeX, ảnh qua asset://, choices {text, image}, answerDisplay, lightbox.
 import { h, fileName } from './dom.js';
-import { makeRich } from '../core/richtext.js';
+import { makeRich, assetUrl } from '../core/richtext.js';
 import { buildSessionQuestions } from '../core/builder.js';
 import { gradeText, gradeChoices } from '../core/grader.js';
 
@@ -19,6 +20,51 @@ function richEl(tag, attrs, htmlContent) {
   }
   el.innerHTML = htmlContent;
   return el;
+}
+
+// Lightbox xem ảnh phóng to (Esc hoặc bấm ngoài để đóng)
+function showLightbox(src, alt) {
+  const backdrop = h('div', { class: 'lightbox-backdrop' },
+    h('div', { class: 'lightbox-box' },
+      h('button', { class: 'lightbox-close', title: 'Đóng (Esc)', onclick: close }, '✕'),
+      h('img', { class: 'lightbox-img', src, alt: alt || 'Ảnh' }),
+      alt ? h('div', { class: 'lightbox-caption' }, alt) : null));
+
+  function close() {
+    window.removeEventListener('keydown', onEsc);
+    backdrop.remove();
+  }
+
+  function onEsc(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  }
+
+  backdrop.onclick = e => {
+    if (e.target === backdrop) close();
+  };
+
+  window.addEventListener('keydown', onEsc);
+  document.body.append(backdrop);
+}
+
+// Gắn sự kiện click mở lightbox và xử lý ảnh lỗi
+function attachImageHandlers(container) {
+  container.querySelectorAll('img.rich-img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.onclick = ev => {
+      ev.stopPropagation();
+      showLightbox(img.src, img.alt);
+    };
+    img.onerror = () => {
+      const missing = document.createElement('span');
+      missing.className = 'img-missing';
+      missing.textContent = `[Không tìm thấy ảnh: ${img.alt || img.getAttribute('src') || ''}]`;
+      img.replaceWith(missing);
+    };
+  });
 }
 
 export function renderSession(root, { entry, config = {} }, actions) {
@@ -117,6 +163,10 @@ export function renderSession(root, { entry, config = {} }, actions) {
   // ── Xử lý phím tắt ────────────────────────────────────────────────────────
 
   function onKeyDown(ev) {
+    if (document.querySelector('.lightbox-backdrop')) {
+      return; // Đang mở lightbox thì không chuyển câu
+    }
+
     // Nếu đang ở màn hình kết quả
     if (session.index >= session.questions.length) {
       if (ev.key === 'Enter') {
@@ -131,7 +181,6 @@ export function renderSession(root, { entry, config = {} }, actions) {
     }
 
     const q = currentQ();
-    const inInput = ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA');
 
     if (session.submitted) {
       if (ev.key === 'Enter') {
@@ -244,14 +293,13 @@ export function renderSession(root, { entry, config = {} }, actions) {
           h('h2', null, `Chi tiết các câu cần lưu ý (${wrongItems.length})`),
           h('div', { class: 'wrong-items' }, wrongItems.map((item, idx) => {
             const q = item.question;
-            let ansDisplay = '';
-            if (q.kind === 'single' || q.kind === 'multi') {
-              ansDisplay = q.answers.map(i => choiceText(q.choices[i])).join(' · ');
-            } else if (q.kind === 'card') {
-              ansDisplay = q.back;
-            } else {
-              ansDisplay = q.answerDisplay || q.answers.join(' | ');
-            }
+            const ansDisplay = q.answerDisplay
+              ? q.answerDisplay
+              : (q.kind === 'single' || q.kind === 'multi')
+                ? q.answers.map(i => choiceText(q.choices[i])).join(' · ')
+                : (q.kind === 'card')
+                  ? q.back
+                  : q.answers.join(' | ');
 
             return h('div', { class: 'wrong-item-box' },
               h('div', { class: 'wrong-item-head' },
@@ -260,7 +308,7 @@ export function renderSession(root, { entry, config = {} }, actions) {
               richEl('div', { class: 'wrong-item-prompt' }, rich.html(q.prompt)),
               h('div', { class: 'wrong-item-detail' },
                 item.userAnswer !== null && item.userAnswer !== undefined && q.kind !== 'card'
-                  ? h('p', { class: 'user-ans' },
+                  ? h('div', { class: 'user-ans' },
                       h('span', { class: 'muted' }, 'Bạn chọn/nhập: '),
                       h('span', { class: 'error-text' },
                         q.kind === 'single'
@@ -269,14 +317,16 @@ export function renderSession(root, { entry, config = {} }, actions) {
                             ? (item.userAnswer || []).map(i => choiceText(q.choices[i])).join(' · ') || '(để trống)'
                             : String(item.userAnswer || '(để trống)')))
                   : null,
-                h('p', { class: 'correct-ans' },
+                h('div', { class: 'correct-ans' },
                   h('span', { class: 'muted' }, 'Đáp án đúng: '),
-                  h('strong', null, ansDisplay))),
+                  richEl('span', null, rich.inline(ansDisplay)))),
               q.explanation
                 ? richEl('div', { class: 'explanation-box' }, rich.html(q.explanation))
                 : null);
           }))) : null)
     );
+
+    attachImageHandlers(root);
   }
 
   // ── Render nội dung câu hỏi ───────────────────────────────────────────────
@@ -286,7 +336,10 @@ export function renderSession(root, { entry, config = {} }, actions) {
       const isMulti = q.kind === 'multi';
       return h('div', { class: 'choices-list' },
         q.choices.map((c, i) => {
-          const text = choiceText(c);
+          const isObj = c && typeof c === 'object';
+          const text = isObj ? (c.text ?? '') : String(c ?? '');
+          const imgUrl = isObj && c.image ? assetUrl(c.image, entry.deckKey) : null;
+
           const isSelected = isMulti
             ? (session.userAnswer || []).includes(i)
             : session.userAnswer === i;
@@ -323,7 +376,9 @@ export function renderSession(root, { entry, config = {} }, actions) {
               disabled: session.submitted,
               tabindex: '-1',
             }),
-            richEl('span', { class: 'choice-text' }, rich.inline(text)));
+            h('div', { class: 'choice-content' },
+              imgUrl ? h('img', { class: 'rich-img choice-img', src: imgUrl, alt: text || `Lựa chọn ${i + 1}` }) : null,
+              text ? richEl('span', { class: 'choice-text' }, rich.inline(text)) : null));
         }));
     }
 
@@ -351,6 +406,9 @@ export function renderSession(root, { entry, config = {} }, actions) {
     }
 
     if (q.kind === 'card') {
+      const frontImgUrl = q.image ? assetUrl(q.image, entry.deckKey) : null;
+      const backImgUrl = q.answerImage ? assetUrl(q.answerImage, entry.deckKey) : null;
+
       return h('div', { class: 'flashcard-wrap' },
         h('div', {
           class: `flashcard ${session.cardFlipped ? 'flipped' : ''}`,
@@ -363,10 +421,12 @@ export function renderSession(root, { entry, config = {} }, actions) {
         },
           h('div', { class: 'card-face card-front' },
             h('span', { class: 'card-badge' }, 'Mặt trước'),
-            richEl('div', { class: 'card-content' }, rich.html(q.front))),
+            richEl('div', { class: 'card-content' }, rich.html(q.front)),
+            frontImgUrl ? h('img', { class: 'rich-img card-img', src: frontImgUrl, alt: 'Hình ảnh mặt trước' }) : null),
           session.cardFlipped ? h('div', { class: 'card-face card-back' },
             h('span', { class: 'card-badge' }, 'Mặt sau'),
-            richEl('div', { class: 'card-content' }, rich.html(q.back))) : null),
+            richEl('div', { class: 'card-content' }, rich.html(q.back)),
+            backImgUrl ? h('img', { class: 'rich-img card-img', src: backImgUrl, alt: 'Hình ảnh mặt sau' }) : null) : null),
         !session.cardFlipped
           ? h('div', { class: 'card-hint' }, 'Bấm Space hoặc chạm vào thẻ để lật xem đáp án')
           : null);
@@ -401,17 +461,21 @@ export function renderSession(root, { entry, config = {} }, actions) {
 
     let correctDisplay = null;
     if (q.kind === 'fill' || q.kind === 'command') {
-      const ansText = q.answerDisplay || q.answers.join(' | ');
+      const ansDisplay = q.answerDisplay || q.answers.join(' | ');
       correctDisplay = h('div', { class: 'correct-display' },
         h('span', { class: 'muted' }, 'Đáp án đúng: '),
-        h('strong', null, ansText));
+        richEl('strong', null, rich.inline(ansDisplay)));
     }
+
+    const answerImgUrl = q.answerImage ? assetUrl(q.answerImage, entry.deckKey) : null;
 
     return h('div', { class: 'feedback-section' },
       h('div', { class: bannerClass },
         h('span', { class: 'feedback-icon' }, icon),
         h('span', { class: 'feedback-text' }, title)),
       correctDisplay,
+      answerImgUrl ? h('div', { class: 'answer-img-wrap' },
+        h('img', { class: 'rich-img', src: answerImgUrl, alt: 'Hình ảnh đáp án' })) : null,
       q.explanation
         ? h('div', { class: 'explanation-box' },
             h('h4', null, 'Giải thích'),
@@ -477,6 +541,8 @@ export function renderSession(root, { entry, config = {} }, actions) {
         }, isLast ? 'Xem kết quả (Enter) →' : 'Tiếp tục (Enter) →'));
     }
 
+    const questionImgUrl = q.image && q.kind !== 'card' ? assetUrl(q.image, entry.deckKey) : null;
+
     root.replaceChildren(
       h('div', { class: 'session-container' },
         // Topbar
@@ -503,10 +569,14 @@ export function renderSession(root, { entry, config = {} }, actions) {
             q.topic ? h('span', { class: 'chip' }, q.topic) : null,
             (q.tags || []).map(t => h('span', { class: 'tag' }, t))),
           richEl('div', { class: 'question-prompt' }, rich.html(q.prompt)),
+          questionImgUrl ? h('div', { class: 'question-img-wrap' },
+            h('img', { class: 'rich-img', src: questionImgUrl, alt: 'Hình ảnh câu hỏi' })) : null,
           renderQuestionBody(q),
           renderFeedback(q),
           actionsRow))
     );
+
+    attachImageHandlers(root);
 
     // Auto-focus input nếu là câu điền / gõ lệnh
     if (!session.submitted && (q.kind === 'fill' || q.kind === 'command')) {
@@ -517,4 +587,3 @@ export function renderSession(root, { entry, config = {} }, actions) {
 
   render();
 }
-

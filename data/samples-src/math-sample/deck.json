@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "id": "math-sample",
+    "title": "Toán học & Giải tích — mẫu",
+    "kind": "quiz",
+    "lang": "vi",
+    "format": "studydeck",
+    "formatVersion": 1
+  },
+  "items": [
+    {
+      "id": "m-001",
+      "type": "single",
+      "topic": "tich-phan",
+      "tags": ["giai-tich", "tich-phan"],
+      "question": "Tính tích phân $\\int_0^1 x^2\\,dx$:",
+      "choices": ["$\\frac{1}{2}$", "$\\frac{1}{3}$", "$1$", "$\\frac{1}{4}$"],
+      "answer": [1],
+      "explanation": "$$\\int_0^1 x^2\\,dx = \\left[\\frac{x^3}{3}\\right]_0^1 = \\frac{1}{3}$$"
+    },
+    {
+      "id": "m-002",
+      "type": "single",
+      "topic": "do-thi",
+      "tags": ["hinh-anh", "parabol"],
+      "question": "Hình bên dưới minh họa đồ thị hàm số nào?\n\n![Đồ thị parabol](img/x2-graph.svg)",
+      "choices": ["$y = x^2$", "$y = 2x$", "$y = \\sqrt{x}$", "$y = x^3$"],
+      "answer": [0],
+      "explanation": "Đồ thị có dạng cong đi qua gốc tọa độ parabol $y = x^2$."
+    },
+    {
+      "id": "m-003",
+      "type": "single",
+      "topic": "hinh-hoc",
+      "tags": ["hinh-anh", "lua-chon"],
+      "question": "Chọn hình vẽ tương ứng với hình tam giác:",
+      "choices": [
+        { "text": "Tam giác", "image": "img/triangle.png" },
+        { "text": "Hình tròn", "image": "img/circle.jpg" }
+      ],
+      "answer": [0],
+      "explanation": "Lựa chọn 1 là hình tam giác."
+    },
+    {
+      "id": "m-004",
+      "type": "fill",
+      "topic": "dai-so",
+      "tags": ["phuong-trinh", "so-hoc"],
+      "question": "Nghiệm dương của phương trình $x^2 - 2 = 0$ (làm tròn 3 chữ số thập phân): $x \\approx$ ___",
+      "answer": ["1.414"],
+      "match": "number",
+      "tolerance": 0.001,
+      "answerDisplay": "$\\sqrt{2} \\approx 1{,}414$",
+      "explanation": "$\\sqrt{2} \\approx 1.41421... \\approx 1{,}414$."
+    },
+    {
+      "id": "m-005",
+      "type": "card",
+      "topic": "dai-so",
+      "tags": ["cong-thuc", "bac-hai"],
+      "front": "Công thức nghiệm phương trình bậc hai $ax^2 + bx + c = 0$ ($a \\neq 0$)?",
+      "back": "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$",
+      "explanation": "Biệt thức $\\Delta = b^2 - 4ac$. Nếu $\\Delta > 0$, phương trình có 2 nghiệm phân biệt."
+    }
+  ]
+}
+

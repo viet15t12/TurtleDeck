@@ -1,6 +1,7 @@
 // src/views/deck.js — Deck view: thông tin bộ thẻ, bảng item (rút gọn) và danh sách cảnh báo / mục bị bỏ qua.
 // Chưa có chế độ học (GĐ2) và nút Sửa bộ thẻ (GĐ2C).
 import { h, shorten, fileName } from './dom.js';
+import { toPlain } from '../core/richtext.js';
 
 const TYPE_LABEL = {
   single: '1 đáp án', multi: 'Nhiều đáp án', fill: 'Điền', command: 'Lệnh', card: 'Thẻ', vocab: 'Từ vựng',
@@ -13,13 +14,13 @@ function summarize(it) {
   const type = it.type ?? 'vocab';
   switch (type) {
     case 'single': case 'multi':
-      return { type, main: it.question, answer: (it.answer || []).map(i => choiceText(it.choices?.[i])).join(' · ') };
+      return { type, main: toPlain(it.question), answer: toPlain((it.answer || []).map(i => choiceText(it.choices?.[i])).join(' · ')) };
     case 'fill': case 'command':
-      return { type, main: it.question, answer: (it.answer || []).join(' | ') };
+      return { type, main: toPlain(it.question), answer: toPlain(it.answerDisplay || (it.answer || []).join(' | ')) };
     case 'card':
-      return { type, main: it.front, answer: it.back };
+      return { type, main: toPlain(it.front), answer: toPlain(it.back) };
     default:
-      return { type: 'vocab', main: it.term, answer: it.definition };
+      return { type: 'vocab', main: toPlain(it.term), answer: toPlain(it.definition) };
   }
 }
 
