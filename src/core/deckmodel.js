@@ -431,13 +431,17 @@ export function createHistory(initialDeck, limit = 100) {
   let present = { deck: initialDeck, cursor: null };
   let future = [];
   let lastTypingTime = 0;
+  let lastMergeKey = null;
 
   return {
-    push(newDeck, { isTyping = false, now = Date.now(), cursor = null, beforeCursor = null } = {}) {
-      if (isTyping && lastTypingTime && (now - lastTypingTime < 500)) {
+    push(newDeck, { isTyping = false, mergeKey = null, now = Date.now(), cursor = null, beforeCursor = null } = {}) {
+      const typingActive = Boolean(isTyping || mergeKey);
+      const sameKey = !mergeKey || !lastMergeKey || mergeKey === lastMergeKey;
+      if (typingActive && sameKey && lastTypingTime && (now - lastTypingTime < 500)) {
         // Gộp lần gõ trong 500ms: cập nhật present mà không đẩy bước mới vào past
         present = { deck: newDeck, cursor: cursor ?? present.cursor };
         lastTypingTime = now;
+        lastMergeKey = mergeKey;
         future = [];
         return;
       }
@@ -447,7 +451,8 @@ export function createHistory(initialDeck, limit = 100) {
       if (past.length > limit) past.shift();
       present = { deck: newDeck, cursor };
       future = [];
-      lastTypingTime = isTyping ? now : 0;
+      lastTypingTime = typingActive ? now : 0;
+      lastMergeKey = typingActive ? mergeKey : null;
     },
 
     undo() {
@@ -455,6 +460,7 @@ export function createHistory(initialDeck, limit = 100) {
       future.unshift(present);
       present = past.pop();
       lastTypingTime = 0;
+      lastMergeKey = null;
       return present.deck;
     },
 
@@ -463,6 +469,7 @@ export function createHistory(initialDeck, limit = 100) {
       past.push(present);
       present = future.shift();
       lastTypingTime = 0;
+      lastMergeKey = null;
       return present.deck;
     },
 

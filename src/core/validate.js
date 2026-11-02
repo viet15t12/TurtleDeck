@@ -102,10 +102,17 @@ export function validateItem(item, { deckKind, assets } = {}) {
   }
 
   // trường chung tuỳ chọn: sai kiểu là lỗi (tránh làm hỏng màn hình học)
-  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'answerDisplay', 'phonetic', 'pos', 'example'])
+  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'imageAlt', 'answerImageAlt', 'answerDisplay', 'phonetic', 'pos', 'example'])
     if (item[f] !== undefined && !isStr(item[f])) add('error', f, `Trường ${f} phải là chuỗi.`);
   for (const f of ['tags', 'forms', 'synonyms'])
     if (item[f] !== undefined && !(Array.isArray(item[f]) && item[f].every(isStr))) add('error', f, `Trường ${f} phải là danh sách chuỗi.`);
+
+  if (nonEmpty(item.image) && item.imageAlt !== undefined && !nonEmpty(item.imageAlt)) {
+    add('warn', 'image', `Thiếu mô tả cho ảnh "${item.image}" (alt text).`);
+  }
+  if (nonEmpty(item.answerImage) && item.answerImageAlt !== undefined && !nonEmpty(item.answerImageAlt)) {
+    add('warn', 'answerImage', `Thiếu mô tả cho ảnh "${item.answerImage}" (alt text).`);
+  }
 
   // Kiểm tra thiếu mô tả ảnh trong Markdown (warn) và công thức còn ô trống ▢ (warn)
   const checkTextWarnings = (text, fieldName) => {

@@ -65,30 +65,7 @@ Tiến độ nhớ (SRS) gắn với **item + hướng học**, lưu riêng vớ
 - Giao diện: bấm vào ảnh để phóng to; công thức dài cuộn ngang; ảnh trong dark mode có nền sáng để không mất nét; TTS, tìm kiếm và xem trước tự bỏ LaTeX/ảnh (`toPlain()`).
 
 ### 2.7 Soạn bộ thẻ trong app (Deck Editor)
-> **Cập nhật thiết kế UX/UI:** Chi tiết giao diện, bố cục 100vh 3 cột có vách ngăn kéo thả, quy tắc ẩn thông tin kỹ thuật (`id`, tên trường JSON, đường dẫn ảnh thô), gộp `single`/`multi` thành một nút *Trắc nghiệm*, kiểm tra lỗi đúng lúc (sau `blur`) và cấu trúc thư mục `src/views/editor/` được quy định đầy đủ trong **`study-app-editor-ux.md`** (thay thế mục 2.7 và 9.3 này).
-
-Mục tiêu: **tạo bộ thẻ mới, thêm / xoá / sửa câu hỏi và ảnh bằng giao diện trực quan**, rồi bấm *Lưu* ra file `.sdeck`. Người dùng không bao giờ phải giải nén gói hay mở file JSON.
-
-- **Tạo mới**: *Bộ thẻ mới* → nhập tên, loại (`vocab` / `qa` / `quiz`), ngôn ngữ → vào Editor với một mục trống. **Sửa bộ thẻ có sẵn**: nút *Sửa* ở Home / Deck view.
-- **Bố cục 3 khu vực** (xem mục 9): danh sách mục | form soạn | xem trước.
-- **Danh sách mục**: tìm kiếm; lọc theo topic / tag / dạng / "chưa hoàn chỉnh"; kéo thả để sắp xếp; thêm (chọn dạng câu hỏi), nhân đôi, xoá; chọn nhiều mục để xoá hoặc gán topic/tag hàng loạt.
-- **Form soạn** đổi theo dạng câu hỏi:
-
-| Dạng | Các ô trong form |
-|---|---|
-| `single` / `multi` | câu hỏi; danh sách lựa chọn (chữ và/hoặc ảnh; thêm / xoá / kéo sắp xếp); tích đáp án đúng (radio cho `single`, checkbox cho `multi`); giải thích |
-| `fill` / `command` | câu hỏi; danh sách đáp án chấp nhận (thêm / xoá); kiểu chấm `match` (normalized / exact / regex / number / latex), `tolerance` khi `number`; `answerDisplay`; ô **"thử đáp án"** chạy đúng `grader` để kiểm tra regex / dung sai |
-| `card` | mặt trước, mặt sau, ảnh trước / sau |
-| vocab (GĐ4) | term, definition, phonetic, pos (danh sách chọn), example, forms (chip), synonyms, tags, ảnh |
-| chung | topic, tags (chip), giải thích, `image`, `answerImage` |
-
-- **Xem trước**: hiển thị **đúng như lúc học** (cùng `richtext.js` và cùng component của session), cập nhật khi gõ; có nút *Thử trả lời*.
-- **Soạn nội dung**: ô Markdown có thanh công cụ (đậm, nghiêng, code, công thức trong dòng `$…$`, công thức khối `$$…$$`, chèn ảnh) và bảng ký hiệu LaTeX hay dùng (phân số, căn, tổng, tích phân, mũ / chỉ số, chữ Hy Lạp, mũi tên…) bấm là chèn. LaTeX sai hiện mã đỏ ngay trong xem trước.
-- **Ảnh**: *Chèn ảnh* (chọn nhiều file), **kéo thả file vào ô soạn**, hoặc **dán từ clipboard** (`Ctrl+V` — chụp màn hình rồi dán thẳng). App kiểm tra là ảnh thật, ≤ 5 MB, chép vào gói (`img/<hash>-<tên>.<đuôi>`), tự chèn `![mô tả](img/...)` và đặt con trỏ vào phần mô tả để nhập alt. *Trình quản lý ảnh*: thumbnail, dung lượng, "đang dùng ở N mục", xoá ảnh không dùng. Khi Lưu, ảnh không còn được tham chiếu → hỏi có dọn không.
-- **Kiểm tra ngay khi soạn**: thiếu đáp án đúng, lựa chọn trùng / rỗng, regex sai, số không đọc được, ảnh không có trong gói, thiếu mô tả ảnh → cảnh báo tại ô đó và đánh dấu ⚠ ở danh sách. Cho phép lưu bản dở; mục chưa hoàn chỉnh **bị bỏ qua khi học** và được liệt kê trong Deck view.
-- **An toàn dữ liệu**: Undo / Redo nhiều bước (`Ctrl+Z` / `Ctrl+Y`, gộp các lần gõ liên tiếp); chỉ báo `● chưa lưu`; `Ctrl+S` lưu; hỏi khi đóng / thoát mà chưa lưu; mỗi lần lưu giữ bản `.sdeck.bak` của lần trước; tự lưu nháp (GĐ6).
-- **Nhập hàng loạt** (GĐ4): dán văn bản TSV / CSV / Quizlet / Markdown quiz → xem trước bảng → thêm vào bộ thẻ đang soạn.
-- **`id` mục do app tự sinh**, ẩn khỏi người dùng và **không đổi khi sửa nội dung** → sửa câu hỏi không làm mất tiến độ học; nhân đôi mục sinh id mới; xoá mục không xoá tiến độ (mục 8). *Lưu thành bản sao…* tạo `meta.id` mới (tiến độ bắt đầu lại).
+Xem `study-app-editor-ux.md` (đặc tả toàn bộ giao diện, tương tác và kiến trúc của Deck Editor).
 
 ---
 

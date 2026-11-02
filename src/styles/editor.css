@@ -1,7 +1,9 @@
-/* src/styles/editor.css — Giao diện Deck Editor UX v2 (study-app-editor-ux.md §3–§11) */
+/* src/styles/editor.css — Giao diện Deck Editor UX v2 (study-app-editor-ux.md §3–§12) */
 
 body.in-editor {
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 body.in-editor .app {
@@ -10,6 +12,9 @@ body.in-editor .app {
   height: 100vh;
   margin: 0;
   padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -80,50 +85,67 @@ body.in-editor .app {
   border-color: var(--c-border);
 }
 
-.editor-title-edit-icon {
+.editor-title-pencil {
   font-size: 13px;
   color: var(--c-text-muted);
   opacity: 0;
   transition: opacity 0.12s ease;
 }
 
-.editor-title-btn:hover .editor-title-edit-icon {
+.editor-title-btn:hover .editor-title-pencil {
   opacity: 1;
 }
 
-.editor-title-inline-input {
+.editor-title-input {
   height: 32px;
   width: 280px;
   max-width: 45vw;
   padding: 0 8px;
+  border: 1px solid var(--c-primary);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
   font-size: var(--fs-lg);
   font-weight: 600;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
-.editor-save-state {
+.editor-save-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: var(--fs-xs);
   color: var(--c-text-muted);
   white-space: nowrap;
   padding-left: 4px;
 }
 
-.editor-save-state.unsaved {
+.editor-save-status.unsaved {
   color: var(--c-warn);
   font-weight: 600;
 }
 
+.editor-save-status .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-warn);
+}
+
 /* ── §3. Khung 3 cột + Splitter 6px ─────────────────────────────────────── */
 
-.editor-workspace {
+.editor-body {
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: stretch;
   overflow: hidden;
   position: relative;
+}
+
+.editor-drawer-backdrop {
+  display: none;
 }
 
 .editor-splitter {
@@ -156,7 +178,7 @@ body.in-editor .app {
 /* ── §5. Cột trái: Danh sách mục ────────────────────────────────────────── */
 
 .editor-col-list {
-  width: var(--list-w, 260px);
+  width: 260px;
   min-width: 200px;
   max-width: 400px;
   flex-shrink: 0;
@@ -201,6 +223,7 @@ body.in-editor .app {
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
+  outline: none;
 }
 
 .list-virtual-spacer {
@@ -343,7 +366,7 @@ body.in-editor .app {
   text-overflow: ellipsis;
 }
 
-/* Chấm trạng thái bên phải (§5, §9): đỏ = lỗi, cam = cảnh báo, xám = mới, không có chấm = ổn */
+/* Chấm trạng thái bên phải (§5, §9) */
 .list-status-dot {
   width: 8px;
   height: 8px;
@@ -413,7 +436,7 @@ body.in-editor .app {
   margin-right: auto;
 }
 
-/* ── §6. Cột giữa: Form soạn thảo ───────────────────────────────────────── */
+/* ── §6. Cột giữa: Vùng soạn thảo ───────────────────────────────────────── */
 
 .editor-col-form {
   flex: 1;
@@ -422,11 +445,15 @@ body.in-editor .app {
   display: flex;
   flex-direction: column;
   background: var(--c-bg);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Đầu cột form dính trên cùng */
-.form-topbar {
+.form-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 25;
   height: 44px;
   flex-shrink: 0;
   display: flex;
@@ -441,52 +468,22 @@ body.in-editor .app {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.form-pos-label {
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--c-text);
-  min-width: 72px;
-  text-align: center;
-}
-
-.form-head-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  position: relative;
 }
 
 .form-mobile-tabs {
   display: none;
 }
 
-.editor-form-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: var(--space-4) var(--space-6) var(--space-6);
-}
-
-.editor-form-inner {
+.form-inner {
   max-width: 760px;
   width: 100%;
   margin: 0 auto;
+  padding: var(--space-4) var(--space-6) var(--space-8);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.form-card {
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .form-field {
@@ -508,37 +505,56 @@ body.in-editor .app {
   color: var(--c-text-muted);
 }
 
-.form-hint {
+.form-label-hint {
   font-size: var(--fs-xs);
   color: var(--c-text-muted);
 }
 
-/* Khung soạn Markdown có thanh công cụ dính (sticky) */
-.md-box {
+.form-label-hint.is-multi {
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
+/* Hai mặt thẻ trực quan (§6.4) */
+.card-editor-face {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── §7.1 Ô soạn Markdown + Thanh công cụ dính ─────────────────────────── */
+
+.rich-box-wrap {
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   background: var(--c-surface);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.md-box:focus-within {
+.rich-box-wrap:focus-within {
   border-color: var(--c-primary);
   box-shadow: var(--focus-ring);
 }
 
-.md-box.has-error {
+.rich-box-wrap.has-error {
   border-color: var(--c-danger);
 }
 
-.md-box.has-warn {
+.rich-box-wrap.has-warn {
   border-color: var(--c-warn);
 }
 
-.md-sticky-bar {
+.rich-toolbar {
   position: sticky;
-  top: 0;
-  z-index: 5;
+  top: 44px;
+  z-index: 10;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
@@ -547,7 +563,7 @@ body.in-editor .app {
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
-.md-tool-btn {
+.rich-tool-btn {
   height: 26px;
   min-width: 28px;
   padding: 0 7px;
@@ -558,14 +574,39 @@ body.in-editor .app {
   font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.md-tool-btn:hover {
+.rich-tool-btn:hover {
   background: var(--c-surface-3);
   color: var(--c-text);
 }
 
-.md-box-textarea {
+.rich-tool-btn.fx-btn {
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+  font-weight: 700;
+}
+
+.rich-tool-btn.fx-btn:hover {
+  background: color-mix(in srgb, var(--c-primary) 22%, transparent);
+}
+
+.rich-tool-btn.math-quick-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.rich-tool-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--c-border);
+  margin: 0 4px;
+}
+
+.rich-textarea {
   display: block;
   width: 100%;
   min-height: 76px;
@@ -578,43 +619,67 @@ body.in-editor .app {
   color: var(--c-text);
   font-size: var(--fs);
   line-height: 1.55;
-  resize: vertical;
+  resize: none;
   outline: none;
 }
 
-/* Hàng lựa chọn trắc nghiệm (§6.2) */
-.choices-stack {
+/* ── §6.2 Hàng lựa chọn trắc nghiệm ─────────────────────────────────────── */
+
+.choices-editor-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.choice-row {
+.choice-editor-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  padding: 2px 0;
+  border-radius: var(--radius);
+}
+
+.choice-editor-row.choice-drag-over {
+  box-shadow: inset 0 2px 0 var(--c-primary);
+}
+
+.choice-drag-grip {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--c-text-muted);
+  cursor: grab;
+  opacity: 0.35;
+  font-size: 14px;
+  user-select: none;
+  transition: opacity 0.12s ease;
+}
+
+.choice-editor-row:hover .choice-drag-grip {
+  opacity: 1;
 }
 
 .choice-letter-btn {
-  width: 32px;
+  min-width: 36px;
   height: 36px;
+  padding: 0 6px;
   flex-shrink: 0;
   border: 1px solid var(--c-border-strong);
-  border-radius: var(--radius);
-  background: var(--c-surface-2);
+  border-radius: 999px;
+  background: var(--c-surface);
   color: var(--c-text-muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
 }
 
 .choice-letter-btn:hover {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--c-ok);
+  color: var(--c-ok);
 }
 
 .choice-letter-btn.is-correct {
@@ -623,67 +688,130 @@ body.in-editor .app {
   color: #ffffff;
 }
 
-.choice-input-col {
+.choice-input-wrap {
   flex: 1;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
 }
 
-.choice-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-}
-
-.choice-thumb-btn {
-  width: 32px;
-  height: 32px;
-  padding: 2px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  background: var(--c-surface-2);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.choice-textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 92px 7px 10px;
+  line-height: 1.45;
+  resize: none;
   overflow: hidden;
 }
 
-.choice-thumb-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.choice-focus-tools {
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  background: color-mix(in srgb, var(--c-surface) 92%, transparent);
+  padding: 1px 3px;
   border-radius: 4px;
+  border: 1px solid var(--c-border);
 }
 
-.choice-del-btn {
+.choice-editor-row.is-focused .choice-focus-tools,
+.choice-input-wrap:focus-within .choice-focus-tools {
+  display: inline-flex;
+}
+
+.choice-mini-tool {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.choice-mini-tool:hover {
+  background: var(--c-surface-3);
+  color: var(--c-primary);
+}
+
+.choice-thumb-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+}
+
+.choice-thumb-28 {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--c-border-strong);
+  cursor: pointer;
+  background: var(--c-surface);
+}
+
+.choice-thumb-remove {
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.choice-thumb-remove:hover {
+  color: var(--c-danger);
+}
+
+.choice-row-del {
   opacity: 0;
   transition: opacity 0.12s ease;
 }
 
-.choice-row:hover .choice-del-btn,
-.choice-row:focus-within .choice-del-btn {
+.choice-editor-row:hover .choice-row-del,
+.choice-editor-row.is-focused .choice-row-del {
   opacity: 1;
 }
 
-/* Hàng chip "+ Thêm …" cho các trường tuỳ chọn (§6.1) */
-.optional-chips-bar {
+/* ── §6.3 Khung Điền / Lệnh & Thử đáp án ────────────────────────────────── */
+
+.grader-test-box {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding-top: 4px;
+  gap: 10px;
 }
 
-.optional-chips-label {
+.grader-test-label {
   font-size: var(--fs-xs);
+  font-weight: 600;
   color: var(--c-text-muted);
-  margin-right: 2px;
+  white-space: nowrap;
 }
 
-/* Ô nhập nhãn kiểu chip */
+.grader-live-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.grader-live-badge.ok { color: var(--c-ok); }
+.grader-live-badge.near { color: var(--c-warn); }
+.grader-live-badge.wrong { color: var(--c-danger); }
+
+/* ── §6.1 & §6.3 Ô nhập danh sách chip (Đáp án chấp nhận & Nhãn) ────────── */
+
 .tags-chip-box {
   display: flex;
   flex-wrap: wrap;
@@ -694,6 +822,7 @@ body.in-editor .app {
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   background: var(--c-surface);
+  cursor: text;
 }
 
 .tags-chip-box:focus-within {
@@ -701,34 +830,42 @@ body.in-editor .app {
   box-shadow: var(--focus-ring);
 }
 
-.tags-chip-item {
+.tags-chip-box.has-error {
+  border-color: var(--c-danger);
+}
+
+.tag-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--c-surface-3);
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
   font-size: var(--fs-xs);
-  font-weight: 500;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.tags-chip-remove {
+.tag-pill button {
   border: 0;
   background: transparent;
-  color: var(--c-text-muted);
+  color: inherit;
   cursor: pointer;
   padding: 0 2px;
   font-size: 11px;
+  opacity: 0.75;
 }
 
-.tags-chip-remove:hover {
+.tag-pill button:hover {
+  opacity: 1;
   color: var(--c-danger);
 }
 
-.tags-chip-input {
+.tag-inline-input {
   flex: 1;
-  min-width: 120px;
+  min-width: 140px;
   height: 26px;
   border: 0 !important;
   box-shadow: none !important;
@@ -737,43 +874,207 @@ body.in-editor .app {
   font-size: var(--fs-sm);
 }
 
-/* Ô ảnh gọn không lộ đường dẫn (§8) */
+.form-add-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+/* ── §8. Ô ảnh (thumbnail ~96px + dung lượng + Thay/Xoá + Mô tả ảnh) ───── */
+
 .img-slot-box {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-3);
   padding: var(--space-3);
   border: 1px dashed var(--c-border-strong);
   border-radius: var(--radius);
-  background: var(--c-surface-2);
-}
-
-.img-slot-box.empty {
-  justify-content: center;
-  cursor: pointer;
+  background: var(--c-surface);
   color: var(--c-text-muted);
   font-size: var(--fs-sm);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
-.img-slot-box.empty:hover {
+.img-slot-box:hover,
+.img-slot-box:focus {
   border-color: var(--c-primary);
-  color: var(--c-primary);
   background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+
+.img-slot-box.has-image {
+  justify-content: flex-start;
+  border-style: solid;
+  border-color: var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  cursor: default;
+}
+
+.img-slot-box.has-warn {
+  border-color: var(--c-warn);
 }
 
 .img-slot-thumb {
-  width: 72px;
-  height: 54px;
+  width: 96px;
+  height: 72px;
+  flex-shrink: 0;
   object-fit: contain;
   border-radius: var(--radius-sm);
-  background: var(--c-surface);
+  background: #ffffff;
   border: 1px solid var(--c-border);
+}
+
+.img-slot-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── §7.2 Popover công thức toán học (nổi, không đẩy trang) ─────────────── */
+
+.math-popover {
+  position: fixed;
+  z-index: 350;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.math-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.math-pop-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.math-pop-subhead {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  margin-bottom: 4px;
+}
+
+.math-pop-recent-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.math-pop-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.math-pop-tab {
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.math-pop-tab:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+}
+
+.math-pop-tab.active {
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+
+.math-pop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  max-height: 175px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.math-pop-btn {
+  min-height: 40px;
+  padding: 4px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.1s ease, background 0.1s ease;
+}
+
+.math-pop-btn:hover {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+
+.math-pop-btn-katex {
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.math-pop-custom-box {
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.math-pop-custom-input {
+  min-height: 48px !important;
+  font-size: 12px !important;
+}
+
+.math-pop-live-preview {
+  min-height: 36px;
+  max-height: 84px;
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
 }
 
 /* ── §10. Cột phải: Xem trước (không bao giờ cuộn ngang) ────────────────── */
 
 .editor-col-preview {
-  width: var(--preview-w, 400px);
+  width: 400px;
   min-width: 320px;
   max-width: 640px;
   flex-shrink: 0;
@@ -784,9 +1085,8 @@ body.in-editor .app {
   overflow: hidden;
 }
 
-.editor-shell.preview-collapsed .editor-col-preview,
-.editor-shell.preview-collapsed .splitter-preview {
-  display: none;
+.editor-col-preview.collapsed {
+  display: none !important;
 }
 
 .preview-topbar {
@@ -846,33 +1146,10 @@ body.in-editor .app {
   line-height: 1.45;
 }
 
-/* ── Bảng phím tắt (Ctrl+/) ─────────────────────────────────────────────── */
-
-.shortcuts-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-sm);
-}
-
-.shortcuts-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.shortcuts-table kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  border: 1px solid var(--c-border-strong);
-  border-radius: 4px;
-  background: var(--c-surface-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-}
-
 /* ── Đáp ứng cửa sổ hẹp (§3: < 1200px và < 900px) ───────────────────────── */
 
 @media (max-width: 1200px) {
-  .splitter-preview {
+  .editor-body > .editor-splitter:last-of-type {
     display: none !important;
   }
 
@@ -884,14 +1161,14 @@ body.in-editor .app {
     display: inline-flex;
   }
 
-  .editor-shell[data-CompactTab="preview"] .editor-col-form {
+  .editor-body.mobile-show-preview .editor-col-form {
     display: none;
   }
 
-  .editor-shell[data-CompactTab="preview"] .editor-col-preview {
-    display: flex;
+  .editor-body.mobile-show-preview .editor-col-preview {
+    display: flex !important;
     flex: 1;
-    width: auto;
+    width: auto !important;
     max-width: none;
   }
 }
@@ -901,7 +1178,7 @@ body.in-editor .app {
     display: inline-flex;
   }
 
-  .splitter-list {
+  .editor-body > .editor-splitter:first-of-type {
     display: none !important;
   }
 
@@ -917,12 +1194,19 @@ body.in-editor .app {
     transition: transform 0.18s ease;
   }
 
-  .editor-shell.drawer-open .editor-col-list {
+  .editor-body.drawer-open .editor-col-list {
     transform: translateX(0);
+  }
+
+  .editor-body.drawer-open .editor-drawer-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    background: rgba(15, 23, 42, 0.35);
   }
 
   .editor-col-form {
     min-width: 0;
   }
 }
-

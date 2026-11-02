@@ -21,6 +21,7 @@ import { createListPane } from './list.js';
 import { createFormPane } from './form.js';
 import { createPreviewPane } from './preview.js';
 import { renderImageManagerModal } from './imagemanager.js';
+import { closeMathPopover } from './mathpopover.js';
 
 function formatTimeHHMM(date) {
   const hh = String(date.getHours()).padStart(2, '0');
@@ -59,6 +60,7 @@ export function renderEditor(root, { entry }, actions) {
   let listWidth = 260;
   let previewWidth = 400;
   let previewCollapsed = false;
+  let recentMathSnippets = ['frac', 'sqrt', 'pow', 'sub', 'sum', 'int'];
   let mobileTab = 'form'; // 'form' | 'preview' (khi < 1200px)
   let drawerOpen = false; // (khi < 900px)
   let saveMenuOpen = false;
@@ -211,6 +213,9 @@ export function renderEditor(root, { entry }, actions) {
         syncResponsiveClasses();
         renderTopbar();
       }
+      if (Array.isArray(s?.recentMathSnippets)) {
+        recentMathSnippets = s.recentMathSnippets.slice(0, 8);
+      }
     } catch {
       // Bỏ qua nếu không đọc được settings
     }
@@ -222,10 +227,17 @@ export function renderEditor(root, { entry }, actions) {
       s.editorListWidth = listWidth;
       s.editorPreviewWidth = previewWidth;
       s.editorPreviewCollapsed = previewCollapsed;
+      s.recentMathSnippets = recentMathSnippets;
       await api.saveSettings(s);
     } catch {
       // Bỏ qua
     }
+  }
+
+  function recordRecentSnippet(snippetId) {
+    if (!snippetId) return;
+    recentMathSnippets = [snippetId, ...recentMathSnippets.filter(id => id !== snippetId)].slice(0, 8);
+    persistLayoutSettings();
   }
 
   // ── Quản lý tài nguyên ảnh ─────────────────────────────────────────────────
@@ -286,6 +298,7 @@ export function renderEditor(root, { entry }, actions) {
 
   function switchActiveItem(nextId, { focusPrimary = false } = {}) {
     if (!nextId || nextId === activeId) return;
+    closeMathPopover();
     finalizeCurrentItemBeforeLeave();
     activeId = nextId;
     drawerOpen = false;
@@ -372,9 +385,12 @@ export function renderEditor(root, { entry }, actions) {
   const formPane = createFormPane({
     container: formColEl,
     deckKey,
+    rich,
     getDeck,
     getItem: getActiveItem,
     getAssets,
+    getRecentSnippets: () => recentMathSnippets,
+    onRecordRecentSnippet: recordRecentSnippet,
     isItemTouched,
     getTouchedFields,
     markFieldTouched,
@@ -1061,6 +1077,9 @@ export function renderEditor(root, { entry }, actions) {
       ['Delete', 'Xoá mục đang chọn (khi đứng ở danh sách)'],
       ['Ctrl + F', 'Tìm kiếm trong danh sách mục'],
       ['Ctrl + B / Ctrl + I', 'In đậm / In nghiêng văn bản'],
+      ['Ctrl + M / Ctrl + Shift + M', 'Công thức toán trong dòng / khối riêng'],
+      ['Tab (trong công thức)', 'Nhảy sang ô trống ▢ kế tiếp'],
+      ['Enter / Backspace rỗng (lựa chọn)', 'Thêm lựa chọn mới / xoá lựa chọn trống'],
       ['Ctrl + \\', 'Ẩn / hiện cột Xem trước'],
       ['Ctrl + /', 'Mở bảng phím tắt này'],
     ];
@@ -1209,6 +1228,7 @@ export function renderEditor(root, { entry }, actions) {
   }
 
   function cleanup() {
+    closeMathPopover();
     window.removeEventListener('keydown', onGlobalKeyDown);
     document.removeEventListener('click', onDocumentClick);
     window.removeEventListener('beforeunload', onBeforeUnload);
