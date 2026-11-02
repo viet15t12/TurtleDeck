@@ -64,13 +64,13 @@ test('allowedTypes, defaultTypeFor, modesFor theo loại bộ thẻ', () => {
   assert.equal(defaultTypeFor('vocab'), 'vocab');
 
   const qaModes = modesFor('qa');
-  assert.deepEqual(qaModes.map(m => m.id), ['srs', 'all']);
+  assert.deepEqual(qaModes.map(m => m.id), ['srs', 'all', 'learn', 'match']);
 
   const quizModes = modesFor('quiz');
-  assert.deepEqual(quizModes.map(m => m.id), ['srs', 'practice']);
+  assert.deepEqual(quizModes.map(m => m.id), ['srs', 'practice', 'exam']);
 
   const vocabModes = modesFor('vocab');
-  assert.deepEqual(vocabModes.map(m => m.id), ['srs', 'flashcards', 'mc', 'write', 'cloze', 'listen']);
+  assert.deepEqual(vocabModes.map(m => m.id), ['srs', 'learn', 'flashcards', 'mc', 'write', 'match', 'cloze', 'listen']);
 });
 
 test('deckkinds: checkModeAvailability kiểm tra điều kiện từng chế độ', () => {

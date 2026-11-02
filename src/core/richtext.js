@@ -81,3 +81,13 @@ export function toPlain(md, formula = ' ') {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+// Tiện ích render Markdown nhanh
+export function renderMarkdown(md, deckKey = '') {
+  return makeRich(deckKey).html(md);
+}
+
+export function renderInlineMarkdown(md, deckKey = '') {
+  return makeRich(deckKey).inline(md);
+}
+

@@ -94,3 +94,22 @@ test('Phase 3C refactored modules and styles are present', () => {
   }
 });
 
+test('Phase 5 Learn, Match, Exam and filters modules are present', () => {
+  for (const file of [
+    'src/core/learnplanner.js',
+    'src/core/matchgame.js',
+    'src/core/exam.js',
+    'src/core/filters.js',
+    'src/views/learn.js',
+    'src/views/match.js',
+    'src/views/exam.js',
+    'src/views/components/timer.js',
+    'src/views/components/filterbar.js',
+    'src/styles/match.css',
+    'src/styles/exam.css',
+    'src/styles/learn.css',
+  ]) {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  }
+});
+

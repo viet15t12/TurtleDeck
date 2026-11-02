@@ -23,6 +23,16 @@ export const KINDS = {
         label: 'Học tất cả',
         description: 'Lật ôn toàn bộ thẻ trong bộ theo thứ tự hoặc ngẫu nhiên',
       },
+      {
+        id: 'learn',
+        label: 'Học thích ứng',
+        description: 'Học thẻ ghi nhớ theo các bậc thành thạo nâng dần',
+      },
+      {
+        id: 'match',
+        label: 'Ghép thẻ',
+        description: 'Ghép nhanh mặt trước và mặt sau các thẻ',
+      },
     ],
   },
   quiz: {
@@ -45,6 +55,11 @@ export const KINDS = {
         label: 'Luyện tập',
         description: 'Luyện tập tự do theo số lượng câu và thứ tự tuỳ chọn',
       },
+      {
+        id: 'exam',
+        label: 'Thi thử',
+        description: 'Thi thử có tính giờ, không hiện đáp án đến cuối',
+      },
     ],
   },
   vocab: {
@@ -63,6 +78,11 @@ export const KINDS = {
         description: 'Ôn từ vựng đến hạn và học từ mới trong hạn mức ngày',
       },
       {
+        id: 'learn',
+        label: 'Học thích ứng',
+        description: 'Học từ vựng theo mức độ thành thạo nâng dần',
+      },
+      {
         id: 'flashcards',
         label: 'Flashcards',
         description: 'Lật thẻ từ vựng hai mặt để ghi nhớ nghĩa và ví dụ',
@@ -76,6 +96,11 @@ export const KINDS = {
         id: 'write',
         label: 'Gõ đáp án',
         description: 'Gõ từ hoặc nghĩa để luyện phản xạ',
+      },
+      {
+        id: 'match',
+        label: 'Ghép thẻ',
+        description: 'Ghép nhanh từ vựng với định nghĩa tương ứng',
       },
       {
         id: 'cloze',
@@ -211,6 +236,10 @@ export function checkModeAvailability(modeId, deckOrItems, { hasVoice = true } =
     ? deckOrItems
     : (Array.isArray(deckOrItems?.items) ? deckOrItems.items : []);
   const k = kindOf(deckOrItems);
+
+  if (modeId === 'match' && items.length < 2) {
+    return { available: false, reason: 'Chế độ Ghép thẻ cần ít nhất 2 mục.' };
+  }
 
   if (k !== 'vocab') {
     if (items.length === 0) {

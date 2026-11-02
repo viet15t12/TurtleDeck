@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { makeRich, toPlain, assetUrl } from '../src/core/richtext.js';
+import { makeRich, toPlain, assetUrl, renderMarkdown, renderInlineMarkdown } from '../src/core/richtext.js';
 
 test('toPlain: loại bỏ định dạng Markdown, LaTeX, ảnh để lấy văn bản thuần', () => {
   assert.equal(toPlain('**In đậm** và *nghiêng*'), 'In đậm và nghiêng');
@@ -81,4 +81,12 @@ test('makeRich: bảo mật (loại bỏ script, onerror, href javascript)', () 
   // KaTeX href javascript không sinh link javascript:
   const katexXss = rich.html('$\\href{javascript:alert(1)}{Click}$');
   assert.doesNotMatch(katexXss, /<a\s[^>]*href=["']?javascript:/i);
+});
+
+test('renderMarkdown và renderInlineMarkdown xuất HTML an toàn', () => {
+  const html = renderMarkdown('**Chữ đậm**', 'deck-1');
+  assert.match(html, /<strong>Chữ đậm<\/strong>/);
+
+  const inline = renderInlineMarkdown('*Chữ nghiêng*', 'deck-1');
+  assert.match(inline, /<em>Chữ nghiêng<\/em>/);
 });

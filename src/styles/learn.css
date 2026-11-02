@@ -1,0 +1,108 @@
+/* src/styles/learn.css — Giao diện chế độ Học thích ứng (Learn mode) */
+
+.learn-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.learn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 24px;
+}
+
+.learn-meter-bar {
+  display: flex;
+  gap: 4px;
+  height: 8px;
+  background: var(--c-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+  width: 160px;
+}
+
+.learn-meter-segment {
+  height: 100%;
+  background: var(--c-primary);
+  transition: width 0.3s ease;
+}
+
+.learn-stage-badge {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+}
+
+.learn-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.learn-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.learn-preview-term {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.learn-preview-def {
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+}
+
+.learn-preview-example {
+  background: var(--c-surface-2);
+  border-left: 3px solid var(--c-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-style: italic;
+  font-size: 15px;
+}
+
+.learn-feedback {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.learn-feedback.correct {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--c-success, #10b981);
+  color: var(--c-success, #10b981);
+}
+
+.learn-feedback.wrong {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--c-danger, #ef4444);
+  color: var(--c-danger, #ef4444);
+}
+

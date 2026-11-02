@@ -85,10 +85,13 @@ function renderDeckCard(entry, st, actions) {
         ev.stopPropagation();
         studyMenu.hidden = true;
         if (m.id === 'srs') actions.startSrsSession(entry);
+        else if (m.id === 'learn') actions.startLearnSession(entry);
+        else if (m.id === 'match') actions.startMatchSession(entry);
+        else if (m.id === 'exam') actions.openSessionSetup(entry, { defaultMode: 'exam' });
         else if (m.id === 'all' || m.id === 'flashcards') {
           actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
         } else {
-          actions.openSessionSetup(entry);
+          actions.openSessionSetup(entry, { defaultMode: m.id });
         }
       },
     },

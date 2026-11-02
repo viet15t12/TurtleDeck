@@ -321,3 +321,16 @@ export function reinsertWrong(queue, currentIndexOrItem, opts = {}) {
   return queue;
 }
 
+// Re-export learn mastery (study-app-phases.md GĐ5)
+export {
+  LEARN_STAGES,
+  QUIZ_LEARN_STAGES,
+  getStagesForKind,
+  nextStage,
+  pickNext,
+  initLearnQueue,
+  buildLearnQuestion,
+  graduateToSRS,
+} from './learnplanner.js';
+
+

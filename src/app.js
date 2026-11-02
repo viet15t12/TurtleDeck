@@ -12,6 +12,9 @@ import { notify } from './views/notify.js';
 import { renderSessionModal } from './views/modals/sessionsetup.js';
 import { renderNewDeckModal } from './views/modals/newdeck.js';
 import { renderDeckInfoModal } from './views/modals/deckinfo.js';
+import { renderLearn } from './views/learn.js';
+import { renderMatch } from './views/match.js';
+import { renderExam } from './views/exam.js';
 
 const api = window.api;
 const root = document.querySelector('#app');
@@ -308,6 +311,24 @@ const actions = {
     render();
   },
 
+  startLearnSession(entry, config = {}) {
+    state.modal = null;
+    state.route = { name: 'learn', uid: entry.uid, config };
+    render();
+  },
+
+  startMatchSession(entry, config = {}) {
+    state.modal = null;
+    state.route = { name: 'match', uid: entry.uid, config };
+    render();
+  },
+
+  startExamSession(entry, config = {}) {
+    state.modal = null;
+    state.route = { name: 'exam', uid: entry.uid, config };
+    render();
+  },
+
   openSessionSetup(entry, opts = {}) {
     state.modal = renderSessionModal(
       entry,
@@ -320,7 +341,15 @@ const actions = {
 
   startSession(entry, config = {}) {
     state.modal = null;
-    state.route = { name: 'session', uid: entry.uid, config };
+    if (config.mode === 'learn') {
+      state.route = { name: 'learn', uid: entry.uid, config };
+    } else if (config.mode === 'match') {
+      state.route = { name: 'match', uid: entry.uid, config };
+    } else if (config.mode === 'exam') {
+      state.route = { name: 'exam', uid: entry.uid, config };
+    } else {
+      state.route = { name: 'session', uid: entry.uid, config };
+    }
     render();
   },
 
@@ -397,6 +426,63 @@ function render() {
         settings: state.settings,
         onRecordReview: handleRecordReview,
       }, sessionActions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
+    state.route = { name: 'home' };
+  }
+
+  if (state.route.name === 'learn') {
+    const entry = state.entries.find(e => e.uid === state.route.uid);
+    if (entry?.status === 'ok') {
+      document.title = `Học thích ứng: ${entry.deck.meta.title} — Study App`;
+      renderLearn(root, {
+        entry,
+        progress: state.progress,
+        onSaveProgress: async newProg => {
+          state.progress = newProg;
+          await api.saveProgress(state.progress);
+        },
+      }, actions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
+    state.route = { name: 'home' };
+  }
+
+  if (state.route.name === 'match') {
+    const entry = state.entries.find(e => e.uid === state.route.uid);
+    if (entry?.status === 'ok') {
+      document.title = `Ghép thẻ: ${entry.deck.meta.title} — Study App`;
+      renderMatch(root, {
+        entry,
+        progress: state.progress,
+        onRecordMatch: async res => {
+          if (res?.progress) {
+            state.progress = res.progress;
+            await api.saveProgress(state.progress);
+          }
+        },
+      }, actions);
+      if (state.modal) root.append(state.modal);
+      return;
+    }
+    state.route = { name: 'home' };
+  }
+
+  if (state.route.name === 'exam') {
+    const entry = state.entries.find(e => e.uid === state.route.uid);
+    if (entry?.status === 'ok') {
+      document.title = `Thi thử: ${entry.deck.meta.title} — Study App`;
+      renderExam(root, {
+        entry,
+        config: state.route.config,
+        progress: state.progress,
+        onSaveProgress: async newProg => {
+          state.progress = newProg;
+          await api.saveProgress(state.progress);
+        },
+      }, actions);
       if (state.modal) root.append(state.modal);
       return;
     }

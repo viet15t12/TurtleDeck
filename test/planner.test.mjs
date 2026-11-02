@@ -204,3 +204,106 @@ test('planner: bỏ qua item đã xoá khỏi deck (giữ nguyên tiến độ) 
   assert.equal(progress.cards['d-clean:deleted-item:fwd'].reps, 3);
 });
 
+test('planner Learn mode: sai tụt bậc, đúng lên bậc, không lặp item liền kề, kết thúc khi mọi thẻ đạt mastery cuối, deck quiz bỏ preview', async () => {
+  const {
+    LEARN_STAGES,
+    QUIZ_LEARN_STAGES,
+    nextStage,
+    pickNext,
+    initLearnQueue,
+    graduateToSRS,
+  } = await import('../src/core/planner.js');
+
+  // 1. Đúng lên bậc, sai tụt bậc (không về 0)
+  const entry = { itemId: 'v-1', mastery: 0, stages: LEARN_STAGES };
+  assert.equal(nextStage(entry, true), 'mc-en-vi');
+  assert.equal(entry.mastery, 1);
+
+  assert.equal(nextStage(entry, true), 'mc-vi-en');
+  assert.equal(entry.mastery, 2);
+
+  assert.equal(nextStage(entry, true), 'write-vi-en');
+  assert.equal(entry.mastery, 3);
+
+  // Sai thì tụt 1 bậc
+  assert.equal(nextStage(entry, false), 'mc-vi-en');
+  assert.equal(entry.mastery, 2);
+
+  // Sai tiếp thì tụt về 1
+  assert.equal(nextStage(entry, false), 'mc-en-vi');
+  assert.equal(entry.mastery, 1);
+
+  // Sai ở bậc 1 thì giữ nguyên ở bậc 1, KHÔNG về 0
+  assert.equal(nextStage(entry, false), 'mc-en-vi');
+  assert.equal(entry.mastery, 1);
+
+  // Đi tiếp đến mastery cuối
+  assert.equal(nextStage(entry, true), 'mc-vi-en'); // 2
+  assert.equal(nextStage(entry, true), 'write-vi-en'); // 3
+  assert.equal(nextStage(entry, true), 'cloze'); // 4
+  assert.equal(nextStage(entry, true), null); // Hoàn thành stage 4 -> mastery = 5, trả về null
+  assert.equal(entry.mastery, 5);
+
+  // 2. Không lặp item liền kề
+  const queue = [
+    { itemId: 'A' },
+    { itemId: 'A' },
+    { itemId: 'B' },
+    { itemId: 'C' },
+  ];
+  const picked1 = pickNext(queue, null);
+  assert.equal(picked1.itemId, 'A');
+
+  // Khi vừa ra A, pickNext không được chọn A tiếp nếu còn item khác (phải chọn B)
+  const picked2 = pickNext(queue, 'A');
+  assert.equal(picked2.itemId, 'B');
+
+  // Tiếp tục với C
+  const picked3 = pickNext(queue, 'B');
+  assert.equal(picked3.itemId, 'A');
+
+  const picked4 = pickNext(queue, 'A');
+  assert.equal(picked4.itemId, 'C');
+
+  // 3. Kết thúc khi mọi thẻ đạt mastery cuối
+  const items = [
+    { id: 't1', term: 'cat', definition: 'mèo' },
+    { id: 't2', term: 'dog', definition: 'chó' },
+  ];
+  const learnQ = initLearnQueue(items, { deckKind: 'vocab' });
+  let progress = { cards: {}, log: [] };
+
+  while (learnQ.length > 0) {
+    const cur = pickNext(learnQ, null);
+    const stage = nextStage(cur, true);
+    if (stage === null) {
+      // Đạt mastery cuối -> đẩy vào SRS
+      const res = graduateToSRS(cur, progress, { deckId: 'deck-1' });
+      progress = res.progress;
+    } else {
+      learnQ.push(cur);
+    }
+  }
+
+  assert.equal(learnQ.length, 0);
+  assert.equal(Object.keys(progress.cards).length, 2);
+  assert.equal(progress.cards['deck-1:t1:fwd'].state, 'review');
+  assert.equal(progress.cards['deck-1:t2:fwd'].state, 'review');
+
+  // 4. Deck quiz: bỏ bước preview, ưu tiên single/multi trước rồi command/fill
+  const quizItems = [
+    { id: 'q-cmd', type: 'command', question: 'Gõ lệnh ls' },
+    { id: 'q-single', type: 'single', question: 'Câu hỏi 1' },
+    { id: 'q-fill', type: 'fill', question: 'Điền vào chỗ trống' },
+    { id: 'q-multi', type: 'multi', question: 'Câu hỏi nhiều đáp án' },
+  ];
+  const quizQ = initLearnQueue(quizItems, { deckKind: 'quiz' });
+  assert.equal(quizQ[0].stages.includes('preview'), false);
+  assert.deepEqual(quizQ[0].stages, QUIZ_LEARN_STAGES);
+
+  // Thứ tự ưu tiên: single & multi trước, sau đó mới đến command & fill
+  const orderedTypes = quizQ.map(q => q.item.type);
+  assert.deepEqual(orderedTypes, ['single', 'multi', 'command', 'fill']);
+});
+
+

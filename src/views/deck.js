@@ -16,6 +16,7 @@ import {
 import { deckStats } from '../core/deckstats.js';
 import { cardKey, DAY } from '../core/srs.js';
 import { stripAccents } from '../core/deckmodel.js';
+import { extractTags } from '../core/filters.js';
 import { renderStackedBar } from './components/stackedbar.js';
 import { speak, hasVoice } from '../tts.js';
 
@@ -30,6 +31,9 @@ const MODE_ICONS = {
   write: '⌨',
   cloze: '🔲',
   listen: '🎧',
+  learn: '🧠',
+  match: '🧩',
+  exam: '⏱️',
 };
 
 function createSearchSvg() {
@@ -88,21 +92,31 @@ function getItemStudyStatus(deckId, item, progress, now) {
   const cards = progress?.cards || {};
   const key = cardKey(deckId, item.id, 'fwd');
   const c = cards[key] || cards[item.id] || null;
+  const isStarred = item.starred === true ||
+    (Array.isArray(progress?.starred) && progress.starred.includes(item.id));
+  const isErrorProne = (c?.lapses || 0) >= 1;
+
+  if (isStarred) {
+    return { key: 'starred', label: '★ Đã sao', cls: 'status-starred', isStarred, isErrorProne };
+  }
+  if (isErrorProne) {
+    return { key: 'error-prone', label: '⚠ Sai nhiều', cls: 'status-error', isStarred, isErrorProne };
+  }
   if (!c || c.state === 'new') {
-    return { key: 'new', label: 'Mới', cls: 'status-new' };
+    return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isErrorProne };
   }
   if (c.state === 'learning' || c.state === 'relearning') {
-    return { key: 'learning', label: 'Đang học', cls: 'status-learning' };
+    return { key: 'learning', label: 'Đang học', cls: 'status-learning', isStarred, isErrorProne };
   }
   if (c.state === 'review') {
     if ((c.due || 0) <= now) {
-      return { key: 'due', label: 'Đến hạn', cls: 'status-due' };
+      return { key: 'due', label: 'Đến hạn', cls: 'status-due', isStarred, isErrorProne };
     }
     const diffDays = Math.max(1, Math.ceil((c.due - now) / DAY));
     const dueText = diffDays === 1 ? 'Ôn · đến hạn mai' : `Ôn · còn ${diffDays} ngày`;
-    return { key: 'mastered', label: dueText, cls: 'status-mastered' };
+    return { key: 'mastered', label: dueText, cls: 'status-mastered', isStarred, isErrorProne };
   }
-  return { key: 'new', label: 'Mới', cls: 'status-new' };
+  return { key: 'new', label: 'Mới', cls: 'status-new', isStarred, isErrorProne };
 }
 
 function renderCollapsibleIssues(issues) {
@@ -227,6 +241,9 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
           onclick: () => {
             if (disabled) return;
             if (m.id === 'srs') actions.startSrsSession(entry);
+            else if (m.id === 'learn') actions.startLearnSession(entry);
+            else if (m.id === 'match') actions.startMatchSession(entry);
+            else if (m.id === 'exam') actions.openSessionSetup(entry, { defaultMode: 'exam' });
             else if (m.id === 'all' || (m.id === 'flashcards' && kind !== 'vocab')) {
               actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
             } else {
@@ -241,10 +258,11 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
           h('div', { class: 'deck-mode-desc muted' }, m.description));
       })));
 
-  // 4. Bảng mục có tìm kiếm và lọc theo Dạng / Chủ đề / Trạng thái, bấm dòng mở Editor tại đúng mục đó
+  // 4. Bảng mục có tìm kiếm và lọc theo Dạng / Chủ đề / Nhãn / Trạng thái, bấm dòng mở Editor tại đúng mục đó
   let searchQuery = '';
   let filterType = 'all';
   let filterTopic = 'all';
+  let filterTag = 'all';
   let filterStatus = 'all';
 
   const preparedRows = items.map((it, idx) => {
@@ -270,6 +288,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
 
   const distinctTypeLabels = [...new Set(preparedRows.map(r => r.typeLabel))];
   const distinctTopics = [...new Set(preparedRows.map(r => r.topic).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const distinctTags = extractTags(items);
 
   const tableHost = h('div');
   const countLabelEl = h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 400; margin-left: 8px;' });
@@ -324,6 +343,17 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     h('option', { value: 'all' }, 'Tất cả chủ đề'),
     ...distinctTopics.map(tp => h('option', { value: tp }, `Chủ đề: ${tp}`))) : null;
 
+  const tagSelect = distinctTags.length > 0 ? h('select', {
+    class: 'ux-select',
+    'aria-label': 'Lọc theo nhãn',
+    onchange: ev => {
+      filterTag = ev.target.value;
+      renderTableBody();
+    },
+  },
+    h('option', { value: 'all' }, 'Tất cả nhãn'),
+    ...distinctTags.map(tg => h('option', { value: tg }, `Nhãn: #${tg}`))) : null;
+
   const statusSelect = h('select', {
     class: 'ux-select',
     'aria-label': 'Lọc theo trạng thái học',
@@ -336,14 +366,21 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     h('option', { value: 'new' }, 'Trạng thái: Mới'),
     h('option', { value: 'learning' }, 'Trạng thái: Đang học'),
     h('option', { value: 'due' }, 'Trạng thái: Đến hạn'),
-    h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'));
+    h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'),
+    h('option', { value: 'error-prone' }, 'Trạng thái: ⚠ Sai nhiều'),
+    h('option', { value: 'starred' }, 'Trạng thái: ★ Đã sao'));
 
   function renderTableBody() {
     const qNorm = stripAccents(searchQuery.trim());
     const filtered = preparedRows.filter(r => {
       if (filterType !== 'all' && r.typeLabel !== filterType) return false;
       if (filterTopic !== 'all' && r.topic !== filterTopic) return false;
-      if (filterStatus !== 'all' && r.status.key !== filterStatus) return false;
+      if (filterTag !== 'all' && !r.tags.includes(filterTag)) return false;
+      if (filterStatus !== 'all') {
+        if (filterStatus === 'starred' && !r.status.isStarred) return false;
+        if (filterStatus === 'error-prone' && !r.status.isErrorProne) return false;
+        if (filterStatus !== 'starred' && filterStatus !== 'error-prone' && r.status.key !== filterStatus) return false;
+      }
       if (qNorm && !r.searchBlob.includes(qNorm)) return false;
       return true;
     });
@@ -373,11 +410,13 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
               searchQuery = '';
               filterType = 'all';
               filterTopic = 'all';
+              filterTag = 'all';
               filterStatus = 'all';
               searchInput.value = '';
               clearSearchBtn.hidden = true;
               typeSelect.value = 'all';
               if (topicSelect) topicSelect.value = 'all';
+              if (tagSelect) tagSelect.value = 'all';
               statusSelect.value = 'all';
               renderTableBody();
             },
@@ -441,6 +480,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
         searchWrap,
         typeSelect,
         topicSelect,
+        tagSelect,
         statusSelect)),
     tableHost);
 
