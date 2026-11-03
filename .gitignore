@@ -4,3 +4,5 @@ release/
 npm-debug.log*
 data/samples/
 *.tmp
+tsconfig.build.json
+tsconfig.preload.json

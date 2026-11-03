@@ -180,6 +180,13 @@ Bạn có thể đưa dữ liệu sẵn có vào Turtle Deck chỉ trong vài gi
 
 ---
 
+## 📖 Toàn bộ Đặc tả Kỹ thuật & Kiến trúc
+
+Chi tiết toàn bộ kiến trúc hệ thống, lược đồ cơ sở dữ liệu SQLite, định dạng gói `.sdeck`, thiết kế UX Editor và lịch sử các giai đoạn phát triển được tổng hợp duy nhất tại:
+- [`SPECIFICATION.md`](./SPECIFICATION.md): Tài liệu đặc tả kỹ thuật, kiến trúc và lộ trình triển khai toàn diện.
+
+---
+
 ## ⚖️ Giấy phép
 
 Dự án phát hành dưới giấy phép mã nguồn mở ISC License.
