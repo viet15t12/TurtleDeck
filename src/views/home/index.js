@@ -132,13 +132,13 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     workspace.renderCardsOnly();
   }
 
-  ctx.refresh = {
+  Object.assign(ctx.refresh, {
     folders: refreshFolders,
     cards: () => workspace.renderCardsOnly(),
     sidebar: renderSidebar,
     breadcrumb: () => breadcrumb.renderBreadcrumbBar(),
     deckSection: renderDeckSection,
-  };
+  });
 
   refreshFolders();
   renderSidebar();
@@ -162,3 +162,4 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
 
   attachHomeKeyboard(ctx);
 }
+
