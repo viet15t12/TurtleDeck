@@ -225,3 +225,19 @@ test('Issue 10: asset:addBytes and asset:remove work with unified object paramet
   const remRes = removeAsset(store, deckKey, 'img/icon.png');
   assert.equal(remRes.ok, true);
 });
+
+// Test Lỗi 11: backup:restore dùng whitelist kiểm tra tên file
+test('Issue 11: restoreBackup validates name using strict regex whitelist', async () => {
+  const { restoreBackup } = await import('../src/main/services/backup-service.js');
+  const deps = { backupsDir: '/tmp', progressFile: '/tmp/p.json' };
+
+  // Các tên độc hại / không hợp lệ phải bị chặn
+  assert.equal((await restoreBackup(deps, '..')).ok, false);
+  assert.equal((await restoreBackup(deps, 'foo.json')).ok, false);
+
+  // File tồn tại nhưng tên không khớp whitelist progress-*.json
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-issue11-'));
+  const validJson = JSON.stringify({ formatVersion: 1, exportedAt: Date.now(), timeZone: 'UTC', cards: {}, logs: [] });
+  await fs.writeFile(path.join(tmpDir, 'custom-name.json'), validJson);
+  assert.equal((await restoreBackup({ backupsDir: tmpDir, progressFile: '/tmp/p.json' }, 'custom-name.json')).ok, false, 'Files not matching progress-*.json must be rejected');
+});

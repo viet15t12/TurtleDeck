@@ -130,7 +130,7 @@ export async function restoreBackup(
   deps: BackupDeps,
   name: string
 ): Promise<{ ok: boolean; progress?: any; error?: string }> {
-  if (typeof name !== 'string' || name.includes('/') || name.includes('\\')) {
+  if (typeof name !== 'string' || !/^progress-[\w-]+\.json$/.test(name)) {
     return { ok: false, error: 'Tên file sao lưu không hợp lệ.' };
   }
   const src = path.join(deps.backupsDir, name);
