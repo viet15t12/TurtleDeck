@@ -12,6 +12,8 @@
     "start": "npm run build && electron .",
     "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
     "dist": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:all": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder -lw",
     "dist:dir": "npm run build && electron-builder --dir"
   },
   "repository": {
@@ -90,6 +92,18 @@
           "role": "Editor"
         }
       ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }
