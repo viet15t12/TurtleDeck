@@ -63,10 +63,20 @@ export async function previewImport(
   packageStore: PackageStore,
   args: any
 ): Promise<{ ok: boolean; format?: string; items?: any[]; issues?: any[]; importId?: string; assetCount?: number; error?: string }> {
-  const { path: filePath, text: rawText, format, options = {} } = args || {};
+  const { token, text: rawText, format, options = {} } = args || {};
   let content = rawText;
   let hasSourceDir = false;
   let sourceDir: string | null = null;
+
+  let filePath: string | undefined;
+  if (token && typeof token === 'string') {
+    filePath = packageStore.getTempImport(token);
+    if (!filePath) {
+      return { ok: false, error: 'Token tệp nhập không hợp lệ hoặc đã hết hạn.' };
+    }
+  } else if (args?.path || args?.filePath) {
+    return { ok: false, error: 'Đường dẫn chưa được cấp phép. Vui lòng chọn file qua hộp thoại.' };
+  }
 
   if (typeof filePath === 'string' && filePath.trim()) {
     try {
