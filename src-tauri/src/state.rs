@@ -1,7 +1,7 @@
 // src-tauri/src/state.rs — Trạng thái ứng dụng dùng chung giữa các command
-use std::sync::Mutex;
-use rusqlite::Connection;
 use crate::paths::AppPaths;
+use rusqlite::Connection;
+use std::sync::Mutex;
 
 pub struct AppState {
     pub paths: AppPaths,

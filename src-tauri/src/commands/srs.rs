@@ -1,8 +1,8 @@
 // src-tauri/src/commands/srs.rs — Các thao tác thuật toán lặp lại ngắt quãng (SRS) và đánh dấu thẻ
-use serde_json::Value;
-use tauri::State;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use serde_json::Value;
+use tauri::State;
 
 #[tauri::command]
 pub async fn srs_get_deck_summary(
@@ -40,7 +40,9 @@ pub async fn srs_record_review(
     _rating: String,
     _elapsed_ms: u64,
 ) -> AppResult<Value> {
-    Err(AppError::NotImplemented("srs:recordReview chưa hỗ trợ trong khung Giai đoạn 1".into()))
+    Err(AppError::NotImplemented(
+        "srs:recordReview chưa hỗ trợ trong khung Giai đoạn 1".into(),
+    ))
 }
 
 #[tauri::command]

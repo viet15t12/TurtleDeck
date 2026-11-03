@@ -1,6 +1,6 @@
 // src-tauri/src/paths.rs — Quản lý đường dẫn dữ liệu người dùng tương thích 100% bản Electron
-use std::path::PathBuf;
 use crate::error::{AppError, AppResult};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct AppPaths {
@@ -18,9 +18,8 @@ impl AppPaths {
         let config_dir = dirs::config_dir().ok_or_else(|| {
             AppError::Custom("Không thể xác định thư mục cấu hình hệ thống".to_string())
         })?;
-        let home_dir = dirs::home_dir().ok_or_else(|| {
-            AppError::Custom("Không thể xác định thư mục người dùng".to_string())
-        })?;
+        let home_dir = dirs::home_dir()
+            .ok_or_else(|| AppError::Custom("Không thể xác định thư mục người dùng".to_string()))?;
 
         // Dùng đúng thư mục "Turtle Deck" của bản Electron để giữ nguyên dữ liệu
         let user_data_dir = config_dir.join("Turtle Deck");

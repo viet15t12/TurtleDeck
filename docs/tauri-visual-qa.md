@@ -28,3 +28,4 @@ Bảng theo dõi hiển thị giao diện người dùng trên WebKitGTK (Linux)
 3. **Thanh cuộn `::-webkit-scrollbar`**: Thanh cuộn có đúng kích thước mảnh (thin) và màu theo theme không.
 4. **Phát âm TTS (`speechSynthesis`)**: Kiểm tra xem WebKitGTK có đọc được từ vựng tiếng Anh/Việt không (cần gói `speech-dispatcher`).
 5. **Hiển thị hình ảnh từ custom scheme `asset://`**: Hình ảnh minh hoạ trong thẻ học có load mượt mà, đúng kích thước và không bị vỡ không.
+

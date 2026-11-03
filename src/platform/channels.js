@@ -108,3 +108,4 @@ export function getCommandName(channel) {
   }
   return channel.replace(':', '_');
 }
+

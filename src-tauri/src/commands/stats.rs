@@ -1,8 +1,8 @@
 // src-tauri/src/commands/stats.rs — Thống kê học tập, báo cáo và chuỗi học tập (streak)
-use serde_json::Value;
-use tauri::State;
 use crate::error::AppResult;
 use crate::state::AppState;
+use serde_json::Value;
+use tauri::State;
 
 #[tauri::command]
 pub async fn stats_get_deck_report(
@@ -21,9 +21,7 @@ pub async fn stats_get_deck_report(
 }
 
 #[tauri::command]
-pub async fn stats_get_overall_streak(
-    _state: State<'_, AppState>,
-) -> AppResult<Value> {
+pub async fn stats_get_overall_streak(_state: State<'_, AppState>) -> AppResult<Value> {
     Ok(serde_json::json!({
         "streak": 0,
         "lastStudyDate": null,

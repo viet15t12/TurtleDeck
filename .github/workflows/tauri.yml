@@ -64,3 +64,4 @@ jobs:
           cd src-tauri
           cargo check
           cargo test
+

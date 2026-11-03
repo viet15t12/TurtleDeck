@@ -72,3 +72,4 @@ src/platform/
 2. **Chuẩn hóa lỗi**: Mọi command trả về `Result<T, AppError>`. Khi có lỗi, hệ thống serialize về `{ ok: false, error: "..." }`. Đối với các kênh trả về mảng, nếu có lỗi sẽ trả về `[]` để tránh làm crash giao diện renderer.
 3. **Bảo mật đường dẫn**: Mọi đường dẫn nhận từ webview phải được chuẩn hoá và kiểm tra nằm trong thư mục cho phép (chống path traversal).
 4. **Không dùng `unwrap()`/`expect()`** trong luồng xử lý chính của Rust.
+

@@ -254,8 +254,8 @@ Nếu sau Ngày 5 chưa qua Gate 3 → **dừng, giữ Electron làm bản chín
 
 | Ngày | Giai đoạn | Trạng thái | Ghi chú |
 |---|---|---|---|
-| 1 sáng | GĐ0 Spike | ☐ | |
-| 1 chiều | GĐ1 Khung + api | ☐ | |
+| 1 sáng | GĐ0 Spike | ☑ | Thư viện hệ thống WebKitGTK 2.54, dbus-1, rsvg, appindicator đã sẵn sàng |
+| 1 chiều | GĐ1 Khung + api | ☑ | Hoàn thành khung Tauri v2, window.api shim, cargo clippy/fmt/test và 207 tests JS |
 | 2 | GĐ2 DB/Settings/Progress/Folder | ☐ | |
 | 3–4 | GĐ3 Deck/.sdeck/asset/library | ☐ | |
 | 5 sáng | GĐ4 Import/Draft/Backup | ☐ | |
