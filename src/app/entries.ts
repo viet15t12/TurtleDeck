@@ -9,8 +9,16 @@ const api = window.api;
 
 export const samePath = (a?: string | null, b?: string | null): boolean => Boolean(a && b && a === b);
 
-// r: kết quả từ main (deck:open / deck:import / deck:save). Trả entry đã thêm/cập nhật.
-export function applyResult(r: any, target?: Entry): Entry {
+export interface PlanApplyResult {
+  fields: Partial<Entry>;
+  targetEntry?: Entry | null;
+  toClose: string[];
+  toRemove: Entry[];
+  warnMessage?: string | null;
+}
+
+// Hàm thuần lập kế hoạch gộp/thay thế entry mà không có tác dụng phụ
+export function planApplyResult(entries: Entry[], r: any, target?: Entry): PlanApplyResult {
   const fields: Partial<Entry> = r.ok
     ? {
         status: 'ok',
@@ -32,9 +40,13 @@ export function applyResult(r: any, target?: Entry): Entry {
         error: r.error || 'Không mở được bộ thẻ.',
       };
 
+  const toClose: string[] = [];
+  const toRemove: Entry[] = [];
+  let warnMessage: string | null = null;
+
   // hai file khác nhau cùng meta.id → cảnh báo và chỉ nạp một
   if (r.ok && fields.path && r.deck?.meta?.id) {
-    const twin = state.entries.find(
+    const twin = entries.find(
       e =>
         e !== target &&
         e.status === 'ok' &&
@@ -43,31 +55,59 @@ export function applyResult(r: any, target?: Entry): Entry {
         e.deck?.meta?.id === fields.deck?.meta?.id
     );
     if (twin) {
-      if (fields.deckKey) api.closeDeck(fields.deckKey);
+      if (fields.deckKey) toClose.push(fields.deckKey);
       Object.assign(fields, {
         status: 'error',
         deckKey: null,
         deck: null,
         error: `Trùng mã bộ thẻ (meta.id "${r.deck.meta.id}") với "${fileName(twin.path)}" đang mở — chỉ nạp một bộ.`,
       });
-      notify(`"${fileName(fields.path)}" có cùng mã bộ thẻ với "${fileName(twin.path)}" nên không được nạp.`, 'warn');
+      warnMessage = `"${fileName(fields.path)}" có cùng mã bộ thẻ với "${fileName(twin.path)}" nên không được nạp.`;
     }
   }
 
-  // cùng đường dẫn đã có trong danh sách → thay thế mục cũ
-  const existing = target ?? (fields.path ? state.entries.find(e => samePath(e.path, fields.path)) : null);
+  const existing = target ?? (fields.path ? entries.find(e => samePath(e.path, fields.path)) : null);
   if (existing) {
-    if (existing.deckKey && existing.deckKey !== fields.deckKey) api.closeDeck(existing.deckKey);
-    Object.assign(existing, fields);
-    // lưu đè lên file đang có ở mục khác → gộp lại
-    for (const other of state.entries.filter(e => e !== existing && samePath(e.path, existing.path))) {
-      if (other.deckKey) api.closeDeck(other.deckKey);
-      state.entries.splice(state.entries.indexOf(other), 1);
+    if (existing.deckKey && existing.deckKey !== fields.deckKey) {
+      toClose.push(existing.deckKey);
     }
-    return existing;
+    for (const other of entries.filter(e => e !== existing && samePath(e.path, existing.path))) {
+      if (other.deckKey) toClose.push(other.deckKey);
+      toRemove.push(other);
+    }
   }
 
-  const entry = newEntry(fields);
+  return {
+    fields,
+    targetEntry: existing,
+    toClose,
+    toRemove,
+    warnMessage,
+  };
+}
+
+// r: kết quả từ main (deck:open / deck:import / deck:save). Trả entry đã thêm/cập nhật.
+export function applyResult(r: any, target?: Entry): Entry {
+  const plan = planApplyResult(state.entries, r, target);
+
+  for (const k of plan.toClose) {
+    api.closeDeck?.(k);
+  }
+
+  if (plan.warnMessage) {
+    notify(plan.warnMessage, 'warn');
+  }
+
+  if (plan.targetEntry) {
+    Object.assign(plan.targetEntry, plan.fields);
+    for (const rem of plan.toRemove) {
+      const idx = state.entries.indexOf(rem);
+      if (idx >= 0) state.entries.splice(idx, 1);
+    }
+    return plan.targetEntry;
+  }
+
+  const entry = newEntry(plan.fields);
   state.entries.push(entry);
   return entry;
 }

@@ -280,3 +280,21 @@ export function applyCardOverride(prevState, originalLogEntry, now = Date.now(),
   };
 }
 
+export function applyOverrideToProgress(progress, cardKey, nextCard, overrideLogEntry) {
+  const nextCards = { ...(progress?.cards || {}) };
+  nextCards[cardKey] = nextCard;
+
+  const nextLog = Array.isArray(progress?.log) ? [...progress.log] : [];
+  if (overrideLogEntry && overrideLogEntry.t) {
+    nextLog.push(overrideLogEntry);
+  }
+
+  return {
+    ...progress,
+    version: progress?.version || 1,
+    cards: nextCards,
+    meta: { ...(progress?.meta || {}) },
+    log: nextLog,
+  };
+}
+
