@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(better--sqlite3)-003B57?logo=sqlite&logoColor=white)](https://github.com/WiseLibs/better-sqlite3)
 [![Tests](https://img.shields.io/badge/Tests-193%20Passed-brightgreen?logo=node.js&logoColor=white)](./test)
-[![License](https://img.shields.io/badge/License-ISC-yellow.svg)](./package.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 <p align="center">
   <a href="#-cài-đặt--khởi-chạy">Cài đặt nhanh</a> •
@@ -207,5 +207,5 @@ Toàn bộ đặc tả nghiệp vụ, mô hình dữ liệu, lược đồ SQLit
 
 ## 📄 Giấy phép & Bản quyền
 
-Dự án phát hành dưới giấy phép mã nguồn mở [ISC License](./package.json).  
+Dự án phát hành dưới giấy phép mã nguồn mở [MIT License](./LICENSE).  
 Biểu trưng và thương hiệu thuộc sở hữu của dự án **Turtle Deck**.
