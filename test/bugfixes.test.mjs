@@ -40,3 +40,24 @@ test('Issue 2: previewImport rejects arbitrary filePath from renderer without va
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 });
+
+// Test Lỗi 3: progress:save vẫn còn được renderer dùng nên được giữ lại và hoạt động an toàn
+test('Issue 3: progress:save remains supported and safely syncs progress data', async () => {
+  const { DatabaseManager } = await import('../src/main/db/index.js');
+  const { saveProgress, loadProgress } = await import('../src/main/services/progress-service.js');
+  const dbManager = DatabaseManager.createInMemory();
+  const deps = { progressFile: '/tmp/p.json', backupsDir: '/tmp', dbManager };
+
+  const testProgress = {
+    cards: {
+      'd1:i1:fwd': { deckId: 'd1', itemId: 'i1', direction: 'fwd', state: 'review', interval: 5, ease: 2.5, due: Date.now() + 100000 }
+    },
+    logs: []
+  };
+
+  const res = await saveProgress(deps, testProgress);
+  assert.equal(res.ok, true);
+
+  const loaded = await loadProgress(deps);
+  assert.ok(loaded.cards['d1:i1:fwd']);
+});
