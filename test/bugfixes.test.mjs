@@ -299,3 +299,43 @@ test('Issue 14: isValidSenderFrame allows valid app html and rejects untrusted o
   assert.equal(isValidSenderFrame('http://localhost:3000'), false);
   assert.equal(isValidSenderFrame('file:///tmp/malicious.html'), false);
 });
+
+// Test deck:open với mảng đường dẫn ({ filePath: string[] }) không được mở dialog
+test('deck:open with array of paths in { filePath: string[] } does not trigger openDialog', async () => {
+  const { registerDeckIpc } = await import('../src/main/ipc/deck.ipc.js');
+  const store = new PackageStore();
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-deckopen-'));
+  const sdeck = await import('../src/core/sdeck.js');
+
+  const deck = { meta: { id: 'd-arr', title: 'Array Deck', kind: 'quiz' }, items: [] };
+  const pkg = sdeck.writePackage(JSON.stringify(deck), new Map());
+  const filePath = path.join(tmpDir, 'test.sdeck');
+  await fs.writeFile(filePath, pkg.bytes);
+
+  let dialogOpened = false;
+  const mockDispatcher = {
+    handlers: new Map(),
+    handle(channel, fn) { this.handlers.set(channel, fn); }
+  };
+
+  registerDeckIpc(mockDispatcher, {
+    packageStore: store,
+    paths: {
+      draftsDir: () => tmpDir,
+      settingsFile: () => path.join(tmpDir, 'settings.json'),
+      defaultLibraryDir: () => tmpDir,
+    },
+    winOf: () => null,
+  });
+
+  const handler = mockDispatcher.handlers.get('deck:open');
+
+  // Gọi với { filePath: [filePath] } như app.js làm khi khởi động
+  const res = await handler({}, { filePath: [filePath] });
+  assert.equal(dialogOpened, false, 'Dialog must NOT be opened when paths are provided');
+  assert.equal(res.length, 1);
+  assert.equal(res[0].ok, true);
+  assert.equal(res[0].deck.meta.title, 'Array Deck');
+
+  await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+});

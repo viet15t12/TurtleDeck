@@ -25,14 +25,18 @@ export function registerDeckIpc(dispatcher: IpcDispatcher, ctx: IpcContext): voi
     knownSaves: ctx.knownSaves,
   });
 
-  registerTypedHandler(dispatcher, 'deck:open', async (event, filePath) => {
-    let paths: string[] | null = typeof filePath === 'string'
-      ? [filePath]
-      : Array.isArray(filePath)
-        ? filePath.filter(p => typeof p === 'string')
-        : (typeof filePath === 'object' && filePath !== null && 'filePath' in filePath && typeof (filePath as any).filePath === 'string')
-          ? [(filePath as any).filePath]
-          : null;
+  registerTypedHandler(dispatcher, 'deck:open', async (event, req: any) => {
+    let raw: any = req;
+    if (typeof req === 'object' && req !== null && 'filePath' in req) {
+      raw = req.filePath;
+    }
+
+    let paths: string[] | null = null;
+    if (typeof raw === 'string' && raw.trim()) {
+      paths = [raw];
+    } else if (Array.isArray(raw)) {
+      paths = raw.filter(p => typeof p === 'string' && p.trim());
+    }
 
     if (!paths || paths.length === 0) {
       const win = ctx.winOf ? ctx.winOf(event) : undefined;
@@ -41,7 +45,7 @@ export function registerDeckIpc(dispatcher: IpcDispatcher, ctx: IpcContext): voi
         properties: ['openFile', 'multiSelections'],
         filters: SDECK_FILTER,
       });
-      if (r.canceled) return [];
+      if (r.canceled || !r.filePaths.length) return [];
       paths = r.filePaths;
     }
 
