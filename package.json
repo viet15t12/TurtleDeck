@@ -2,29 +2,36 @@
   "name": "turtle-deck",
   "productName": "Turtle Deck",
   "desktopName": "turtle-deck.desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
   "main": "dist/main/index.js",
   "scripts": {
-    "test": "node --test",
+    "test": "node --import ./tools/register-test-hooks.mjs --test",
     "typecheck": "tsc --noEmit",
     "build": "node tools/build.mjs",
-    "start": "electron .",
+    "start": "npm run build && electron .",
     "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
     "dist": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder --linux",
     "dist:dir": "npm run build && electron-builder --dir"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/viet15t12/studyApp.git"
+    "url": "git+https://github.com/viet15t12/TurtleDeck.git"
   },
-  "keywords": [],
-  "author": "Turtle Deck Team <support@turtledeck.app>",
+  "keywords": [
+    "flashcards",
+    "srs",
+    "quiz",
+    "study",
+    "education",
+    "offline-first"
+  ],
+  "author": "Viet15t12 <quocviet15t12@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/viet15t12/studyApp/issues"
+    "url": "https://github.com/viet15t12/TurtleDeck/issues"
   },
-  "homepage": "https://github.com/viet15t12/studyApp#readme",
+  "homepage": "https://github.com/viet15t12/TurtleDeck#readme",
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
@@ -67,7 +74,7 @@
         "AppImage",
         "rpm"
       ],
-      "maintainer": "Turtle Deck Team <support@turtledeck.app>",
+      "maintainer": "Viet15t12 <quocviet15t12@gmail.com>",
       "category": "Education",
       "syncDesktopName": true,
       "icon": "build/icons",

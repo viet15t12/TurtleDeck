@@ -1,4 +1,5 @@
 // src/main/index.ts — Điểm vào chính của tiến trình Main (ESM)
+import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
 import { defaultPaths } from './app/paths.js';
@@ -21,10 +22,10 @@ if (!gotTheLock) {
   }
 
   // 3. Đường dẫn preload và HTML renderer
-  const preloadPath = path.resolve(import.meta.dirname, '../preload.js');
-  const fallbackPreload = path.resolve(import.meta.dirname, '../../preload.js');
   const actualPreload = path.resolve(import.meta.dirname, '../preload.js');
-  const htmlPath = path.resolve(import.meta.dirname, '../../src/index.html');
+  const distHtml = path.resolve(import.meta.dirname, '../index.html');
+  const srcHtml = path.resolve(import.meta.dirname, '../../src/index.html');
+  const htmlPath = fs.existsSync(distHtml) ? distHtml : srcHtml;
 
   initAppLifecycle(defaultPaths, defaultPackageStore, actualPreload, htmlPath);
 

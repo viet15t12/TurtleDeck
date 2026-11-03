@@ -5,9 +5,12 @@
 //   node tools/sdeck.mjs check <file.sdeck>               kiểm tra gói + nội dung
 //   node tools/sdeck.mjs pack-all <thư-mục-nguồn> <thư-mục-ra>   đóng gói mọi thư mục con có deck.json
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
-import { readPackage, writePackage, collectAssetsFromDir } from '../src/core/sdeck.js';
-import { parseDeck } from '../src/core/parser.js';
+
+const coreDir = fsSync.existsSync(new URL('../dist/core/sdeck.js', import.meta.url)) ? '../dist/core' : '../src/core';
+const { readPackage, writePackage, collectAssetsFromDir } = await import(`${coreDir}/sdeck.js`);
+const { parseDeck } = await import(`${coreDir}/parser.js`);
 import { atomicWrite } from '../src/core/fsutil.js';
 
 const USAGE = `Cách dùng:

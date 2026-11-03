@@ -1,1 +1,0 @@
-{"version":3,"file":"asset-protocol.js","sourceRoot":"","sources":["asset-protocol.ts"],"names":[],"mappings":"AAAA,+FAA+F;AAC/F,OAAO,KAAK,aAAa,MAAM,6BAA6B,CAAC;AAG7D,MAAM,UAAU,kBAAkB,CAAC,GAAW,EAAE,YAA0B;IACxE,OAAQ,aAAqB,CAAC,cAAc,CAAC,GAAG,EAAE;QAChD,cAAc,EAAE,CAAC,GAAW,EAAE,EAAE,CAAC,YAAY,CAAC,GAAG,CAAC,GAAG,CAAC;KACvD,CAAC,CAAC;AACL,CAAC"}

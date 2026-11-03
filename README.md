@@ -6,12 +6,12 @@
 
 ### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
 
-[![Platform](https://img.shields.io/badge/Platform-Linux%20(AppImage%20%7C%20RPM)-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/studyApp/releases)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20(AppImage%20%7C%20RPM)-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![Electron](https://img.shields.io/badge/Electron-45.2.1-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.x%20Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite%20(better--sqlite3)-003B57?logo=sqlite&logoColor=white)](https://github.com/WiseLibs/better-sqlite3)
-[![Tests](https://img.shields.io/badge/Tests-193%20Passed-brightgreen?logo=node.js&logoColor=white)](./test)
+[![Tests](https://img.shields.io/badge/Tests-194%20Passed-brightgreen?logo=node.js&logoColor=white)](./test)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 <p align="center">
@@ -41,18 +41,18 @@
 ### 📦 Dành cho người dùng cuối (Linux)
 
 #### 1. Cài đặt qua gói RPM (Khuyên dùng cho Fedora / RHEL)
-Tệp cài đặt đã được liên kết trực tiếp tại thư mục gốc hoặc trong thư mục `release/`:
+Tải tệp RPM từ [GitHub Releases](https://github.com/viet15t12/TurtleDeck/releases) và cài đặt:
 ```bash
-sudo dnf install ./turtle-deck-0.1.0.x86_64.rpm
+sudo dnf install ./turtle-deck-0.1.1.x86_64.rpm
 ```
 > [!NOTE]
 > Gói RPM tự động tích hợp biểu tượng desktop, phân loại vào menu **Education**, và đăng ký MIME type `application/x-studydeck` để bạn chỉ cần nhấp đúp vào bất kỳ file `.sdeck` nào là ứng dụng sẽ mở ngay lập tức.
 
 #### 2. Chạy trực tiếp qua AppImage (Linux mọi bản phân phối)
-Không cần cài đặt, tải tệp và cấp quyền thực thi:
+Tải tệp AppImage từ [GitHub Releases](https://github.com/viet15t12/TurtleDeck/releases) và cấp quyền thực thi:
 ```bash
-chmod +x "Turtle Deck-0.1.0.AppImage"
-./"Turtle Deck-0.1.0.AppImage"
+chmod +x "Turtle Deck-0.1.1.AppImage"
+./"Turtle Deck-0.1.1.AppImage"
 ```
 
 ---

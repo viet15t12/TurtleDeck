@@ -13,7 +13,7 @@ test('Electron app entry files and renderer are present', () => {
 
 test('Phase 1 core modules, views and dev tool are present', () => {
   for (const file of [
-    'src/core/sdeck.js', 'src/core/parser.js', 'src/core/validate.js', 'src/core/deckmodel.js', 'src/core/fsutil.js',
+    'src/core/sdeck.ts', 'src/core/parser.ts', 'src/core/validate.ts', 'src/core/deckmodel.ts', 'src/core/fsutil.js',
     'src/views/home.js', 'src/views/deck.js', 'tools/sdeck.mjs',
     'data/samples-src/lpic-sample/deck.json', 'data/samples-src/vocab-sample/deck.json',
   ]) {
@@ -25,7 +25,7 @@ test('Phase 1 core modules, views and dev tool are present', () => {
 
 test('Phase 2 core modules and views are present', () => {
   for (const file of [
-    'src/core/grader.js', 'src/core/builder.js', 'src/core/richtext.js', 'src/views/session.js',
+    'src/core/grader.ts', 'src/core/builder.ts', 'src/core/richtext.js', 'src/views/session.js',
   ]) {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
@@ -56,8 +56,8 @@ test('Phase 2C Deck Editor view is present', () => {
 
 test('Phase 3 SRS, planner, settings view and simulation script are present', () => {
   for (const file of [
-    'src/core/srs.js',
-    'src/core/planner.js',
+    'src/core/srs.ts',
+    'src/core/planner.ts',
     'src/views/settings.js',
     'test/simulate.js',
   ]) {
@@ -67,7 +67,7 @@ test('Phase 3 SRS, planner, settings view and simulation script are present', ()
 
 test('Phase 3B Lượt 1 deckkinds and deckstats modules are present', () => {
   for (const file of [
-    'src/core/deckkinds.js',
+    'src/core/deckkinds.ts',
     'src/core/deckstats.js',
   ]) {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
@@ -96,7 +96,7 @@ test('Phase 3C refactored modules and styles are present', () => {
 
 test('Phase 5 Learn, Match, Exam and filters modules are present', () => {
   for (const file of [
-    'src/core/learnplanner.js',
+    'src/core/learnplanner.ts',
     'src/core/matchgame.js',
     'src/core/exam.js',
     'src/core/filters.js',
@@ -115,7 +115,7 @@ test('Phase 5 Learn, Match, Exam and filters modules are present', () => {
 
 test('Phase 6 Stats, progressio, library, shortcuts and linux tools are present', () => {
   for (const file of [
-    'src/core/stats.js',
+    'src/core/stats.ts',
     'src/core/progressio.js',
     'src/core/library.js',
     'src/views/stats.js',
