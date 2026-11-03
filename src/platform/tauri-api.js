@@ -48,7 +48,9 @@ export async function invokeTyped(channel, data) {
   let args = {};
 
   if (data !== undefined && data !== null) {
-    if (typeof data === 'object' && !Array.isArray(data)) {
+    if (channel === 'progress:save' || channel === 'settings:save') {
+      args = typeof data === 'object' && !Array.isArray(data) && 'data' in data ? data : { data };
+    } else if (typeof data === 'object' && !Array.isArray(data)) {
       args = data;
     } else {
       // Dữ liệu nguyên thuỷ hoặc mảng: chuyển thành tham số phù hợp
@@ -148,9 +150,9 @@ export const api = {
 
   // Tiến độ & Cài đặt
   loadProgress: () => invokeTyped('progress:load', undefined),
-  saveProgress: (d) => invokeTyped('progress:save', d),
+  saveProgress: (d) => invokeTyped('progress:save', { data: d }),
   loadSettings: () => invokeTyped('settings:load', undefined),
-  saveSettings: (d) => invokeTyped('settings:save', d),
+  saveSettings: (d) => invokeTyped('settings:save', { data: d }),
 
   // Nhập hàng loạt (CSV/TSV/Markdown)
   pickImportFile: () => invokeTyped('import:pickFile', undefined),

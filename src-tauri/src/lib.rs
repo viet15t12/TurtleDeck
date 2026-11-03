@@ -8,6 +8,8 @@ pub mod state;
 
 use paths::AppPaths;
 use state::AppState;
+use std::sync::Arc;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,7 +24,26 @@ pub fn run() {
         }
     };
 
-    let app_state = AppState::new(paths);
+    let app_state = match db::open_or_create(&paths.db_file) {
+        Ok(mut conn) => {
+            // Chạy migration tự động nếu có progress.json cũ từ Electron
+            let _ = db::migration::migrate_legacy_progress(&mut conn, &paths.user_data_dir);
+            // Chạy migration cây thư mục
+            let _ =
+                db::migration_folders::migrate_to_folders(&mut conn, &paths.default_library_dir);
+            AppState {
+                paths,
+                db: std::sync::Mutex::new(Some(conn)),
+                package_store: Arc::new(services::package_store::PackageStore::new()),
+                library_cache: std::sync::RwLock::new(std::collections::HashMap::new()),
+                watcher: std::sync::Mutex::new(None),
+            }
+        }
+        Err(e) => {
+            eprintln!("Lỗi kết nối cơ sở dữ liệu SQLite: {e}");
+            AppState::new(paths)
+        }
+    };
 
     let mut builder = tauri::Builder::default();
 
@@ -35,6 +56,12 @@ pub fn run() {
         );
     }
 
+    // Đăng ký custom URI scheme protocol asset:// phục vụ hình ảnh gói thẻ
+    let pkg_store_for_asset = Arc::clone(&app_state.package_store);
+    builder = builder.register_uri_scheme_protocol("asset", move |_app, req| {
+        services::asset_protocol::handle_asset_request(&pkg_store_for_asset, &req)
+    });
+
     // Các plugin chính
     builder = builder
         .plugin(tauri_plugin_dialog::init())
@@ -43,6 +70,19 @@ pub fn run() {
             // Sẽ xử lý sự kiện deck:openExternal ở Giai đoạn 5
         }))
         .manage(app_state)
+        .setup(|app| {
+            let state = app.state::<AppState>();
+            let watcher = services::watcher::AppWatcher::new(
+                app.handle().clone(),
+                Arc::clone(&state.package_store),
+            );
+            let lib_dir = state.get_active_library_dir();
+            watcher.watch_path(&lib_dir);
+            if let Ok(mut lock) = state.watcher.lock() {
+                *lock = Some(watcher);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Deck commands
             commands::deck::deck_open,

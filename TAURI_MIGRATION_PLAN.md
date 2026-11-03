@@ -256,8 +256,8 @@ Nếu sau Ngày 5 chưa qua Gate 3 → **dừng, giữ Electron làm bản chín
 |---|---|---|---|
 | 1 sáng | GĐ0 Spike | ☑ | Thư viện hệ thống WebKitGTK 2.54, dbus-1, rsvg, appindicator đã sẵn sàng |
 | 1 chiều | GĐ1 Khung + api | ☑ | Hoàn thành khung Tauri v2, window.api shim, cargo clippy/fmt/test và 207 tests JS |
-| 2 | GĐ2 DB/Settings/Progress/Folder | ☐ | |
-| 3–4 | GĐ3 Deck/.sdeck/asset/library | ☐ | |
+| 2 | GĐ2 DB/Settings/Progress/Folder | ☑ | Hoàn thành toàn bộ SQLite DDL + FTS5, SRS repo, Stats repo (Asia/Saigon), Folder repo, Settings/Progress services và 9 unit tests Rust pass 100% |
+| 3–4 | GĐ3 Deck/.sdeck/asset/library | ☑ | Hoàn thành PackageStore, ZIP .sdeck, asset protocol, asset/deck/library commands, notify watcher và 15 unit tests Rust pass 100% |
 | 5 sáng | GĐ4 Import/Draft/Backup | ☐ | |
 | 5 chiều–6 | GĐ5 Lifecycle/đóng gói | ☐ | |
 | 7 | GĐ6 Kiểm thử cuối, đệm | ☐ | |

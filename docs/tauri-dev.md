@@ -72,4 +72,5 @@ src/platform/
 2. **Chuẩn hóa lỗi**: Mọi command trả về `Result<T, AppError>`. Khi có lỗi, hệ thống serialize về `{ ok: false, error: "..." }`. Đối với các kênh trả về mảng, nếu có lỗi sẽ trả về `[]` để tránh làm crash giao diện renderer.
 3. **Bảo mật đường dẫn**: Mọi đường dẫn nhận từ webview phải được chuẩn hoá và kiểm tra nằm trong thư mục cho phép (chống path traversal).
 4. **Không dùng `unwrap()`/`expect()`** trong luồng xử lý chính của Rust.
+5. **Crate bổ sung**: `uuid` 1.0 (v4) được kích hoạt để sinh mã định danh duy nhất (UUID v4) cho thư mục và liên kết bộ thẻ, tương thích 100% với `crypto.randomUUID()` của JavaScript.
 
