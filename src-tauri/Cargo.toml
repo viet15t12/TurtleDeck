@@ -1,0 +1,33 @@
+[package]
+name = "turtle-deck"
+version = "0.1.4"
+description = "Ứng dụng học tập offline bằng flashcard và trắc nghiệm"
+authors = ["Viet15t12 <quocviet15t12@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/viet15t12/TurtleDeck"
+edition = "2021"
+
+[lib]
+name = "turtle_deck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-log = "2"
+
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+notify = "6"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+sha2 = "0.10"
+thiserror = "2"
+dirs = "5"
+tokio = { version = "1", features = ["full"] }
+log = "0.4"

@@ -1,0 +1,49 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "turtle-deck",
+  "version": "0.1.4",
+  "identifier": "com.turtledeck.app",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeDevCommand": "node tools/build.mjs --shell=tauri",
+    "beforeBuildCommand": "node tools/build.mjs --shell=tauri"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Turtle Deck",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 800,
+        "minHeight": 550,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' asset: ipc: http://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-src 'none';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage", "rpm", "deb", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Education",
+    "shortDescription": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
+    "fileAssociations": [
+      {
+        "ext": ["sdeck"],
+        "name": "Turtle Deck Package",
+        "mimeType": "application/x-studydeck",
+        "role": "Editor"
+      }
+    ]
+  }
+}

@@ -1,0 +1,66 @@
+name: Tauri Build & Test
+
+on:
+  push:
+    branches:
+      - main
+      - tauri-migration
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run JS Tests & Typecheck
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build renderer for Tauri
+        run: node tools/build.mjs --shell=tauri
+
+      - name: Check & Test Tauri backend
+        run: |
+          cd src-tauri
+          cargo check
+          cargo test

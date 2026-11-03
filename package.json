@@ -12,6 +12,9 @@
     "build:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js",
     "dev:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js --watch",
     "start": "npm run build && electron .",
+    "tauri": "tauri",
+    "tauri:dev": "node tools/build.mjs --shell=tauri && tauri dev",
+    "tauri:build": "node tools/build.mjs --shell=tauri && tauri build",
     "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
     "dist": "npm run build && electron-builder --linux",
     "dist:compat": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder --linux",
@@ -38,6 +41,8 @@
   },
   "homepage": "https://github.com/viet15t12/TurtleDeck#readme",
   "devDependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/cli": "^2.12.4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
     "electron": "^45.2.1",
