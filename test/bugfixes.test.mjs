@@ -189,3 +189,21 @@ test('Issue 8: WatcherService watches subdirectories recursively and can closeAl
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 });
+
+// Test Lỗi 9: tempImports có cơ chế TTL và dọn dẹp các mục quá hạn
+test('Issue 9: pruneTempImports removes entries older than TTL', () => {
+  const store = new PackageStore();
+  const now = 1000000;
+  store.setTempImport('token1', '/path/1'); // tạo lúc now
+  // Giả lập token2 tạo trước đó 40 phút (2400000 ms)
+  store.tempImports.set('token2', { path: '/path/2', createdAt: now - (40 * 60 * 1000) });
+
+  assert.equal(store.getTempImport('token1'), '/path/1');
+  assert.equal(store.getTempImport('token2'), '/path/2');
+
+  // Dọn dẹp với TTL 30 phút tại thời điểm now
+  store.pruneTempImports(30 * 60 * 1000, now);
+
+  assert.equal(store.getTempImport('token1'), '/path/1', 'Fresh token must be retained');
+  assert.equal(store.getTempImport('token2'), undefined, 'Expired token must be pruned');
+});
