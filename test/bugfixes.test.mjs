@@ -80,3 +80,26 @@ test('Issue 4: exit early if single-instance lock is not acquired', () => {
   assert.equal(quitCalled, true);
   assert.equal(exitCalled, true);
 });
+
+// Test Lỗi 5: Xác minh saveSettingsFile gộp (merge) cài đặt chứ không ghi đè mất các trường khác
+test('Issue 5: saveSettingsFile merges patch without overwriting other settings', async () => {
+  const { loadSettingsFile, saveSettingsFile } = await import('../src/core/fsutil.js');
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-issue5-'));
+  const sFile = path.join(tmpDir, 'settings.json');
+
+  try {
+    // 1. Lưu cài đặt ban đầu có darkTheme và newCardsPerDay
+    await saveSettingsFile(sFile, { darkTheme: true, newCardsPerDay: 25 });
+
+    // 2. Cập nhật chỉ riêng libraryDir (như library:setDir làm)
+    await saveSettingsFile(sFile, { libraryDir: '/my/custom/decks' });
+
+    // 3. Đọc lại và kiểm tra darkTheme và newCardsPerDay vẫn còn nguyên vẹn
+    const loaded = await loadSettingsFile(sFile);
+    assert.equal(loaded.libraryDir, '/my/custom/decks');
+    assert.equal(loaded.darkTheme, true, 'darkTheme must be preserved');
+    assert.equal(loaded.newCardsPerDay, 25, 'newCardsPerDay must be preserved');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
