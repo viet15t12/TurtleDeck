@@ -5,14 +5,17 @@
     "asset:list",
     "asset:remove",
     "backup:create",
+    "backup:createFull",
     "backup:list",
     "backup:openFolder",
     "backup:restore",
+    "backup:restoreFull",
     "deck:close",
     "deck:duplicate",
     "deck:exportCopy",
     "deck:getLocations",
     "deck:import",
+    "deck:importSdeck",
     "deck:link",
     "deck:move",
     "deck:new",
@@ -60,5 +63,5 @@
   "protocols": [
     "asset"
   ],
-  "count": 54
+  "count": 57
 }

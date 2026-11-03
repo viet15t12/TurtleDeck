@@ -248,4 +248,92 @@ export function registerDeckIpc(dispatcher: IpcDispatcher, ctx: IpcContext): voi
       return fail('Không đọc được nguồn: ' + ((e && e.message) || String(e)));
     }
   });
+
+  registerTypedHandler(dispatcher, 'deck:importSdeck', async (event, req: any) => {
+    let { filePaths, targetFolderId } = req || {};
+
+    if (!filePaths || !Array.isArray(filePaths) || filePaths.length === 0) {
+      const win = ctx.winOf ? ctx.winOf(event) : undefined;
+      const r = await dialog.showOpenDialog(win, {
+        title: 'Nhập bộ thẻ (.sdeck) vào hệ thống lưu trữ ứng dụng',
+        properties: ['openFile', 'multiSelections'],
+        filters: SDECK_FILTER,
+      });
+      if (r.canceled || !r.filePaths.length) return { ok: false, canceled: true };
+      filePaths = r.filePaths;
+    }
+
+    const libDir = await getActiveLibraryDir(ctx.paths.settingsFile(), ctx.paths.defaultLibraryDir());
+    let targetDir = libDir;
+
+    if (targetFolderId && ctx.dbManager?.folder) {
+      const f = ctx.dbManager.folder.getFolderById(targetFolderId);
+      if (f) {
+        targetDir = path.join(libDir, ...f.path.split('/'));
+      }
+    }
+
+    await fs.mkdir(targetDir, { recursive: true }).catch(() => {});
+
+    const imported: any[] = [];
+    for (const srcPath of filePaths) {
+      try {
+        const bytes = await fs.readFile(srcPath);
+        const metaRes = (sdeck as any).readPackageMeta(bytes);
+        if (!metaRes.ok || !metaRes.deckText) continue;
+
+        const parsed = (parser as any).parseDeck(metaRes.deckText);
+        if (!parsed.ok || !parsed.deck?.meta) continue;
+
+        const title = parsed.deck.meta.title || path.basename(srcPath, '.sdeck');
+        const baseSlug = deckService.slugify(title) || 'bo-the';
+        let destFileName = `${baseSlug}.sdeck`;
+        let destPath = path.join(targetDir, destFileName);
+        let counter = 1;
+
+        while (true) {
+          try {
+            await fs.stat(destPath);
+            destFileName = `${baseSlug} (${counter}).sdeck`;
+            destPath = path.join(targetDir, destFileName);
+            counter++;
+          } catch {
+            break; // File chưa tồn tại, có thể ghi
+          }
+        }
+
+        // Sao chép hoàn toàn vào thư viện app (hoàn toàn độc lập với file gốc)
+        await fsutil.atomicWrite(destPath, bytes);
+
+        const deckId = parsed.deck.meta.id;
+        if (deckId && ctx.dbManager) {
+          try {
+            ctx.dbManager.deck.syncDeck(parsed.deck, destPath);
+            ctx.dbManager.deckLocation.addLocation(deckId, targetFolderId || null, destPath, false);
+          } catch (dbErr) {
+            console.warn('[importSdeck] Lỗi đồng bộ db:', dbErr);
+          }
+        }
+
+        imported.push({
+          deckId,
+          title,
+          path: destPath,
+        });
+      } catch (err) {
+        console.warn(`[importSdeck] Lỗi nhập file ${srcPath}:`, err);
+      }
+    }
+
+    if (imported.length > 0) {
+      ctx.notify?.('deck:changed', { filePath: targetDir });
+      ctx.notify?.('folder:changed', { action: 'import' });
+    }
+
+    return {
+      ok: true,
+      importedCount: imported.length,
+      decks: imported,
+    };
+  });
 }

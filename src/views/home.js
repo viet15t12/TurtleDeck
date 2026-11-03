@@ -1,24 +1,33 @@
-// src/views/home.js — Màn hình chính: Dải Hôm nay, Cây thư mục sidebar (0.1.3),
-// lọc/tìm/sắp xếp, lưới thẻ bộ thẻ, kéo thả deck vào thư mục.
+// src/views/home.js — Màn hình chính quản lý tệp kiểu Nautilus / GNOME Files:
+// Sidebar Bookmarks, thanh điều hướng Breadcrumb, bàn làm việc hiển thị Thư mục con & Bộ thẻ,
+// tìm kiếm/sắp xếp, kéo thả an toàn, nhập file độc lập và sao lưu toàn bộ.
 import { h, fileName } from './dom.js';
-import { KINDS, kindOf, modesFor } from '../core/deckkinds.js';
+import { notify } from './notify.js';
+import { KINDS, kindOf } from '../core/deckkinds.js';
 import { deckStats, countReviewedToday } from '../core/deckstats.js';
 import { stripAccents } from '../core/deckmodel.js';
 import { renderDeckCard } from './components/deckcard.js';
+import { renderFolderCard } from './components/foldercard.js';
 import { renderFolderTree, flattenFolders } from './components/foldertree.js';
 import { openFolderModal } from './components/foldermenu.js';
-import { promptDropAction } from './components/dragdrop.js';
 
-// Giữ trạng thái bộ lọc/tìm kiếm/sắp xếp và thư mục đang chọn giữa các lần render
+// Trạng thái giao diện trang chủ
 const homeUiState = {
   filterKind: 'all', // 'all' | 'qa' | 'quiz' | 'vocab'
-  filterGroup: 'all', // 'all' | 'LPIC/101' | ...
   searchQuery: '',
   sortBy: 'due',     // 'due' | 'recent' | 'title'
   selectedFolderId: 'all', // 'all' | null (root) | folderId
+  viewMode: typeof localStorage !== 'undefined'
+    ? localStorage.getItem('turtle_view_mode') || 'grid'
+    : 'grid',
   sidebarOpen: typeof localStorage !== 'undefined'
     ? localStorage.getItem('turtle_folder_sidebar_open') !== 'false'
     : true,
+  pinnedFolderIds: typeof localStorage !== 'undefined'
+    ? JSON.parse(localStorage.getItem('turtle_pinned_folders') || '[]')
+    : [],
+  history: ['all'],
+  historyIndex: 0,
 };
 
 function createSearchSvg() {
@@ -45,40 +54,6 @@ function closeAllDropdowns(except) {
   });
 }
 
-function renderEmptyHome(busy, actions) {
-  return h('section', { class: 'home-empty-state panel' },
-    h('div', { class: 'home-empty-intro' },
-      h('h2', null, 'Bắt đầu tạo bộ thẻ đầu tiên của bạn'),
-      h('p', { class: 'muted' },
-        'Chọn một loại bộ thẻ bên dưới để tạo mới ngay trong trình soạn, hoặc mở file bộ thẻ có sẵn trên máy.')),
-    h('div', { class: 'ux-kind-grid home-empty-kinds' },
-      ...['qa', 'quiz', 'vocab'].map(k => {
-        const info = KINDS[k];
-        const disabled = !info.available || busy;
-        return h('button', {
-          type: 'button',
-          class: `ux-kind-card ${disabled ? 'disabled' : ''}`,
-          'data-kind': k,
-          disabled,
-          onclick: () => {
-            if (disabled) return;
-            actions.openNewDeckModal(k);
-          },
-        },
-          h('div', { class: 'ux-kind-card-head' },
-            h('span', { class: 'ux-kind-icon' }, info.icon),
-            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : h('span', { class: 'ux-chip active' }, '+ Tạo mới')),
-          h('div', { class: 'ux-kind-title' }, info.label),
-          h('div', { class: 'ux-kind-desc' }, info.description));
-      })),
-    h('div', { class: 'home-empty-actions' },
-      h('span', { class: 'muted', style: 'font-size: 13px;' }, 'Hoặc mở dữ liệu có sẵn:'),
-      h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: actions.openFiles }, '📂 Mở file…'),
-      h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('text') }, 'Nhập từ CSV / TSV / Markdown…'),
-      h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('file') }, 'Nhập từ file .json…'),
-      h('button', { type: 'button', class: 'ux-btn', disabled: busy, onclick: () => actions.importDeck('dir') }, 'Nhập từ thư mục…')));
-}
-
 export function renderHome(root, { entries, busy, progress, settings }, actions) {
   const now = Date.now();
   const statsByUid = new Map();
@@ -96,12 +71,309 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   }
   const reviewedToday = countReviewedToday(progress, now);
 
-  const importMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 250px;' },
+  let rawFolderTree = [];
+  let flatFolders = [];
+  let deckLocations = [];
+  let locationsByDeckId = new Map();
+
+  async function refreshDeckLocations() {
+    if (window.api?.getDeckLocations) {
+      try {
+        const locs = await window.api.getDeckLocations() || [];
+        deckLocations = locs;
+        locationsByDeckId = new Map(
+          locs.filter(l => !l.isLink).map(l => [l.deckId, l.folderId])
+        );
+      } catch (e) {
+        console.warn('Không thể nạp danh sách vị trí bộ thẻ:', e);
+      }
+    }
+  }
+
+  // Helper tìm thư mục theo ID
+  function findFolder(fId) {
+    if (!fId || fId === 'all') return null;
+    return flatFolders.find(f => f.id === fId) || null;
+  }
+
+  // Lấy chuỗi cây phả hệ từ gốc đến thư mục hiện tại để hiển thị breadcrumb
+  function getBreadcrumbChain(fId) {
+    if (!fId || fId === 'all') return [];
+    const chain = [];
+    let current = findFolder(fId);
+    while (current) {
+      chain.unshift(current);
+      current = current.parentId ? findFolder(current.parentId) : null;
+    }
+    return chain;
+  }
+
+  // Đổi trạng thái Ghim Bookmark
+  function togglePin(folderId) {
+    const idx = homeUiState.pinnedFolderIds.indexOf(folderId);
+    if (idx >= 0) {
+      homeUiState.pinnedFolderIds.splice(idx, 1);
+    } else {
+      homeUiState.pinnedFolderIds.push(folderId);
+    }
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('turtle_pinned_folders', JSON.stringify(homeUiState.pinnedFolderIds));
+      } catch {}
+    }
+    renderSidebar();
+    renderCardsOnly();
+  }
+
+  // ── Điều hướng Lịch sử (Back / Forward kiểu Nautilus) ──────────────────────
+  function navigateToFolder(folderId, recordHistory = true) {
+    if (recordHistory) {
+      if (homeUiState.selectedFolderId !== folderId) {
+        homeUiState.history = homeUiState.history.slice(0, homeUiState.historyIndex + 1);
+        homeUiState.history.push(folderId);
+        homeUiState.historyIndex = homeUiState.history.length - 1;
+      }
+    }
+    homeUiState.selectedFolderId = folderId;
+    updateNavButtons();
+    renderBreadcrumbBar();
+    renderSidebar();
+    renderCardsOnly();
+  }
+
+  function goBack() {
+    if (homeUiState.historyIndex > 0) {
+      homeUiState.historyIndex--;
+      const prevFolder = homeUiState.history[homeUiState.historyIndex];
+      navigateToFolder(prevFolder, false);
+    }
+  }
+
+  function goForward() {
+    if (homeUiState.historyIndex < homeUiState.history.length - 1) {
+      homeUiState.historyIndex++;
+      const nextFolder = homeUiState.history[homeUiState.historyIndex];
+      navigateToFolder(nextFolder, false);
+    }
+  }
+
+  const backBtn = h('button', {
+    type: 'button',
+    class: 'nautilus-nav-btn',
+    title: 'Quay lại thư mục trước (Alt+←)',
+    disabled: homeUiState.historyIndex <= 0,
+    onclick: goBack,
+  }, '‹');
+
+  const forwardBtn = h('button', {
+    type: 'button',
+    class: 'nautilus-nav-btn',
+    title: 'Tiến tới thư mục sau (Alt+→)',
+    disabled: homeUiState.historyIndex >= homeUiState.history.length - 1,
+    onclick: goForward,
+  }, '›');
+
+  function updateNavButtons() {
+    backBtn.disabled = homeUiState.historyIndex <= 0;
+    forwardBtn.disabled = homeUiState.historyIndex >= homeUiState.history.length - 1;
+  }
+
+  // ── Breadcrumbs Bar ───────────────────────────────────────────────────────
+  const pathBarHost = h('div', { class: 'nautilus-path-bar' });
+
+  function renderBreadcrumbBar() {
+    pathBarHost.replaceChildren();
+
+    const makeSegment = ({ label, icon, folderId, isActive }) => {
+      const pill = h('button', {
+        type: 'button',
+        class: `nautilus-path-pill ${isActive ? 'active' : ''}`,
+        title: `Đi đến ${label}`,
+        onclick: () => navigateToFolder(folderId),
+        ondragover: (e) => {
+          e.preventDefault();
+          pill.classList.add('drag-over');
+        },
+        ondragleave: () => pill.classList.remove('drag-over'),
+        ondrop: (e) => {
+          e.preventDefault();
+          pill.classList.remove('drag-over');
+          const draggedFolderId = e.dataTransfer.getData('application/turtle-folder-id');
+          const deckId = e.dataTransfer.getData('application/turtle-deck-id') || e.dataTransfer.getData('text/plain');
+          if (draggedFolderId && draggedFolderId !== folderId) {
+            handleDropFolder(draggedFolderId, folderId === 'all' ? null : folderId);
+          } else if (deckId) {
+            handleDropDeck(deckId, folderId === 'all' ? null : folderId);
+          }
+        },
+      },
+        icon ? h('span', null, icon) : null,
+        h('span', null, label)
+      );
+      return pill;
+    };
+
+    if (homeUiState.selectedFolderId === 'all') {
+      pathBarHost.append(
+        makeSegment({ label: 'Tất cả bộ thẻ', icon: '📚', folderId: 'all', isActive: true })
+      );
+      return;
+    }
+
+    // Luôn bắt đầu từ Thư mục gốc
+    pathBarHost.append(
+      makeSegment({
+        label: 'Home',
+        icon: '🏠',
+        folderId: null,
+        isActive: homeUiState.selectedFolderId === null,
+      })
+    );
+
+    if (homeUiState.selectedFolderId !== null) {
+      const chain = getBreadcrumbChain(homeUiState.selectedFolderId);
+      for (let i = 0; i < chain.length; i++) {
+        const f = chain[i];
+        const isLast = i === chain.length - 1;
+        pathBarHost.append(
+          h('span', { class: 'nautilus-path-sep' }, '›'),
+          makeSegment({
+            label: f.name,
+            icon: '📁',
+            folderId: f.id,
+            isActive: isLast,
+          })
+        );
+      }
+    }
+  }
+
+  // ── Xử lý kéo thả an toàn ("tránh lỗi vặt khi di chuyển") ────────────────
+  async function handleDropDeck(deckId, targetFolderId) {
+    try {
+      locationsByDeckId.set(deckId, targetFolderId);
+      renderCardsOnly();
+
+      const res = await window.api?.moveDeck(deckId, targetFolderId);
+      if (res && !res.ok) {
+        alert('Không thể chuyển bộ thẻ: ' + res.error);
+        await refreshDeckLocations();
+        renderCardsOnly();
+        return;
+      }
+      const targetFolder = findFolder(targetFolderId);
+      const folderName = targetFolder ? targetFolder.name : 'Thư mục gốc (Home)';
+      notify(`Đã chuyển bộ thẻ vào "${folderName}".`, 'success');
+      await refreshFolders();
+      actions.scanLibrary?.();
+    } catch (err) {
+      console.warn('Lỗi di chuyển deck:', err);
+      await refreshDeckLocations();
+      renderCardsOnly();
+    }
+  }
+
+  async function handleDropFolder(draggedFolderId, targetFolderId) {
+    if (draggedFolderId === targetFolderId) return;
+
+    // Kiểm tra vòng lặp: targetFolderId không được là con cháu của draggedFolderId
+    if (targetFolderId !== null) {
+      const dragged = findFolder(draggedFolderId);
+      const target = findFolder(targetFolderId);
+      if (dragged && target) {
+        if (target.path === dragged.path || target.path.startsWith(`${dragged.path}/`)) {
+          alert('Không thể di chuyển thư mục vào bên trong chính nó hoặc thư mục con của nó.');
+          return;
+        }
+      }
+    }
+
+    try {
+      const res = await window.api?.moveFolder(draggedFolderId, targetFolderId);
+      if (res && !res.ok) {
+        alert('Không thể di chuyển thư mục: ' + res.error);
+        return;
+      }
+      const targetFolder = findFolder(targetFolderId);
+      const folderName = targetFolder ? targetFolder.name : 'Thư mục gốc';
+      if (typeof window.notify === 'function') {
+        window.notify(`Đã di chuyển thư mục vào "${folderName}".`, 'success');
+      }
+      await refreshFolders();
+      actions.reloadLibrary?.();
+    } catch (err) {
+      console.warn('Lỗi di chuyển thư mục:', err);
+    }
+  }
+
+  // ── Nhập bộ thẻ độc lập vào app storage ──────────────────────────────────
+  async function handleImportSdeck() {
+    try {
+      const targetId = homeUiState.selectedFolderId === 'all' ? null : homeUiState.selectedFolderId;
+      const res = await window.api?.importSdeck?.(targetId);
+      if (res?.canceled) return;
+      if (!res?.ok) {
+        alert('Lỗi nhập bộ thẻ: ' + (res?.error || 'Lỗi không xác định'));
+        return;
+      }
+      if (typeof window.notify === 'function') {
+        window.notify(`Đã nhập thành công ${res.importedCount} bộ thẻ vào hệ thống lưu trữ độc lập của ứng dụng!`, 'success');
+      }
+      await refreshFolders();
+      actions.reloadLibrary?.();
+    } catch (err) {
+      alert('Không thể nhập file bộ thẻ: ' + (err?.message || err));
+    }
+  }
+
+  // ── Sao lưu & Khôi phục toàn bộ (Full Backup & Restore for OS reinstall) ───
+  async function handleFullBackup() {
+    try {
+      const res = await window.api?.createFullBackup?.();
+      if (res?.canceled) return;
+      if (!res?.ok) {
+        alert('Lỗi khi sao lưu toàn bộ hệ thống: ' + (res?.error || 'Lỗi'));
+        return;
+      }
+      alert(`Sao lưu toàn bộ hoàn tất thành công!\n\n- File sao lưu: ${res.name || res.filePath}\n- Số bộ thẻ: ${res.decksCount}\n- Số thư mục: ${res.foldersCount}\n\nBạn có thể cất file này ra USB hoặc ổ đĩa ngoài để nạp lại sau khi cài lại hệ điều hành.`);
+    } catch (err) {
+      alert('Không thể tạo file sao lưu: ' + (err?.message || err));
+    }
+  }
+
+  async function handleFullRestore() {
+    if (!window.confirm('Khôi phục toàn bộ hệ thống sẽ giải nén tất cả bộ thẻ và cấu trúc thư mục từ file sao lưu vào ứng dụng.\n\nBạn có muốn tiếp tục chọn file .turtlebackup để khôi phục?')) {
+      return;
+    }
+    try {
+      const res = await window.api?.restoreFullBackup?.();
+      if (res?.canceled) return;
+      if (!res?.ok) {
+        alert('Lỗi khôi phục từ bản sao lưu: ' + (res?.error || 'Lỗi'));
+        return;
+      }
+      alert(`Khôi phục toàn bộ hệ thống thành công!\n\n- Đã nạp lại ${res.decksCount} bộ thẻ\n- Đã tái tạo ${res.foldersCount} thư mục\n\nỨng dụng sẽ tự động làm mới giao diện.`);
+      await refreshFolders();
+      actions.reloadLibrary?.();
+    } catch (err) {
+      alert('Không thể khôi phục bản sao lưu: ' + (err?.message || err));
+    }
+  }
+
+  // ── Dropdown Menus (Nhập & Sao lưu) ───────────────────────────────────────
+  const importMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 270px;' },
+    h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      style: 'font-weight: 600;',
+      onclick: () => { importMenu.hidden = true; handleImportSdeck(); },
+    }, '📥 Nhập file bộ thẻ (.sdeck) vào đây…'),
+    h('div', { style: 'height: 1px; background: var(--c-border); margin: 4px 0;' }),
     h('button', {
       type: 'button',
       class: 'ux-popover-item',
       onclick: () => { importMenu.hidden = true; actions.importDeck('text'); },
-    }, 'Từ file bảng / văn bản (.csv, .tsv, .txt, .md)…'),
+    }, 'Từ bảng / văn bản (.csv, .tsv, .txt, .md)…'),
     h('button', {
       type: 'button',
       class: 'ux-popover-item',
@@ -113,14 +385,61 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       onclick: () => { importMenu.hidden = true; actions.importDeck('dir'); },
     }, 'Từ thư mục (kèm ảnh)…'));
 
+  const backupMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 280px;' },
+    h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      style: 'font-weight: 600;',
+      onclick: () => { backupMenu.hidden = true; handleFullBackup(); },
+    }, '💾 Sao lưu toàn bộ hệ thống (.turtlebackup)…'),
+    h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      onclick: () => { backupMenu.hidden = true; handleFullRestore(); },
+    }, '↺ Khôi phục toàn bộ từ file sao lưu…'),
+    h('div', { style: 'height: 1px; background: var(--c-border); margin: 4px 0;' }),
+    h('button', {
+      type: 'button',
+      class: 'ux-popover-item',
+      onclick: () => { backupMenu.hidden = true; window.api?.openBackupsFolder?.(); },
+    }, '📂 Mở thư mục sao lưu'));
+
+  // ── Chuyển đổi View Mode (Grid vs List) ───────────────────────────────────
+  function setViewMode(mode) {
+    homeUiState.viewMode = mode;
+    if (typeof localStorage !== 'undefined') {
+      try { localStorage.setItem('turtle_view_mode', mode); } catch {}
+    }
+    gridBtn.classList.toggle('active', mode === 'grid');
+    listBtn.classList.toggle('active', mode === 'list');
+    renderCardsOnly();
+  }
+
+  const gridBtn = h('button', {
+    type: 'button',
+    class: `nautilus-view-btn ${homeUiState.viewMode === 'grid' ? 'active' : ''}`,
+    title: 'Chế độ xem dạng lưới (Grid)',
+    onclick: () => setViewMode('grid'),
+  }, '⊞');
+
+  const listBtn = h('button', {
+    type: 'button',
+    class: `nautilus-view-btn ${homeUiState.viewMode === 'list' ? 'active' : ''}`,
+    title: 'Chế độ xem danh sách (List)',
+    onclick: () => setViewMode('list'),
+  }, '☰');
+
+  const viewToggleGroup = h('div', { class: 'nautilus-view-toggle' }, gridBtn, listBtn);
+
+  // ── Sidebar Host & Toggle ────────────────────────────────────────────────
   const sidebarHost = h('aside', { class: `folder-sidebar ${homeUiState.sidebarOpen ? '' : 'collapsed'}` });
 
   const sidebarToggleBtn = h('button', {
     type: 'button',
     class: `ux-btn ${homeUiState.sidebarOpen ? 'active' : ''}`,
-    title: homeUiState.sidebarOpen ? 'Thu gọn danh mục thư mục' : 'Mở danh mục thư mục',
+    title: homeUiState.sidebarOpen ? 'Thu gọn thanh bên' : 'Mở thanh bên (Bookmarks)',
     onclick: () => toggleSidebar(),
-  }, homeUiState.sidebarOpen ? '📁 Thư mục ▾' : '📁 Thư mục ▸');
+  }, homeUiState.sidebarOpen ? '📁 Thanh bên ▾' : '📁 Thanh bên ▸');
 
   function toggleSidebar(forceState) {
     homeUiState.sidebarOpen = typeof forceState === 'boolean' ? forceState : !homeUiState.sidebarOpen;
@@ -132,16 +451,15 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     if (homeUiState.sidebarOpen) {
       sidebarHost.classList.remove('collapsed');
       sidebarToggleBtn.classList.add('active');
-      sidebarToggleBtn.textContent = '📁 Thư mục ▾';
-      sidebarToggleBtn.title = 'Thu gọn danh mục thư mục';
+      sidebarToggleBtn.textContent = '📁 Thanh bên ▾';
     } else {
       sidebarHost.classList.add('collapsed');
       sidebarToggleBtn.classList.remove('active');
-      sidebarToggleBtn.textContent = '📁 Thư mục ▸';
-      sidebarToggleBtn.title = 'Mở danh mục thư mục';
+      sidebarToggleBtn.textContent = '📁 Thanh bên ▸';
     }
   }
 
+  // ── Toolbar & Header Buttons ─────────────────────────────────────────────
   const toolbar = h('div', { class: 'toolbar' },
     h('button', {
       type: 'button',
@@ -149,13 +467,18 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       disabled: busy,
       onclick: () => actions.openNewDeckModal(),
     }, '+ Bộ thẻ mới'),
-    sidebarToggleBtn,
     h('button', {
       type: 'button',
       class: 'ux-btn',
       disabled: busy,
-      onclick: actions.openFiles,
-    }, 'Mở file…'),
+      title: 'Tạo thư mục mới trong vị trí hiện tại',
+      onclick: () => {
+        const parentId = homeUiState.selectedFolderId === 'all' ? null : homeUiState.selectedFolderId;
+        const parentFolder = findFolder(parentId);
+        handleFolderAction('create', parentFolder);
+      },
+    }, '+ Thư mục'),
+    sidebarToggleBtn,
     h('div', { class: 'menu-wrap' },
       h('button', {
         type: 'button',
@@ -170,6 +493,21 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         },
       }, 'Nhập… ▾'),
       importMenu),
+    h('div', { class: 'menu-wrap' },
+      h('button', {
+        type: 'button',
+        class: 'ux-btn',
+        disabled: busy,
+        'aria-haspopup': 'menu',
+        onclick: ev => {
+          ev.stopPropagation();
+          const willOpen = backupMenu.hidden;
+          closeAllDropdowns(backupMenu);
+          backupMenu.hidden = !willOpen;
+        },
+      }, 'Sao lưu… ▾'),
+      backupMenu),
+    viewToggleGroup,
     h('button', {
       type: 'button',
       class: 'ux-btn',
@@ -183,6 +521,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       onclick: actions.openSettings,
     }, '⚙ Cài đặt'));
 
+  // Hôm nay strip
   const todaySection = h('section', { class: 'today-section' },
     h('div', { class: 'section-label' }, 'Hôm nay'),
     h('div', { class: 'today-strip' },
@@ -199,9 +538,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   const bannerHost = h('div', { class: 'home-banner-host' });
   const listHost = h('div', { class: 'home-list-host' });
 
-  let rawFolderTree = [];
-  let flatFolders = [];
-
+  // Nạp lại cấu trúc thư mục từ Main
   async function refreshFolders() {
     if (window.api?.getFolderTree) {
       try {
@@ -211,10 +548,13 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         console.warn('Không thể nạp cây thư mục:', e);
       }
     }
+    await refreshDeckLocations();
+    renderBreadcrumbBar();
     renderSidebar();
     renderDeckSection();
   }
 
+  // Xử lý các tác vụ thư mục (Tạo, Đổi tên, Di chuyển, Xoá)
   function handleFolderAction(actionType, folder) {
     if (actionType === 'create') {
       openFolderModal({
@@ -255,38 +595,16 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
           const res = await window.api?.deleteFolder(folder.id);
           if (res && !res.ok) throw new Error(res.error);
           if (homeUiState.selectedFolderId === folder.id) {
-            homeUiState.selectedFolderId = 'all';
+            navigateToFolder(folder.parentId || null);
+          } else {
+            await refreshFolders();
           }
-          await refreshFolders();
         },
       });
     }
   }
 
-  function handleDropDeck(deckId, targetFolderId) {
-    const entry = entries.find(e => e.deck?.meta?.id === deckId);
-    const deckTitle = entry?.deck?.meta?.title || 'Bộ thẻ';
-    const targetFolder = flatFolders.find(f => f.id === targetFolderId);
-    const folderName = targetFolder ? targetFolder.name : 'Thư mục gốc';
-
-    promptDropAction({
-      deckTitle,
-      folderName,
-      onChoose: async (choice) => {
-        if (choice === 'move') {
-          const res = await window.api?.moveDeck(deckId, targetFolderId);
-          if (res && !res.ok) alert(res.error);
-        } else if (choice === 'link') {
-          const res = await window.api?.linkDeck(deckId, targetFolderId);
-          if (res && !res.ok) alert(res.error);
-        }
-        await refreshFolders();
-        actions.reloadLibrary?.();
-      },
-    });
-  }
-
-  // Tác vụ di chuyển và liên kết từ menu của thẻ
+  // Tác vụ của thẻ bộ thẻ (Deck card)
   const deckCardActions = {
     ...actions,
     onMoveDeck: (entry) => {
@@ -334,64 +652,20 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       renderFolderTree({
         folders: flatFolders,
         selectedFolderId: homeUiState.selectedFolderId,
-        onFolderSelect: (fId) => {
-          homeUiState.selectedFolderId = fId;
-          renderSidebar();
-          renderCardsOnly();
-        },
+        pinnedFolderIds: homeUiState.pinnedFolderIds,
+        onFolderSelect: (fId) => navigateToFolder(fId),
         onFolderAction: handleFolderAction,
+        onTogglePin: togglePin,
         onDropDeck: handleDropDeck,
+        onDropFolder: handleDropFolder,
         onToggleSidebar: () => toggleSidebar(false),
       })
-    );
-  }
-
-  function updateBanner(count = 0) {
-    if (homeUiState.selectedFolderId === 'all') {
-      bannerHost.replaceChildren();
-      bannerHost.hidden = true;
-      return;
-    }
-
-    let folderName = 'Thư mục gốc (Root)';
-    let folderIcon = '🏠';
-    if (homeUiState.selectedFolderId !== null) {
-      const targetFolder = flatFolders.find(f => f.id === homeUiState.selectedFolderId);
-      if (targetFolder) {
-        folderName = targetFolder.path || targetFolder.name;
-        folderIcon = '📁';
-      }
-    }
-
-    bannerHost.hidden = false;
-    bannerHost.replaceChildren(
-      h('div', { class: 'active-folder-banner' },
-        h('div', { class: 'active-folder-banner-left' },
-          h('span', null, folderIcon),
-          h('span', { style: 'font-weight: 600;' }, 'Đang xem thư mục:'),
-          h('span', { class: 'ux-chip active' }, folderName),
-          h('span', { class: 'muted', style: 'font-size: 13px;' }, `(${count} bộ thẻ)`)),
-        h('button', {
-          type: 'button',
-          class: 'ux-btn sm ghost',
-          title: 'Hiển thị tất cả bộ thẻ',
-          onclick: () => {
-            homeUiState.selectedFolderId = 'all';
-            renderSidebar();
-            renderDeckSection();
-          },
-        }, '✕ Bỏ lọc'))
     );
   }
 
   let renderCardsOnly = () => {};
 
   function renderDeckSection() {
-    if (!entries.length) {
-      listHost.replaceChildren(renderEmptyHome(busy, actions));
-      return;
-    }
-
     const filterOptions = [
       { id: 'all', label: 'Tất cả' },
       { id: 'qa', label: `${KINDS.qa.icon} ${KINDS.qa.label}` },
@@ -402,7 +676,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     const searchInput = h('input', {
       type: 'text',
       class: 'ux-input ux-search-input',
-      placeholder: 'Tìm theo tên bộ thẻ…',
+      placeholder: 'Tìm theo tên thư mục hoặc bộ thẻ…',
       value: homeUiState.searchQuery,
       oninput: ev => {
         homeUiState.searchQuery = ev.target.value;
@@ -425,7 +699,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       },
     }, '✕');
 
-    const searchWrap = h('div', { class: 'ux-search-wrap home-search-box' });
+    const searchWrap = h('div', { class: 'ux-search-wrap home-search-box', style: 'flex: 1; max-width: 320px;' });
     searchWrap.append(createSearchSvg(), searchInput, clearBtn);
 
     const sortSelect = h('select', {
@@ -454,33 +728,66 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         searchWrap,
         sortSelect));
 
-    const cardsContainer = h('div');
+    // Khối điều hướng Nautilus: Nút Back, Forward và Breadcrumb
+    const navRow = h('div', { class: 'nautilus-toolbar-row' },
+      h('div', { class: 'nautilus-nav-controls' }, backBtn, forwardBtn),
+      pathBarHost
+    );
+
+    const mainContainer = h('div', { class: 'nautilus-workspace-container' });
 
     renderCardsOnly = function() {
       const qNorm = stripAccents(homeUiState.searchQuery.trim());
-      const filtered = entries.filter(e => {
-        // 1. Lọc theo thư mục đang chọn trong sidebar
+
+      // 1. Lọc Thư mục con trực tiếp trên bàn (Subfolders)
+      let directSubfolders = [];
+      if (homeUiState.selectedFolderId !== 'all') {
+        const parentId = homeUiState.selectedFolderId;
+        directSubfolders = flatFolders.filter(f => f.parentId === parentId);
+      } else if (!qNorm) {
+        // Ở chế độ xem tất cả, hiển thị các thư mục cấp gốc nếu không tìm kiếm
+        directSubfolders = flatFolders.filter(f => f.parentId === null);
+      } else {
+        // Đang tìm kiếm ở 'all': lọc tất cả thư mục khớp từ khoá
+        directSubfolders = flatFolders.filter(f => stripAccents(f.name).includes(qNorm));
+      }
+
+      if (qNorm && homeUiState.selectedFolderId !== 'all') {
+        directSubfolders = directSubfolders.filter(f => stripAccents(f.name).includes(qNorm));
+      }
+
+      // 2. Lọc Bộ thẻ (Decks)
+      const filteredDecks = entries.filter(e => {
+        const deckId = e.deck?.meta?.id;
+        const assignedFolderId = deckId ? locationsByDeckId.get(deckId) : undefined;
+
+        // Lọc theo thư mục
         if (homeUiState.selectedFolderId !== 'all') {
-          if (homeUiState.selectedFolderId === null) {
-            // Thư mục gốc: không có group hoặc relPath không chứa dấu phân cách thư mục
-            if (e.group || (e.relPath && e.relPath.includes('/'))) return false;
+          if (assignedFolderId !== undefined) {
+            // Nguồn chuẩn từ cơ sở dữ liệu vị trí bộ thẻ
+            if (assignedFolderId !== homeUiState.selectedFolderId) return false;
           } else {
-            const targetFolder = flatFolders.find(f => f.id === homeUiState.selectedFolderId);
-            if (targetFolder) {
-              const matchesGroup = e.group === targetFolder.path;
-              const matchesRel = e.relPath && (e.relPath === targetFolder.path || e.relPath.startsWith(`${targetFolder.path}/`));
-              if (!matchesGroup && !matchesRel) return false;
+            // Fallback theo cấu trúc group / relPath trên đĩa
+            if (homeUiState.selectedFolderId === null) {
+              if (e.group || (e.relPath && e.relPath.includes('/'))) return false;
+            } else {
+              const targetFolder = findFolder(homeUiState.selectedFolderId);
+              if (targetFolder) {
+                const matchesGroup = e.group === targetFolder.path;
+                const matchesRel = e.relPath && (e.relPath === targetFolder.path || e.relPath.startsWith(`${targetFolder.path}/`));
+                if (!matchesGroup && !matchesRel) return false;
+              }
             }
           }
         }
 
-        // 2. Lọc theo loại thẻ
+        // Lọc theo loại thẻ
         if (homeUiState.filterKind !== 'all') {
           if (e.status !== 'ok' || !e.deck) return false;
           if (kindOf(e.deck) !== homeUiState.filterKind) return false;
         }
 
-        // 3. Tìm kiếm theo từ khoá
+        // Lọc theo tìm kiếm từ khoá
         if (qNorm) {
           const title = e.deck?.meta?.title || fileName(e.path) || '';
           const desc = e.deck?.meta?.description || '';
@@ -489,7 +796,8 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         return true;
       });
 
-      filtered.sort((a, b) => {
+      // Sắp xếp bộ thẻ
+      filteredDecks.sort((a, b) => {
         if (a.status !== 'ok' && b.status === 'ok') return 1;
         if (a.status === 'ok' && b.status !== 'ok') return -1;
         if (a.status !== 'ok' && b.status !== 'ok') return 0;
@@ -518,39 +826,99 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         return titleA.localeCompare(titleB, 'vi');
       });
 
-      updateBanner(filtered.length);
+      // 3. Render giao diện bàn làm việc
+      const contentElements = [];
 
-      if (!filtered.length) {
-        cardsContainer.replaceChildren(
-          h('div', { class: 'empty', style: 'padding: 32px;' },
-            h('p', { style: 'font-weight: 600; margin: 0 0 6px;' }, 'Không tìm thấy bộ thẻ nào khớp bộ lọc.'),
-            h('p', { class: 'muted', style: 'margin: 0 0 14px; font-size: 13px;' },
-              'Thử chọn lại loại bộ thẻ, thư mục hoặc xoá từ khoá tìm kiếm.'),
-            h('button', {
-              type: 'button',
-              class: 'ux-btn sm',
-              onclick: () => {
-                homeUiState.filterKind = 'all';
-                homeUiState.selectedFolderId = 'all';
-                homeUiState.searchQuery = '';
-                renderSidebar();
-                renderDeckSection();
-              },
-            }, 'Xoá bộ lọc'))
+      // Render danh sách thư mục con (Subfolders)
+      if (directSubfolders.length > 0) {
+        const folderHeader = h('div', { class: 'nautilus-section-header' },
+          h('div', { class: 'section-label', style: 'margin: 0;' }, `Thư mục con (${directSubfolders.length})`)
         );
-        return;
+
+        const folderGrid = h('div', { class: `nautilus-subfolders-grid ${homeUiState.viewMode === 'list' ? 'list-view' : ''}` },
+          ...directSubfolders.map(f => {
+            // Đếm số item bên trong thư mục này
+            const childFolders = flatFolders.filter(cf => cf.parentId === f.id);
+            const childDecks = entries.filter(e => {
+              if (e.group === f.path) return true;
+              if (e.relPath && (e.relPath === f.path || e.relPath.startsWith(`${f.path}/`))) return true;
+              return false;
+            });
+            const isPinned = homeUiState.pinnedFolderIds.includes(f.id);
+
+            return renderFolderCard({
+              folder: f,
+              deckCount: childDecks.length,
+              subfolderCount: childFolders.length,
+              isPinned,
+              onOpen: (targetId) => navigateToFolder(targetId),
+              onFolderAction: handleFolderAction,
+              onTogglePin: togglePin,
+              onDropDeck: handleDropDeck,
+              onDropFolder: handleDropFolder,
+            });
+          })
+        );
+
+        contentElements.push(h('div', { class: 'nautilus-subfolders-section' }, folderHeader, folderGrid));
       }
 
-      cardsContainer.replaceChildren(
-        h('div', { class: 'deck-grid' },
-          ...filtered.map(e => renderDeckCard(e, statsByUid.get(e.uid) || {
+      // Render danh sách bộ thẻ (Decks)
+      if (filteredDecks.length > 0) {
+        const deckHeader = h('div', { class: 'nautilus-section-header' },
+          h('div', { class: 'section-label', style: 'margin: 0;' }, `Bộ thẻ (${filteredDecks.length})`)
+        );
+
+        const deckContainer = h('div', { class: `deck-grid ${homeUiState.viewMode === 'list' ? 'list-view' : ''}` },
+          ...filteredDecks.map(e => renderDeckCard(e, statsByUid.get(e.uid) || {
             new: 0, learning: 0, due: 0, mastered: 0, newLeftToday: 0, lastStudied: null,
-          }, deckCardActions)))
-      );
+          }, deckCardActions))
+        );
+
+        contentElements.push(h('div', { class: 'nautilus-decks-section' }, deckHeader, deckContainer));
+      }
+
+      // Khi cả thư mục và bộ thẻ đều trống
+      if (directSubfolders.length === 0 && filteredDecks.length === 0) {
+        contentElements.push(
+          h('div', { class: 'empty', style: 'padding: 40px 20px; text-align: center;' },
+            h('div', { style: 'font-size: 38px; margin-bottom: 8px;' }, '📁'),
+            h('p', { style: 'font-weight: 600; margin: 0 0 6px;' },
+              qNorm ? 'Không tìm thấy thư mục hoặc bộ thẻ nào khớp với từ khoá.' : 'Thư mục này hiện chưa có nội dung.'
+            ),
+            h('p', { class: 'muted', style: 'margin: 0 0 16px; font-size: 13px;' },
+              qNorm ? 'Thử xoá từ khoá tìm kiếm hoặc chọn thư mục khác.' : 'Bạn có thể tạo thư mục con mới hoặc tạo/nhập bộ thẻ vào vị trí này.'
+            ),
+            h('div', { style: 'display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;' },
+              h('button', {
+                type: 'button',
+                class: 'ux-btn sm primary',
+                onclick: () => actions.openNewDeckModal(),
+              }, '+ Tạo bộ thẻ'),
+              h('button', {
+                type: 'button',
+                class: 'ux-btn sm',
+                onclick: () => {
+                  const parentId = homeUiState.selectedFolderId === 'all' ? null : homeUiState.selectedFolderId;
+                  handleFolderAction('create', findFolder(parentId));
+                },
+              }, '+ Tạo thư mục con'),
+              h('button', {
+                type: 'button',
+                class: 'ux-btn sm',
+                onclick: handleImportSdeck,
+              }, '📥 Nhập file .sdeck vào đây')
+            )
+          )
+        );
+      }
+
+      mainContainer.replaceChildren(...contentElements);
     };
 
+    renderBreadcrumbBar();
     renderCardsOnly();
-    listHost.replaceChildren(filterBar, cardsContainer);
+    listHost.replaceChildren(navRow, filterBar, mainContainer);
   }
 
   // Khởi tạo ban đầu
@@ -561,8 +929,8 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   root.replaceChildren(
     h('header', { class: 'page-head' },
       h('div', null,
-        h('p', { class: 'eyebrow' }, 'TURTLE DECK'),
-        h('h1', null, 'Bộ thẻ của bạn')),
+        h('p', { class: 'eyebrow' }, 'TURTLE DECK — FILE MANAGER'),
+        h('h1', null, 'Quản lý Bộ thẻ & Thư mục')),
       toolbar),
     h('div', { class: 'home-layout' },
       sidebarHost,
@@ -583,6 +951,15 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
       e.preventDefault();
       toggleSidebar();
+    }
+    // Alt + Left: Back, Alt + Right: Forward
+    if (e.altKey && e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goBack();
+    }
+    if (e.altKey && e.key === 'ArrowRight') {
+      e.preventDefault();
+      goForward();
     }
   };
   window.addEventListener('keydown', onHomeKeyDown);

@@ -324,15 +324,45 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
           type: 'button',
           class: 'ux-btn primary sm',
           onclick: async () => {
+            const r = await window.api.createFullBackup?.();
+            if (r?.canceled) return;
+            if (r?.ok) {
+              notify(`Đã sao lưu toàn bộ hệ thống: ${r.name || r.filePath} (${r.decksCount} bộ thẻ, ${r.foldersCount} thư mục)`, 'success');
+              loadBackups();
+            } else {
+              notify('Không tạo được sao lưu toàn bộ: ' + (r?.error || 'Lỗi'), 'error');
+            }
+          },
+        }, '💾 Sao lưu toàn bộ hệ thống (.turtlebackup)…'),
+        h('button', {
+          type: 'button',
+          class: 'ux-btn sm',
+          onclick: async () => {
+            if (!window.confirm('Khôi phục toàn bộ hệ thống sẽ giải nén tất cả bộ thẻ và cấu trúc thư mục từ file sao lưu vào ứng dụng.\n\nBạn có muốn tiếp tục chọn file .turtlebackup?')) return;
+            const r = await window.api.restoreFullBackup?.();
+            if (r?.canceled) return;
+            if (r?.ok) {
+              notify(`Đã khôi phục thành công ${r.decksCount} bộ thẻ và ${r.foldersCount} thư mục!`, 'success');
+              if (actions.reloadLibrary) actions.reloadLibrary();
+              else actions.home?.();
+            } else {
+              notify('Lỗi khôi phục toàn bộ: ' + (r?.error || 'Lỗi'), 'error');
+            }
+          },
+        }, '↺ Khôi phục từ file sao lưu toàn bộ…'),
+        h('button', {
+          type: 'button',
+          class: 'ux-btn sm',
+          onclick: async () => {
             const r = await window.api.createBackup?.();
             if (r?.ok) {
-              notify(`Đã tạo bản sao lưu: ${r.name}`, 'success');
+              notify(`Đã tạo bản sao lưu tiến độ: ${r.name}`, 'success');
               loadBackups();
             } else {
               notify('Không tạo được sao lưu: ' + (r?.error || 'Lỗi'), 'error');
             }
           },
-        }, '💾 Sao lưu ngay'),
+        }, 'Sao lưu tiến độ nhanh'),
         h('button', {
           type: 'button',
           class: 'ux-btn sm',

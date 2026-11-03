@@ -41,6 +41,10 @@ export interface IpcContracts {
       assetCount?: number;
     };
   };
+  'deck:importSdeck': {
+    request: { filePaths?: string[]; targetFolderId?: string | null } | void;
+    response: { ok: boolean; importedCount?: number; decks?: any[]; error?: string; canceled?: boolean };
+  };
   'deck:close': {
     request: { deckKey: string } | string;
     response: boolean;
@@ -178,6 +182,14 @@ export interface IpcContracts {
     request: void;
     response: { ok: boolean; file?: string; error?: string };
   };
+  'backup:createFull': {
+    request: { destPath?: string } | void;
+    response: { ok: boolean; filePath?: string; name?: string; decksCount?: number; foldersCount?: number; error?: string; canceled?: boolean };
+  };
+  'backup:restoreFull': {
+    request: { filePath?: string } | void;
+    response: { ok: boolean; decksCount?: number; foldersCount?: number; error?: string; canceled?: boolean };
+  };
   'backup:list': {
     request: void;
     response: Array<{ name: string; size: number; mtime: number }>;
@@ -269,7 +281,7 @@ export interface IpcContracts {
     response: { ok: boolean; error?: string };
   };
   'deck:getLocations': {
-    request: { deckId: string };
+    request: { deckId?: string } | void;
     response: DeckLocation[];
   };
 }

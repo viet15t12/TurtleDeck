@@ -2,7 +2,7 @@
 import { h, fileName } from '../dom.js';
 import { KINDS, kindOf, kindLabel, modesFor } from '../../core/deckkinds.js';
 import { renderStackedBar } from './stackedbar.js';
-import { makeDeckDraggable } from './dragdrop.js';
+import { makeDeckDraggable, isCurrentlyDragging } from './dragdrop.js';
 
 const countIssues = e => (e.issues || []).filter(i => i.level === 'warn' || i.level === 'error').length;
 
@@ -144,7 +144,14 @@ export function renderDeckCard(entry, st, actions, options = {}) {
     tabindex: '0',
     role: 'button',
     title: tooltip,
-    onclick: () => actions.openDeckView(entry),
+    onclick: (ev) => {
+      if (isCurrentlyDragging()) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        return;
+      }
+      actions.openDeckView(entry);
+    },
     onkeydown: ev => {
       if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) {
         ev.preventDefault();
@@ -154,6 +161,7 @@ export function renderDeckCard(entry, st, actions, options = {}) {
   },
     h('div', { class: 'deck-card-head' },
       h('div', { class: 'deck-card-badges' },
+        h('span', { class: 'deck-drag-handle', title: 'Kéo thả bộ thẻ vào thư mục con hoặc thanh bên' }, '⠿'),
         h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
         folderPath ? h('span', { class: 'ux-chip folder-chip', style: 'cursor: default; font-size: 11px;' }, `📁 ${folderPath}`) : null,
         isLink ? h('span', { class: 'ux-chip link-chip', title: `Liên kết tới: ${entry.linkTarget || 'file gốc'}` }, '🔗 Liên kết') : null,
@@ -233,6 +241,12 @@ export function renderDeckCard(entry, st, actions, options = {}) {
   if (deckId) {
     makeDeckDraggable(card, deckId);
   }
+
+  // Ngăn chặn kéo nút bấm làm lệch kéo thả thẻ
+  card.querySelectorAll('button, .menu-wrap').forEach(el => {
+    el.setAttribute('draggable', 'false');
+    el.addEventListener('dragstart', (e) => e.stopPropagation());
+  });
 
   return card;
 }

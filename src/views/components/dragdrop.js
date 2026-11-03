@@ -1,15 +1,31 @@
 // src/views/components/dragdrop.js — Xử lý kéo thả (drag & drop) deck vào folder
 import { h } from '../dom.js';
 
+let isGlobalDragging = false;
+let globalDragEndTime = 0;
+
+export function isCurrentlyDragging() {
+  return isGlobalDragging || (Date.now() - globalDragEndTime < 250);
+}
+
 export function makeDeckDraggable(deckElement, deckId) {
   deckElement.setAttribute('draggable', 'true');
   deckElement.addEventListener('dragstart', (e) => {
+    // Không kéo card nếu bắt đầu kéo từ nút hoặc menu tương tác bên trong
+    if (e.target.closest('button, select, input, a, .menu-wrap, .ux-popover')) {
+      e.preventDefault();
+      return;
+    }
+    isGlobalDragging = true;
+    e.dataTransfer.setData('application/turtle-deck-id', deckId);
     e.dataTransfer.setData('text/plain', deckId);
     e.dataTransfer.effectAllowed = 'copyMove';
     deckElement.classList.add('is-dragging');
   });
 
   deckElement.addEventListener('dragend', () => {
+    isGlobalDragging = false;
+    globalDragEndTime = Date.now();
     deckElement.classList.remove('is-dragging');
   });
 }

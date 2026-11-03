@@ -67,6 +67,10 @@ export class DeckLocationService {
         return { ok: false, error: 'Không tìm thấy vị trí của bộ thẻ trong hệ thống.' };
       }
 
+      if (loc.folderId === newFolderId) {
+        return { ok: true, data: undefined };
+      }
+
       // Xác định thư mục đích
       const rootDir = this.deps.libraryDir ? this.deps.libraryDir() : path.dirname(loc.filePath);
       let targetDir = rootDir;
@@ -85,14 +89,35 @@ export class DeckLocationService {
       const fileName = path.basename(loc.filePath);
       const targetFilePath = path.join(targetDir, fileName);
 
-      if (path.resolve(loc.filePath) !== path.resolve(targetFilePath)) {
+      // Kiểm tra file nguồn hiện tại
+      let sourcePath = loc.filePath;
+      let sourceExists = false;
+      try {
+        await this.fsLib.access(sourcePath);
+        sourceExists = true;
+      } catch {}
+
+      if (!sourceExists && this.deps.deckRepo) {
+        const deckRecord = this.deps.deckRepo.getDeck(deckId);
+        if (deckRecord?.filePath && deckRecord.filePath !== sourcePath) {
+          try {
+            await this.fsLib.access(deckRecord.filePath);
+            sourcePath = deckRecord.filePath;
+            sourceExists = true;
+          } catch {}
+        }
+      }
+
+      if (path.resolve(sourcePath) !== path.resolve(targetFilePath)) {
         await this.fsLib.mkdir(targetDir, { recursive: true });
-        try {
-          await this.fsLib.rename(loc.filePath, targetFilePath);
-        } catch {
-          // Nếu đổi tên khác partition/device, copy rồi xóa
-          await this.fsLib.copyFile(loc.filePath, targetFilePath);
-          await this.fsLib.unlink(loc.filePath);
+        if (sourceExists) {
+          try {
+            await this.fsLib.rename(sourcePath, targetFilePath);
+          } catch {
+            // Nếu đổi tên khác partition/device, copy rồi xóa
+            await this.fsLib.copyFile(sourcePath, targetFilePath);
+            await this.fsLib.unlink(sourcePath);
+          }
         }
       }
 
@@ -263,6 +288,10 @@ export class DeckLocationService {
     } catch (err: any) {
       return { ok: false, error: err?.message || String(err) };
     }
+  }
+
+  getAllLocations(): DeckLocation[] {
+    return this.locationRepo.getAllLocations();
   }
 
   getLocationsByDeck(deckId: string): DeckLocation[] {

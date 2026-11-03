@@ -27,9 +27,12 @@ export function registerDeckLocationIpc(dispatcher: IpcDispatcher, ctx: IpcConte
     return deckLocationService.removeLocation(req.locationId, req.deleteFile);
   });
 
-  registerTypedHandler(dispatcher, 'deck:getLocations', async (_e, req) => {
+  registerTypedHandler(dispatcher, 'deck:getLocations', async (_e, req: any) => {
     if (!deckLocationService) return [];
-    return deckLocationService.getLocationsByDeck(req.deckId);
+    if (req?.deckId) {
+      return deckLocationService.getLocationsByDeck(req.deckId);
+    }
+    return deckLocationService.getAllLocations();
   });
 }
 

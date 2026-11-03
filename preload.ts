@@ -59,6 +59,8 @@ const api = {
   newDeck: () => invokeTyped('deck:new', undefined),
   duplicateDeck: (oldDeckKey: string) => invokeTyped('deck:duplicate', oldDeckKey),
   importDeck: (kind: string) => invokeTyped('deck:import', kind),
+  importSdeck: (targetFolderId?: string | null, filePaths?: string[]) =>
+    invokeTyped('deck:importSdeck', { targetFolderId, filePaths }),
   saveDeck: (deckKey: string, deckText?: string, opts?: { filePath?: string; saveAs?: boolean; pruneUnused?: boolean }) =>
     invokeTyped('deck:save', { deckKey, deckText, ...opts }),
   closeDeck: (deckKey: string) => invokeTyped('deck:close', deckKey),
@@ -101,7 +103,9 @@ const api = {
   applyImportProgress: (opts: IpcRequest<'progress:applyImport'>) => invokeTyped('progress:applyImport', opts),
   listBackups: () => invokeTyped('backup:list', undefined),
   createBackup: () => invokeTyped('backup:create', undefined),
+  createFullBackup: (destPath?: string) => invokeTyped('backup:createFull', destPath ? { destPath } : undefined),
   restoreBackup: (name: string) => invokeTyped('backup:restore', name),
+  restoreFullBackup: (filePath?: string) => invokeTyped('backup:restoreFull', filePath ? { filePath } : undefined),
   openBackupsFolder: () => invokeTyped('backup:openFolder', undefined),
 
   // Quản lý thư mục cây phân cấp & vị trí bộ thẻ
@@ -113,7 +117,7 @@ const api = {
   moveDeck: (deckId: string, newFolderId: string | null) => invokeTyped('deck:move', { deckId, newFolderId }),
   linkDeck: (deckId: string, targetFolderId: string | null) => invokeTyped('deck:link', { deckId, targetFolderId }),
   unlinkDeck: (locationId: string, deleteFile: boolean = false) => invokeTyped('deck:unlink', { locationId, deleteFile }),
-  getDeckLocations: (deckId: string) => invokeTyped('deck:getLocations', { deckId }),
+  getDeckLocations: (deckId?: string) => invokeTyped('deck:getLocations', deckId ? { deckId } : undefined),
 
   // Đăng ký sự kiện từ main
   onDeckChanged: (cb: (data: IpcEvents['deck:changed']) => void) => onEvent('deck:changed', cb),

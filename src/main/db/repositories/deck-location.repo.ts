@@ -82,6 +82,11 @@ export class DeckLocationRepository {
     return rows.map(mapRow);
   }
 
+  getAllLocations(): DeckLocation[] {
+    const rows = this.db.prepare(`SELECT * FROM deck_locations ORDER BY created_at ASC`).all() as DeckLocationRow[];
+    return rows.map(mapRow);
+  }
+
   addLocation(
     deckId: string,
     folderId: string | null,
