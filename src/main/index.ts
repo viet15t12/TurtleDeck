@@ -11,7 +11,8 @@ const { app, protocol } = (electron as any) || {};
 const gotTheLock = app ? app.requestSingleInstanceLock() : true;
 if (!gotTheLock) {
   app?.quit();
-} else {
+  process.exit(0);
+}
   // 2. Đăng ký scheme asset:// trước khi app ready
   if (protocol) {
     protocol.registerSchemesAsPrivileged([
@@ -26,4 +27,4 @@ if (!gotTheLock) {
   const htmlPath = path.resolve(import.meta.dirname, '../../src/index.html');
 
   initAppLifecycle(defaultPaths, defaultPackageStore, actualPreload, htmlPath);
-}
+

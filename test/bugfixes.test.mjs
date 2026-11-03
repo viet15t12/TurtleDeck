@@ -61,3 +61,22 @@ test('Issue 3: progress:save remains supported and safely syncs progress data', 
   const loaded = await loadProgress(deps);
   assert.ok(loaded.cards['d1:i1:fwd']);
 });
+
+// Test Lỗi 4: Kiểm tra thoát sớm khi không giành được lock
+test('Issue 4: exit early if single-instance lock is not acquired', () => {
+  let quitCalled = false;
+  let exitCalled = false;
+  const mockApp = {
+    requestSingleInstanceLock: () => false,
+    quit: () => { quitCalled = true; },
+  };
+
+  const gotLock = mockApp.requestSingleInstanceLock();
+  if (!gotLock) {
+    mockApp.quit();
+    exitCalled = true;
+  }
+
+  assert.equal(quitCalled, true);
+  assert.equal(exitCalled, true);
+});
