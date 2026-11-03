@@ -15,6 +15,28 @@ export interface BackupDeps {
 
 const errMsg = (e: any) => (e && e.message) || String(e);
 
+export async function pruneTemporaryDbBackups(dir: string, maxKeep = 5): Promise<void> {
+  try {
+    const files = await fs.readdir(dir);
+    const preImport = files.filter(f => f.startsWith('pre-import-') && f.endsWith('.db')).sort();
+    const preRestore = files.filter(f => f.startsWith('pre-restore-') && f.endsWith('.db')).sort();
+
+    if (preImport.length > maxKeep) {
+      const toDelete = preImport.slice(0, preImport.length - maxKeep);
+      for (const f of toDelete) {
+        await fs.rm(path.join(dir, f), { force: true }).catch(() => {});
+      }
+    }
+
+    if (preRestore.length > maxKeep) {
+      const toDelete = preRestore.slice(0, preRestore.length - maxKeep);
+      for (const f of toDelete) {
+        await fs.rm(path.join(dir, f), { force: true }).catch(() => {});
+      }
+    }
+  } catch {}
+}
+
 export async function ensureDailyBackup(deps: BackupDeps): Promise<void> {
   const tz = deps.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
   const now = deps.now ? deps.now() : Date.now();
@@ -56,6 +78,9 @@ export async function ensureDailyBackup(deps: BackupDeps): Promise<void> {
       await fs.rm(path.join(dir, dbSibling), { force: true }).catch(() => {});
     }
   } catch {}
+
+  // Dọn dẹp các bản sao lưu db tạm thời
+  await pruneTemporaryDbBackups(dir, 5);
 }
 
 export async function createBackup(deps: BackupDeps): Promise<{ ok: boolean; name?: string; error?: string }> {

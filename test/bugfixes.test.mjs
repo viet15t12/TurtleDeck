@@ -103,3 +103,29 @@ test('Issue 5: saveSettingsFile merges patch without overwriting other settings'
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 });
+
+// Test Lỗi 6: Dọn dẹp các file pre-restore-*.db và pre-import-*.db cũ
+test('Issue 6: pruneTemporaryDbBackups keeps only N newest pre-restore/pre-import db backups', async () => {
+  const { pruneTemporaryDbBackups } = await import('../src/main/services/backup-service.js');
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-issue6-'));
+
+  try {
+    // Tạo 8 bản pre-import và 8 bản pre-restore
+    for (let i = 1; i <= 8; i++) {
+      const ts = 1000 + i;
+      await fs.writeFile(path.join(tmpDir, `pre-import-${ts}.db`), 'db');
+      await fs.writeFile(path.join(tmpDir, `pre-restore-${ts}.db`), 'db');
+    }
+
+    await pruneTemporaryDbBackups(tmpDir, 3);
+
+    const remaining = await fs.readdir(tmpDir);
+    const preImports = remaining.filter(f => f.startsWith('pre-import-'));
+    const preRestores = remaining.filter(f => f.startsWith('pre-restore-'));
+
+    assert.equal(preImports.length, 3, 'Should retain only 3 newest pre-import db files');
+    assert.equal(preRestores.length, 3, 'Should retain only 3 newest pre-restore db files');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
