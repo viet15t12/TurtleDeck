@@ -5,7 +5,7 @@ import { fileName } from '../views/dom.js';
 import { notify } from '../views/notify.js';
 import { state, newEntry } from './state.js';
 
-const api = window.api;
+const getApi = () => (typeof window !== 'undefined' ? window.api : undefined);
 
 export const samePath = (a?: string | null, b?: string | null): boolean => Boolean(a && b && a === b);
 
@@ -90,8 +90,9 @@ export function planApplyResult(entries: Entry[], r: any, target?: Entry): PlanA
 export function applyResult(r: any, target?: Entry): Entry {
   const plan = planApplyResult(state.entries, r, target);
 
+  const api = getApi();
   for (const k of plan.toClose) {
-    api.closeDeck?.(k);
+    api?.closeDeck?.(k);
   }
 
   if (plan.warnMessage) {

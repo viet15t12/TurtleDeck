@@ -16,6 +16,11 @@ export async function resolve(specifier, context, nextResolve) {
             if (fs.existsSync(distPath)) {
               return nextResolve(pathToFileURL(distPath).href, context);
             }
+            // Hỗ trợ import file TS trong src (ví dụ .ts khi gọi đuôi .js)
+            const tsPath = filePath.replace(/\.js$/, '.ts');
+            if (fs.existsSync(tsPath)) {
+              return nextResolve(pathToFileURL(tsPath).href, context);
+            }
           }
           // 2. Chuyển hướng dist -> src khi module/vendor chưa compile hoặc ở dạng JS nguồn
           if (filePath.includes('/dist/')) {
