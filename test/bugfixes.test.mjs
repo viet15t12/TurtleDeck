@@ -256,3 +256,32 @@ test('Issue 12: getFallbackErrorResponse returns [] for array channels and {ok:f
   assert.equal(objRes.ok, false);
   assert.ok(objRes.error.includes('crash'));
 });
+
+// Test Lỗi 13: Xử lý chữ ký console-message cho cả Electron mới và cũ
+test('Issue 13: console-message handles modern and legacy signatures', () => {
+  function parseConsoleMessage(...args) {
+    let message = '';
+    let line = 0;
+    let sourceId = '';
+    if (typeof args[0] === 'object' && args[0] !== null && 'message' in args[0]) {
+      message = args[0].message;
+      line = args[0].line;
+      sourceId = args[0].sourceId;
+    } else {
+      message = args[1];
+      line = args[2];
+      sourceId = args[3];
+    }
+    return { message, line, sourceId };
+  }
+
+  // Modern signature
+  const modern = parseConsoleMessage({ level: 1, message: 'hello modern', line: 42, sourceId: 'app.js' });
+  assert.equal(modern.message, 'hello modern');
+  assert.equal(modern.line, 42);
+
+  // Legacy signature
+  const legacy = parseConsoleMessage(1, 'hello legacy', 99, 'index.js');
+  assert.equal(legacy.message, 'hello legacy');
+  assert.equal(legacy.line, 99);
+});

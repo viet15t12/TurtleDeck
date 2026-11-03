@@ -26,7 +26,21 @@ export function createWindow(preloadPath: string, htmlPath: string): any {
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (event: any) => event.preventDefault());
-  mainWindow.webContents.on('console-message', (_event: any, _level: any, message: any, line: any, sourceId: any) => {
+  mainWindow.webContents.on('console-message', (_event: any, ...args: any[]) => {
+    let message = '';
+    let line = 0;
+    let sourceId = '';
+    if (typeof args[0] === 'object' && args[0] !== null && 'message' in args[0]) {
+      // Modern Electron signature (event, { message, level, line, sourceId })
+      message = args[0].message;
+      line = args[0].line;
+      sourceId = args[0].sourceId;
+    } else {
+      // Legacy Electron signature (event, level, message, line, sourceId)
+      message = args[1];
+      line = args[2];
+      sourceId = args[3];
+    }
     console.log(`[Renderer] ${message} (${sourceId}:${line})`);
   });
   mainWindow.loadFile(htmlPath);
