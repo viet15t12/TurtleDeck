@@ -80,15 +80,15 @@ export interface IpcContracts {
     response: any;
   };
   'asset:addBytes': {
-    request: { deckKey: string; name: string; bytes: number[] | Uint8Array } | any;
-    response: any;
+    request: { deckKey: string; name: string; bytes: number[] | Uint8Array };
+    response: { ok: boolean; path?: string; error?: string };
   };
   'asset:list': {
     request: { deckKey: string } | string;
     response: string[];
   };
   'asset:remove': {
-    request: { deckKey: string; assetPath: string } | any;
+    request: { deckKey: string; assetPath: string };
     response: { ok: boolean; error?: string };
   };
 

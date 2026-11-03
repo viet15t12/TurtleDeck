@@ -207,3 +207,21 @@ test('Issue 9: pruneTempImports removes entries older than TTL', () => {
   assert.equal(store.getTempImport('token1'), '/path/1', 'Fresh token must be retained');
   assert.equal(store.getTempImport('token2'), undefined, 'Expired token must be pruned');
 });
+
+// Test Lỗi 10: asset:addBytes và asset:remove nhận payload dạng đối tượng thống nhất
+test('Issue 10: asset:addBytes and asset:remove work with unified object parameters', async () => {
+  const { addAssetBytes, removeAsset } = await import('../src/main/services/asset-service.js');
+  const store = new PackageStore();
+  const deckKey = store.newKey();
+  store.set(deckKey, { file: null, assets: new Map() });
+
+  // 1x1 valid PNG
+  const validPng = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2d420000000049454e44ae426082', 'hex');
+
+  const addRes = addAssetBytes(store, deckKey, 'icon.png', validPng);
+  assert.equal(addRes.ok, true);
+  assert.equal(addRes.path, 'img/icon.png');
+
+  const remRes = removeAsset(store, deckKey, 'img/icon.png');
+  assert.equal(remRes.ok, true);
+});
