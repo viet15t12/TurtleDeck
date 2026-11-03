@@ -68,6 +68,15 @@ export async function scanLibraryRecursively(
   return results;
 }
 
+export interface LibraryCacheEntry {
+  mtime: number;
+  size: number;
+  deck: any;
+  total: number;
+}
+
+export const libraryCache = new Map<string, LibraryCacheEntry>();
+
 export async function scanLibrary(libDir: string): Promise<any[]> {
   await fs.mkdir(libDir, { recursive: true }).catch(() => {});
   const scannedFiles = await scanLibraryRecursively(libDir, libDir);
@@ -78,6 +87,20 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
     try {
       const st = await fs.stat(item.fullPath);
       if (st.size > (sdeck as any).LIMITS.total) continue;
+
+      const cached = libraryCache.get(item.fullPath);
+      if (cached && cached.mtime === st.mtimeMs && cached.size === st.size) {
+        decks.push({
+          path: item.fullPath,
+          relPath: item.relPath,
+          group,
+          ok: true,
+          deck: cached.deck,
+          total: cached.total,
+        });
+        continue;
+      }
+
       const bytes = await fs.readFile(item.fullPath);
       const metaRes = (sdeck as any).readPackageMeta(bytes);
       if (!metaRes.ok) {
@@ -101,6 +124,14 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
         });
         continue;
       }
+
+      libraryCache.set(item.fullPath, {
+        mtime: st.mtimeMs,
+        size: st.size,
+        deck: parsed.deck,
+        total: parsed.total,
+      });
+
       decks.push({
         path: item.fullPath,
         relPath: item.relPath,

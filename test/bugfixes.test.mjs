@@ -129,3 +129,36 @@ test('Issue 6: pruneTemporaryDbBackups keeps only N newest pre-restore/pre-impor
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 });
+
+// Test Lỗi 7: library:scan cache theo mtime + size để không đọc lại file chưa đổi
+test('Issue 7: scanLibrary caches decks by mtime and size', async () => {
+  const { scanLibrary, libraryCache } = await import('../src/main/services/library-service.js');
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-issue7-'));
+  const sdeck = await import('../src/core/sdeck.js');
+
+  try {
+    const deck1 = {
+      meta: { id: 'd1', title: 'Cached Deck', kind: 'quiz' },
+      items: [{ id: 'i1', type: 'card', front: 'F', back: 'B' }]
+    };
+    const pkg = sdeck.writePackage(JSON.stringify(deck1), new Map());
+    const filePath = path.join(tmpDir, 'deck1.sdeck');
+    await fs.writeFile(filePath, pkg.bytes);
+
+    // Lần quét 1: đọc file vào cache
+    const scan1 = await scanLibrary(tmpDir);
+    assert.equal(scan1.length, 1);
+    assert.equal(scan1[0].deck.meta.title, 'Cached Deck');
+    assert.ok(libraryCache.has(filePath), 'File must be cached');
+
+    // Giả lập sửa cached object trong memory để phát hiện cache hit
+    const cachedEntry = libraryCache.get(filePath);
+    cachedEntry.deck.meta.title = 'Title From Cache';
+
+    // Lần quét 2: file không đổi mtime/size -> phải lấy từ cache
+    const scan2 = await scanLibrary(tmpDir);
+    assert.equal(scan2[0].deck.meta.title, 'Title From Cache', 'Scan must use cached entry');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
