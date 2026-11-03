@@ -106,3 +106,4 @@ export function renderActionsRow(ctx, q) {
 
   return { actionsRow, shortcutFooter };
 }
+

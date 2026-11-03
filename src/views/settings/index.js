@@ -80,3 +80,4 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
 
   root.ownerDocument.title = 'Cài đặt — Turtle Deck';
 }
+

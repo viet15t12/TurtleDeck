@@ -90,3 +90,4 @@ export function resetForQuestion(session: SessionState, q: Question): void {
     session.userAnswer = null;
   }
 }
+

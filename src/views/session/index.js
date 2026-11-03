@@ -274,3 +274,4 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
   render();
 }
+

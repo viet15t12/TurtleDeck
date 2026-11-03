@@ -109,3 +109,4 @@ export function createResetProgressSection({ progress, entries, actions }) {
     element,
   };
 }
+

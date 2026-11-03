@@ -56,3 +56,4 @@ export function savePref(key: string, value: string): void {
     } catch {}
   }
 }
+

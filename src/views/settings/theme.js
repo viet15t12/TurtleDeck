@@ -11,3 +11,4 @@ export function applyTheme(t) {
     (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 }
+

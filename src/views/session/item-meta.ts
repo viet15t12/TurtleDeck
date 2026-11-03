@@ -28,3 +28,4 @@ export function setItemNote(progress: Progress, deckId: string, itemId: string, 
   progress.meta[metaKey].note = String(note || '').slice(0, 2000);
   api.saveProgress(progress);
 }
+

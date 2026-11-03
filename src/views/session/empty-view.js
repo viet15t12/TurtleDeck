@@ -48,3 +48,4 @@ export function renderEmptySession(root, { trialBanner, isSrsMode, entry, action
     )
   );
 }
+

@@ -1,6 +1,7 @@
 // src/views/home/dnd.ts — Logic kéo thả an toàn cho thư mục và bộ thẻ
 
 import type { Folder } from '../../core/types.js';
+// @ts-ignore
 import { notify } from '../notify.js';
 
 export function canMoveFolderInto(dragged: Folder | null, target: Folder | null): boolean {
@@ -73,3 +74,4 @@ export function createDndHandlers(ctx: any) {
     handleDropFolder,
   };
 }
+

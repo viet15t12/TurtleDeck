@@ -54,3 +54,4 @@ export function settingsActions({ state }) {
     },
   };
 }
+

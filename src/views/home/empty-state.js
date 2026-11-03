@@ -59,3 +59,4 @@ export function renderEmptyFolder(ctx, qNorm) {
     )
   );
 }
+

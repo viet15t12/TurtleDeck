@@ -81,3 +81,4 @@ export function createLearningSection({ form, showError, onSubmit, onCancel }) {
     },
   };
 }
+

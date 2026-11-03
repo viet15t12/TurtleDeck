@@ -1,6 +1,7 @@
 // src/views/home/query.ts — Các hàm thuần lọc thư mục con và bộ thẻ
 
 import type { Deck, DeckKind, Entry, Folder } from '../../core/types.js';
+// @ts-ignore
 import { fileName } from '../dom.js';
 
 export interface DeckStats {
@@ -130,3 +131,4 @@ export function selectDecks(input: QueryInput): Entry[] {
 
   return filtered;
 }
+

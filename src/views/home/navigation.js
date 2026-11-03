@@ -74,3 +74,4 @@ export function createNavigation(ctx) {
     updateNavButtons,
   };
 }
+

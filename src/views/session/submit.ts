@@ -5,6 +5,7 @@ import { gradeChoices, gradeText } from '../../core/grader.js';
 import { RATING, cardKey, newCard, previewIntervalLabel, ratingFromGrade } from '../../core/srs.js';
 import { reinsertWrong } from '../../core/planner.js';
 import { applyCardOverride, applyOverrideToProgress } from '../../core/progressio.js';
+// @ts-ignore
 import { formatNextIntervalText } from '../result.js';
 import type { Question, SessionState } from './session-state.js';
 

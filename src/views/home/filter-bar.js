@@ -105,3 +105,4 @@ export function createFilterBar(ctx) {
 
   return filterBar;
 }
+

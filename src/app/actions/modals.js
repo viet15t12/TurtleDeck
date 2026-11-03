@@ -115,3 +115,4 @@ export function modalActions({ state, actions }) {
     },
   };
 }
+

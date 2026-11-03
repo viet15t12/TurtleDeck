@@ -40,3 +40,4 @@ export const newEntry = (fields: Partial<Entry>): Entry => ({
   issues: fields.issues ?? [],
   ...fields,
 });
+

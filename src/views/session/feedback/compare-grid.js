@@ -35,3 +35,4 @@ export function renderCompareGrid(ctx, q) {
     )
   );
 }
+

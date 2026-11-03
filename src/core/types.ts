@@ -134,3 +134,4 @@ export type Route =
   | { name: 'editor'; uid: number; itemId?: string | null }
   | { name: 'deck' | 'learn' | 'match' | 'exam'; uid: number; config?: Record<string, unknown> }
   | { name: 'session'; uid: number; config?: SessionConfig; fromEditor?: boolean; trialDeck?: Deck };
+

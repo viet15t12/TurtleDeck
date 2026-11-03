@@ -54,3 +54,4 @@ export function renderVocabExtra(ctx, q) {
     itImg ? h('img', { class: 'rich-img', src: itImg, alt: 'Ảnh minh hoạ', style: 'max-height: 120px; margin-top: 8px;' }) : null
   );
 }
+

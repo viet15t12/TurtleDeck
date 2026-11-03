@@ -7,3 +7,4 @@ export const setRenderer = fn => {
 };
 
 export const render = () => renderFn();
+

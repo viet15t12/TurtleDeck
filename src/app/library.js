@@ -89,3 +89,4 @@ export async function scanLibrary(actions) {
 export function reloadLibrary(actions) {
   return actions.scanLibrary();
 }
+

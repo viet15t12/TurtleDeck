@@ -12,3 +12,4 @@ export const catLabels = {
   learning: 'Đang học',
   new: 'Mục mới',
 };
+

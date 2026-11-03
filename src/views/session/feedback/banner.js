@@ -44,3 +44,4 @@ export function renderFeedbackBanner(session, q) {
     h('span', { class: 'feedback-text' }, title)
   );
 }
+

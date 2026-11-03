@@ -30,3 +30,4 @@ export function buildAcceptedAnswerChips(q, rich) {
   }
   return chips;
 }
+
