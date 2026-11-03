@@ -6,6 +6,13 @@ import * as parser from '../../core/parser.js';
 import * as fsutil from '../../core/fsutil.js';
 import * as library from '../../core/library.js';
 
+export function isPathInsideRoot(targetPath: string, rootDir: string): boolean {
+  const normRoot = path.resolve(rootDir);
+  const rootPrefix = normRoot.endsWith(path.sep) ? normRoot : normRoot + path.sep;
+  const normTarget = path.resolve(targetPath);
+  return normTarget.startsWith(rootPrefix) || normTarget === normRoot;
+}
+
 export async function getActiveLibraryDir(settingsFile: string, defaultDir: string): Promise<string> {
   try {
     const s = await fsutil.loadSettingsFile(settingsFile);
@@ -35,6 +42,7 @@ export async function scanLibraryRecursively(
   try {
     realRoot = await fs.realpath(rootDir);
   } catch {}
+  const rootPrefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
 
   for (const ent of dirents) {
     if (results.length >= maxFiles) break;
@@ -44,7 +52,7 @@ export async function scanLibraryRecursively(
     const fullPath = path.join(dir, name);
     try {
       const real = await fs.realpath(fullPath);
-      if (!real.startsWith(realRoot)) continue;
+      if (!real.startsWith(rootPrefix)) continue;
     } catch {
       continue;
     }
