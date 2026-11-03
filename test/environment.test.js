@@ -6,7 +6,7 @@ const test = require('node:test');
 const root = path.join(__dirname, '..');
 
 test('Electron app entry files and renderer are present', () => {
-  for (const file of ['main.js', 'preload.js', 'src/index.html', 'src/app.js']) {
+  for (const file of ['src/main/index.ts', 'preload.ts', 'src/index.html', 'src/app.js']) {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });

@@ -1,0 +1,130 @@
+// src/main/services/backup-service.ts — Quản lý sao lưu, khôi phục và dọn dẹp bản sao lưu cũ (không import 'electron')
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import * as fsutil from '../../core/fsutil.js';
+import * as progressio from '../../core/progressio.js';
+import { DatabaseManager } from '../db/index.js';
+
+export interface BackupDeps {
+  backupsDir: string;
+  progressFile: string;
+  dbManager?: DatabaseManager;
+  now?: () => number;
+  timeZone?: string;
+}
+
+const errMsg = (e: any) => (e && e.message) || String(e);
+
+export async function ensureDailyBackup(deps: BackupDeps): Promise<void> {
+  const tz = deps.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const now = deps.now ? deps.now() : Date.now();
+  const fileName = (progressio as any).backupFileName(now, tz);
+  const dir = deps.backupsDir;
+  await fs.mkdir(dir, { recursive: true }).catch(() => {});
+  const dest = path.join(dir, fileName);
+
+  try {
+    await fs.stat(dest);
+  } catch (e: any) {
+    if (e.code === 'ENOENT') {
+      try {
+        if (deps.dbManager) {
+          const dbBackupName = fileName.replace(/\.json$/, '.db');
+          await deps.dbManager.backup(path.join(dir, dbBackupName));
+          const progressData = deps.dbManager.srs.exportProgressData();
+          await fsutil.atomicWrite(dest, JSON.stringify(progressData, null, 2));
+        } else {
+          const pStat = await fs.stat(deps.progressFile);
+          if (pStat.isFile()) {
+            const content = await fs.readFile(deps.progressFile);
+            await fsutil.atomicWrite(dest, content);
+          }
+        }
+      } catch (err) {
+        console.warn('[Backup] Lỗi sao lưu hàng ngày:', err);
+      }
+    }
+  }
+
+  // Dọn dẹp bản sao lưu cũ, chỉ giữ 7 ngày mới nhất
+  try {
+    const files = await fs.readdir(dir);
+    const toDel = (progressio as any).pickBackupsToDelete(files, 7);
+    for (const name of toDel) {
+      await fs.rm(path.join(dir, name), { force: true }).catch(() => {});
+      const dbSibling = name.replace(/\.json$/, '.db');
+      await fs.rm(path.join(dir, dbSibling), { force: true }).catch(() => {});
+    }
+  } catch {}
+}
+
+export async function createBackup(deps: BackupDeps): Promise<{ ok: boolean; name?: string; error?: string }> {
+  const dir = deps.backupsDir;
+  await fs.mkdir(dir, { recursive: true }).catch(() => {});
+  const tz = deps.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const now = deps.now ? deps.now() : Date.now();
+  const name = `progress-${(progressio as any).dayKey(now, tz)}-manual-${now}.json`;
+  const dest = path.join(dir, name);
+  try {
+    if (deps.dbManager) {
+      const dbBackupName = name.replace(/\.json$/, '.db');
+      await deps.dbManager.backup(path.join(dir, dbBackupName));
+      const progressData = deps.dbManager.srs.exportProgressData();
+      await fsutil.atomicWrite(dest, JSON.stringify(progressData, null, 2));
+      return { ok: true, name };
+    }
+    const content = await fs.readFile(deps.progressFile);
+    await fsutil.atomicWrite(dest, content);
+    return { ok: true, name };
+  } catch (e: any) {
+    return { ok: false, error: errMsg(e) };
+  }
+}
+
+export async function listBackups(backupsDir: string): Promise<Array<{ name: string; size: number; mtime: number }>> {
+  await fs.mkdir(backupsDir, { recursive: true }).catch(() => {});
+  let files: string[];
+  try {
+    files = await fs.readdir(backupsDir);
+  } catch {
+    return [];
+  }
+  const result: Array<{ name: string; size: number; mtime: number }> = [];
+  for (const f of files) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const st = await fs.stat(path.join(backupsDir, f));
+      result.push({ name: f, size: st.size, mtime: st.mtimeMs });
+    } catch {}
+  }
+  result.sort((a, b) => b.mtime - a.mtime);
+  return result;
+}
+
+export async function restoreBackup(
+  deps: BackupDeps,
+  name: string
+): Promise<{ ok: boolean; progress?: any; error?: string }> {
+  if (typeof name !== 'string' || name.includes('/') || name.includes('\\')) {
+    return { ok: false, error: 'Tên file sao lưu không hợp lệ.' };
+  }
+  const src = path.join(deps.backupsDir, name);
+  try {
+    const content = await fs.readFile(src, 'utf8');
+    const validated = (progressio as any).validateProgress(JSON.parse(content));
+    if (!validated.ok) return { ok: false, error: validated.error };
+
+    if (deps.dbManager) {
+      const preRestoreName = `pre-restore-${Date.now()}.db`;
+      await deps.dbManager.backup(path.join(deps.backupsDir, preRestoreName)).catch(() => {});
+      deps.dbManager.srs.importProgressData(validated.progress, 'replace');
+      return { ok: true, progress: validated.progress };
+    }
+
+    await fsutil.backupFile(deps.progressFile).catch(() => {});
+    await fsutil.saveProgressFile(deps.progressFile, validated.progress, { replace: true });
+    return { ok: true, progress: validated.progress };
+  } catch (e: any) {
+    return { ok: false, error: 'Không khôi phục được bản sao lưu: ' + errMsg(e) };
+  }
+}

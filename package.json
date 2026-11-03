@@ -2,9 +2,11 @@
   "name": "study-app",
   "version": "0.1.0",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
-  "main": "main.js",
+  "main": "dist/main/index.js",
   "scripts": {
     "test": "node --test",
+    "typecheck": "tsc --noEmit",
+    "build": "node tools/build.mjs",
     "start": "electron .",
     "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples"
   },
@@ -20,10 +22,14 @@
   },
   "homepage": "https://github.com/viet15t12/studyApp#readme",
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.6",
     "electron": "^45.2.1",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "chart.js": "^4.6.1",
     "dompurify": "^3.4.17",
     "fflate": "^0.8.3",
