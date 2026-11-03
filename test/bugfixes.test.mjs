@@ -285,3 +285,17 @@ test('Issue 13: console-message handles modern and legacy signatures', () => {
   assert.equal(legacy.message, 'hello legacy');
   assert.equal(legacy.line, 99);
 });
+
+// Test Lỗi 14: Bảo mật IPC chỉ nhận từ file://.../src/index.html
+test('Issue 14: isValidSenderFrame allows valid app html and rejects untrusted origins', async () => {
+  const { isValidSenderFrame } = await import('../src/main/ipc/register.js');
+
+  // Hợp lệ: file://.../src/index.html
+  assert.equal(isValidSenderFrame('file:///home/user/studyApp/src/index.html'), true);
+  assert.equal(isValidSenderFrame('file:///app/src/index.html#session'), true);
+
+  // Không hợp lệ: http, https, trang web lạ
+  assert.equal(isValidSenderFrame('https://evil.com'), false);
+  assert.equal(isValidSenderFrame('http://localhost:3000'), false);
+  assert.equal(isValidSenderFrame('file:///tmp/malicious.html'), false);
+});

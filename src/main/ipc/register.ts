@@ -49,6 +49,11 @@ export function getFallbackErrorResponse(channel: string, errorMsg: string): any
   return { ok: false, error: `Lỗi không mong muốn: ${errorMsg}` };
 }
 
+export function isValidSenderFrame(url?: string): boolean {
+  if (!url) return true;
+  return url.startsWith('file://') && url.includes('src/index.html');
+}
+
 export function registerTypedHandler<C extends IpcChannel>(
   dispatcher: IpcDispatcher,
   channel: C,
@@ -56,6 +61,10 @@ export function registerTypedHandler<C extends IpcChannel>(
 ): void {
   dispatcher.handle(channel, async (event, ...args: any[]) => {
     try {
+      if (event?.senderFrame?.url && !isValidSenderFrame(event.senderFrame.url)) {
+        console.warn(`[Security] Blocked IPC from unauthorized origin: ${event.senderFrame.url}`);
+        return getFallbackErrorResponse(channel, 'Yêu cầu bị từ chối do nguồn gốc không hợp lệ.');
+      }
       const param = args.length <= 1 ? args[0] : args;
       return await fn(event, param as IpcRequest<C>);
     } catch (e: any) {
