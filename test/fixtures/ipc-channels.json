@@ -11,16 +11,25 @@
     "deck:close",
     "deck:duplicate",
     "deck:exportCopy",
+    "deck:getLocations",
     "deck:import",
+    "deck:link",
+    "deck:move",
     "deck:new",
     "deck:open",
     "deck:queryItems",
     "deck:save",
     "deck:showInFolder",
+    "deck:unlink",
     "draft:delete",
     "draft:list",
     "draft:load",
     "draft:save",
+    "folder:create",
+    "folder:delete",
+    "folder:getTree",
+    "folder:move",
+    "folder:rename",
     "import:commit",
     "import:pickFile",
     "import:preview",
@@ -51,5 +60,5 @@
   "protocols": [
     "asset"
   ],
-  "count": 45
+  "count": 54
 }

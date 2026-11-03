@@ -8,6 +8,8 @@ import { SrsRepository } from './repositories/srs.repo.js';
 import { DeckRepository } from './repositories/deck.repo.js';
 import { StatsRepository } from './repositories/stats.repo.js';
 import { MatchRepository } from './repositories/match.repo.js';
+import { FolderRepository } from './repositories/folder.repo.js';
+import { DeckLocationRepository } from './repositories/deck-location.repo.js';
 
 export class DatabaseManager {
   private static instance: DatabaseManager | null = null;
@@ -16,6 +18,8 @@ export class DatabaseManager {
   public deck: DeckRepository;
   public stats: StatsRepository;
   public match: MatchRepository;
+  public folder: FolderRepository;
+  public deckLocation: DeckLocationRepository;
   public lastMigrationResult: MigrationResult | null = null;
 
   public constructor(dbPathOrMemory = ':memory:', userDataPath?: string) {
@@ -46,6 +50,8 @@ export class DatabaseManager {
     this.deck = new DeckRepository(this.db);
     this.stats = new StatsRepository(this.db);
     this.match = new MatchRepository(this.db);
+    this.folder = new FolderRepository(this.db);
+    this.deckLocation = new DeckLocationRepository(this.db);
   }
 
   public static getInstance(userDataPath?: string): DatabaseManager {

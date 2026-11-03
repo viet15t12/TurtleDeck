@@ -8,6 +8,9 @@ import { PackageStore } from '../services/package-store.js';
 import { WatcherService } from '../services/watcher-service.js';
 import { ensureDailyBackup } from '../services/backup-service.js';
 import { getActiveLibraryDir } from '../services/library-service.js';
+import { FolderService } from '../services/folder-service.js';
+import { DeckLocationService } from '../services/deck-location-service.js';
+import { migrateToFolders } from '../db/migration-folders.js';
 import { AppPaths } from './paths.js';
 import { createWindow, getMainWindow, winOf } from './window.js';
 import { ExternalFilesManager } from './external-files.js';
@@ -89,7 +92,33 @@ export function initAppLifecycle(
       });
     }
 
-    // 4. Register IPC Handlers
+    // 4. Thư mục lưu trữ & migration cấu trúc thư mục
+    await fs.mkdir(paths.backupsDir(), { recursive: true }).catch(() => {});
+    await fs.mkdir(paths.draftsDir(), { recursive: true }).catch(() => {});
+    const libDir = await getActiveLibraryDir(paths.settingsFile(), paths.defaultLibraryDir());
+    await fs.mkdir(libDir, { recursive: true }).catch(() => {});
+
+    if (dbManager) {
+      try {
+        migrateToFolders(dbManager.db, libDir);
+      } catch (e) {
+        console.warn('[Migration Folders Error]', e);
+      }
+    }
+
+    const folderService = dbManager ? new FolderService(dbManager.folder, {
+      notify: sendToRenderer,
+      libraryDir: () => libDir,
+    }) : undefined;
+
+    const deckLocationService = dbManager ? new DeckLocationService(dbManager.deckLocation, null, {
+      notify: sendToRenderer,
+      folderRepo: dbManager.folder,
+      deckRepo: dbManager.deck,
+      libraryDir: () => libDir,
+    }) : undefined;
+
+    // 5. Register IPC Handlers
     registerAll(ipcMain, {
       dbManager,
       packageStore,
@@ -98,14 +127,11 @@ export function initAppLifecycle(
       notify: sendToRenderer,
       watchPath: (dir: string) => watcherService?.watchPath(dir),
       knownSaves,
+      folderService,
+      deckLocationService,
     });
 
-    // 5. Thư mục lưu trữ
-    await fs.mkdir(paths.backupsDir(), { recursive: true }).catch(() => {});
-    await fs.mkdir(paths.draftsDir(), { recursive: true }).catch(() => {});
-    const libDir = await getActiveLibraryDir(paths.settingsFile(), paths.defaultLibraryDir());
-    await fs.mkdir(libDir, { recursive: true }).catch(() => {});
-    watcherService.watchPath(libDir);
+    await watcherService.watchRecursively(libDir, 9);
 
     // 6. Sao lưu tự động
     const backupDeps = {

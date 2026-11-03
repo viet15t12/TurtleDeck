@@ -1,6 +1,7 @@
 import { DeckItem } from './item.types.js';
 import { SrsCard, SrsDeckSummary, SrsRating, SrsDirection, ItemMetaRecord } from './srs.types.js';
 import { DeckStatsReport, OverallStreak } from './stats.types.js';
+import { Folder, DeckLocation } from './folder.types.js';
 
 export interface IpcContracts {
   // Gói thẻ .sdeck
@@ -231,6 +232,46 @@ export interface IpcContracts {
     request: { deckId: string; itemId: string; note: string };
     response: { ok: boolean };
   };
+
+  // Folder operations
+  'folder:create': {
+    request: { name: string; parentId: string | null };
+    response: { ok: boolean; folder?: Folder; error?: string };
+  };
+  'folder:rename': {
+    request: { id: string; newName: string };
+    response: { ok: boolean; error?: string };
+  };
+  'folder:move': {
+    request: { id: string; newParentId: string | null };
+    response: { ok: boolean; error?: string };
+  };
+  'folder:delete': {
+    request: { id: string };
+    response: { ok: boolean; error?: string };
+  };
+  'folder:getTree': {
+    request: void;
+    response: Folder[];
+  };
+
+  // Deck location operations
+  'deck:move': {
+    request: { deckId: string; newFolderId: string | null };
+    response: { ok: boolean; error?: string };
+  };
+  'deck:link': {
+    request: { deckId: string; targetFolderId: string | null };
+    response: { ok: boolean; error?: string };
+  };
+  'deck:unlink': {
+    request: { locationId: string; deleteFile: boolean };
+    response: { ok: boolean; error?: string };
+  };
+  'deck:getLocations': {
+    request: { deckId: string };
+    response: DeckLocation[];
+  };
 }
 
 export interface IpcEvents {
@@ -239,6 +280,10 @@ export interface IpcEvents {
   'deck:fileAdded': { filePath: string };
   'deck:fileRemoved': { filePath: string };
   'deck:watchError': { error: string };
+  'deck:moved': { deckId: string; newFolderId: string | null; filePath: string };
+  'deck:linked': { deckId: string; targetFolderId: string | null; filePath: string };
+  'deck:unlinked': { locationId: string; deckId: string };
+  'folder:changed': any;
   'app:ready': void;
 }
 

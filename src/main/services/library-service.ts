@@ -23,14 +23,22 @@ export async function getActiveLibraryDir(settingsFile: string, defaultDir: stri
   return defaultDir;
 }
 
+export interface ScannedFile {
+  fullPath: string;
+  relPath: string;
+  name: string;
+  isLink?: boolean;
+  linkTarget?: string | null;
+}
+
 export async function scanLibraryRecursively(
   dir: string,
   rootDir: string,
   depth = 0,
-  results: Array<{ fullPath: string; relPath: string; name: string }> = [],
+  results: Array<ScannedFile> = [],
   maxFiles = 2000
-): Promise<Array<{ fullPath: string; relPath: string; name: string }>> {
-  if (depth > 4 || results.length >= maxFiles) return results;
+): Promise<Array<ScannedFile>> {
+  if (depth > 9 || results.length >= maxFiles) return results;
   let dirents: any[];
   try {
     dirents = await fs.readdir(dir, { withFileTypes: true });
@@ -50,19 +58,30 @@ export async function scanLibraryRecursively(
     if (name.startsWith('.')) continue;
 
     const fullPath = path.join(dir, name);
+    let isLink = false;
+    let linkTarget: string | null = null;
+
+    try {
+      const lst = await fs.lstat(fullPath);
+      if (lst.isSymbolicLink()) {
+        isLink = true;
+        linkTarget = await fs.realpath(fullPath);
+      }
+    } catch {}
+
     try {
       const real = await fs.realpath(fullPath);
-      if (!real.startsWith(rootPrefix)) continue;
+      if (!isLink && !real.startsWith(rootPrefix)) continue;
     } catch {
       continue;
     }
 
     if (ent.isDirectory()) {
       await scanLibraryRecursively(fullPath, rootDir, depth + 1, results, maxFiles);
-    } else if (ent.isFile() && name.toLowerCase().endsWith('.sdeck')) {
+    } else if ((ent.isFile() || ent.isSymbolicLink()) && name.toLowerCase().endsWith('.sdeck')) {
       if (name.endsWith('.bak') || name.endsWith('.tmp')) continue;
       const relPath = path.relative(rootDir, fullPath);
-      results.push({ fullPath, relPath, name });
+      results.push({ fullPath, relPath, name, isLink, linkTarget });
     }
   }
   return results;
@@ -97,6 +116,8 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
           ok: true,
           deck: cached.deck,
           total: cached.total,
+          isLink: item.isLink || false,
+          linkTarget: item.linkTarget || null,
         });
         continue;
       }
@@ -110,6 +131,8 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
           group,
           ok: false,
           error: metaRes.error,
+          isLink: item.isLink || false,
+          linkTarget: item.linkTarget || null,
         });
         continue;
       }
@@ -121,6 +144,8 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
           group,
           ok: false,
           error: parsed.error,
+          isLink: item.isLink || false,
+          linkTarget: item.linkTarget || null,
         });
         continue;
       }
@@ -139,6 +164,8 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
         ok: true,
         deck: parsed.deck,
         total: parsed.total,
+        isLink: item.isLink || false,
+        linkTarget: item.linkTarget || null,
       });
     } catch (e: any) {
       decks.push({
@@ -147,8 +174,27 @@ export async function scanLibrary(libDir: string): Promise<any[]> {
         group,
         ok: false,
         error: (e && e.message) || String(e),
+        isLink: item.isLink || false,
+        linkTarget: item.linkTarget || null,
       });
     }
   }
   return decks;
+}
+
+export interface ScanResult {
+  decks: any[];
+  total: number;
+}
+
+export class LibraryService {
+  constructor(private deps: { libraryDir?: () => string } = {}) {}
+
+  async scanLibraryRecursive(rootPath: string): Promise<ScanResult> {
+    const decks = await scanLibrary(rootPath);
+    return {
+      decks,
+      total: decks.length,
+    };
+  }
 }

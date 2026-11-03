@@ -183,7 +183,8 @@ h2 {
 }
 
 .modal-dialog {
-  background: #fff;
+  background: var(--c-surface, #fff);
+  color: var(--c-text);
   border: 1px solid var(--c-border);
   border-radius: 14px;
   width: min(460px, calc(100% - 32px));

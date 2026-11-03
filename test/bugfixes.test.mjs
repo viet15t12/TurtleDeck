@@ -290,9 +290,11 @@ test('Issue 13: console-message handles modern and legacy signatures', () => {
 test('Issue 14: isValidSenderFrame allows valid app html and rejects untrusted origins', async () => {
   const { isValidSenderFrame } = await import('../src/main/ipc/register.js');
 
-  // Hợp lệ: file://.../src/index.html
+  // Hợp lệ: file://.../src/index.html hoặc file://.../dist/index.html
   assert.equal(isValidSenderFrame('file:///home/user/studyApp/src/index.html'), true);
+  assert.equal(isValidSenderFrame('file:///home/user/studyApp/dist/index.html'), true);
   assert.equal(isValidSenderFrame('file:///app/src/index.html#session'), true);
+  assert.equal(isValidSenderFrame('file:///app/dist/index.html#session'), true);
 
   // Không hợp lệ: http, https, trang web lạ
   assert.equal(isValidSenderFrame('https://evil.com'), false);

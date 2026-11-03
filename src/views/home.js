@@ -1,19 +1,24 @@
-// src/views/home.js — Màn hình chính (GĐ3B Lượt 2): dải Hôm nay, lọc/tìm/sắp xếp, lưới thẻ bộ thẻ,
-// thanh tiến độ xếp chồng, nút Ôn hôm nay · N / Hôm nay đã xong ✓, Học ▾ theo loại, trạng thái trống 3 ô lớn.
+// src/views/home.js — Màn hình chính: Dải Hôm nay, Cây thư mục sidebar (0.1.3),
+// lọc/tìm/sắp xếp, lưới thẻ bộ thẻ, kéo thả deck vào thư mục.
 import { h, fileName } from './dom.js';
-import { KINDS, kindOf, kindLabel, modesFor } from '../core/deckkinds.js';
+import { KINDS, kindOf, modesFor } from '../core/deckkinds.js';
 import { deckStats, countReviewedToday } from '../core/deckstats.js';
 import { stripAccents } from '../core/deckmodel.js';
-import { renderStackedBar } from './components/stackedbar.js';
+import { renderDeckCard } from './components/deckcard.js';
+import { renderFolderTree, flattenFolders } from './components/foldertree.js';
+import { openFolderModal } from './components/foldermenu.js';
+import { promptDropAction } from './components/dragdrop.js';
 
-const countIssues = e => (e.issues || []).filter(i => i.level === 'warn' || i.level === 'error').length;
-
-// Giữ trạng thái bộ lọc/tìm kiếm/sắp xếp trên Home giữa các lần render
+// Giữ trạng thái bộ lọc/tìm kiếm/sắp xếp và thư mục đang chọn giữa các lần render
 const homeUiState = {
   filterKind: 'all', // 'all' | 'qa' | 'quiz' | 'vocab'
   filterGroup: 'all', // 'all' | 'LPIC/101' | ...
   searchQuery: '',
   sortBy: 'due',     // 'due' | 'recent' | 'title'
+  selectedFolderId: 'all', // 'all' | null (root) | folderId
+  sidebarOpen: typeof localStorage !== 'undefined'
+    ? localStorage.getItem('turtle_folder_sidebar_open') !== 'false'
+    : true,
 };
 
 function createSearchSvg() {
@@ -38,198 +43,6 @@ function closeAllDropdowns(except) {
   document.querySelectorAll('.menu, .ux-popover[data-dropdown]').forEach(el => {
     if (el !== except) el.hidden = true;
   });
-}
-
-function renderDeckCard(entry, st, actions) {
-  const removeBtn = entry.inLibrary ? null : h('button', {
-    type: 'button',
-    class: 'ux-btn sm ghost danger-hover',
-    title: 'Gỡ khỏi danh sách (không xoá file)',
-    onclick: ev => { ev.stopPropagation(); actions.remove(entry); },
-  }, 'Gỡ');
-
-  if (entry.status === 'loading') {
-    return h('article', { class: 'deck-card loading', title: entry.path || '' },
-      h('div', { class: 'deck-card-head' },
-        h('span', { class: 'ux-chip' }, 'Đang mở…')),
-      h('div', { class: 'deck-card-title' }, fileName(entry.path) || 'Bộ thẻ'),
-      h('div', { class: 'muted', style: 'font-size: 13px;' }, 'Đang đọc dữ liệu bộ thẻ…'));
-  }
-
-  if (entry.status !== 'ok') {
-    return h('article', { class: 'deck-card bad', title: entry.path || '' },
-      h('div', { class: 'deck-card-head' },
-        h('span', { class: 'ux-chip danger' }, entry.status === 'missing' ? 'Không tìm thấy file' : 'Lỗi đọc bộ thẻ')),
-      h('div', { class: 'deck-card-title' }, fileName(entry.path) || 'Bộ thẻ'),
-      h('div', { class: 'error-text', style: 'font-size: 13px;' }, entry.error || 'Không mở được bộ thẻ.'),
-      h('div', { class: 'deck-card-footer' },
-        entry.status !== 'missing' && entry.path
-          ? h('button', { type: 'button', class: 'ux-btn sm', onclick: ev => { ev.stopPropagation(); actions.reload(entry); } }, 'Thử lại')
-          : null,
-        removeBtn));
-  }
-
-  const { meta, items } = entry.deck;
-  const kind = kindOf(entry.deck);
-  const kInfo = KINDS[kind];
-  const warn = countIssues(entry);
-  const dueToday = st.due + st.learning;
-  const totalToday = dueToday + st.newLeftToday;
-  const totalValid = st.new + st.learning + st.due + st.mastered;
-  const modes = modesFor(kind);
-
-  const studyMenu = h('div', { class: 'ux-popover', 'data-dropdown': '1', hidden: true, style: 'min-width: 250px;' },
-    ...modes.map(m => h('button', {
-      type: 'button',
-      class: 'ux-popover-item deck-mode-menu-item',
-      onclick: ev => {
-        ev.stopPropagation();
-        studyMenu.hidden = true;
-        if (m.id === 'srs') actions.startSrsSession(entry);
-        else if (m.id === 'learn') actions.startLearnSession(entry);
-        else if (m.id === 'match') actions.startMatchSession(entry);
-        else if (m.id === 'exam') actions.openSessionSetup(entry, { defaultMode: 'exam' });
-        else if (m.id === 'all' || m.id === 'flashcards') {
-          actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
-        } else {
-          actions.openSessionSetup(entry, { defaultMode: m.id });
-        }
-      },
-    },
-      h('div', null,
-        h('div', { style: 'font-weight: 600; color: var(--c-text);' }, m.label),
-        h('div', { class: 'muted', style: 'font-size: 12px; line-height: 1.35; margin-top: 2px;' }, m.description))))
-  );
-
-  const moreMenu = h('div', { class: 'ux-popover align-right', 'data-dropdown': '1', hidden: true, style: 'min-width: 210px;' },
-    entry.path ? h('button', {
-      type: 'button',
-      class: 'ux-popover-item',
-      title: entry.path,
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.showInFolder?.(entry); },
-    }, '📂 Hiện trong thư mục') : null,
-    entry.path ? h('button', {
-      type: 'button',
-      class: 'ux-popover-item',
-      title: 'Xuất bản sao file .sdeck sang nơi khác và giữ nguyên mã bộ thẻ',
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.exportCopy?.(entry); },
-    }, '📤 Xuất bản sao…') : null,
-    h('button', {
-      type: 'button',
-      class: 'ux-popover-item',
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.duplicateDeck(entry); },
-    }, '📄 Nhân đôi (Bản sao mới)'),
-    h('button', {
-      type: 'button',
-      class: 'ux-popover-item',
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.openDeckInfoModal?.(entry); },
-    }, 'ℹ Thông tin bộ thẻ…'),
-    entry.path ? null : h('button', {
-      type: 'button',
-      class: 'ux-popover-item',
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.saveAs(entry); },
-    }, '💾 Lưu thành .sdeck…'),
-    entry.inLibrary ? null : h('div', { class: 'ux-popover-sep' }),
-    entry.inLibrary ? null : h('button', {
-      type: 'button',
-      class: 'ux-popover-item danger',
-      onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.remove(entry); },
-    }, '✕ Gỡ khỏi danh sách')
-  );
-
-  const tooltip = entry.path
-    ? `${meta.title} — ${entry.path}`
-    : (entry.source ? `${meta.title} (Nhập từ: ${entry.source})` : meta.title);
-
-  return h('article', {
-    class: 'deck-card',
-    'data-kind': kind,
-    tabindex: '0',
-    role: 'button',
-    title: tooltip,
-    onclick: () => actions.openDeckView(entry),
-    onkeydown: ev => {
-      if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) {
-        ev.preventDefault();
-        actions.openDeckView(entry);
-      }
-    },
-  },
-    h('div', { class: 'deck-card-head' },
-      h('div', { class: 'deck-card-badges' },
-        h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
-        entry.group ? h('span', { class: 'ux-chip', style: 'cursor: default; font-size: 11px;' }, `📁 ${entry.group}`) : null,
-        entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu'),
-        warn ? h('span', { class: 'ux-chip warn', title: `${warn} cảnh báo trong bộ thẻ` }, `⚠ ${warn}`) : null),
-      h('div', { class: 'menu-wrap', onclick: ev => ev.stopPropagation() },
-        h('button', {
-          type: 'button',
-          class: 'ux-icon-btn',
-          title: 'Tác vụ khác',
-          'aria-label': 'Tác vụ khác',
-          onclick: ev => {
-            ev.stopPropagation();
-            const willOpen = moreMenu.hidden;
-            closeAllDropdowns(moreMenu);
-            moreMenu.hidden = !willOpen;
-          },
-        }, '⋯'),
-        moreMenu)),
-
-    h('div', { class: 'deck-card-body' },
-      h('h3', { class: 'deck-card-title' }, meta.title),
-      meta.description
-        ? h('p', { class: 'deck-card-desc' }, meta.description)
-        : null),
-
-    h('div', { class: 'deck-card-progress' },
-      renderStackedBar(st),
-      h('div', { class: 'deck-stats-legend' },
-        h('span', { class: 'stat-dot new' }, `Mới ${st.new}`),
-        h('span', { class: 'stat-sep' }, '·'),
-        h('span', { class: 'stat-dot learning' }, `Đang học ${st.learning}`),
-        h('span', { class: 'stat-sep' }, '·'),
-        h('span', { class: `stat-dot due ${st.due > 0 ? 'has-due' : ''}` }, `Đến hạn ${st.due}`),
-        h('span', { class: 'stat-sep' }, '·'),
-        h('span', { class: 'stat-dot mastered' }, `Đã thuộc ${st.mastered}`))),
-
-    h('div', { class: 'deck-card-footer', onclick: ev => ev.stopPropagation() },
-      totalValid > 0
-        ? (totalToday > 0
-            ? h('button', {
-                type: 'button',
-                class: 'ux-btn primary deck-primary-btn',
-                onclick: ev => { ev.stopPropagation(); actions.startSrsSession(entry); },
-              }, `Ôn hôm nay · ${totalToday}`)
-            : h('button', {
-                type: 'button',
-                class: 'ux-btn deck-done-btn',
-                disabled: true,
-                title: 'Bạn đã hoàn thành lịch ôn và hạn mức thẻ mới hôm nay của bộ thẻ này',
-              }, 'Hôm nay đã xong ✓'))
-        : h('button', {
-            type: 'button',
-            class: 'ux-btn deck-done-btn',
-            disabled: true,
-          }, 'Chưa có mục hợp lệ'),
-      items.length > 0 ? h('div', { class: 'menu-wrap' },
-        h('button', {
-          type: 'button',
-          class: 'ux-btn',
-          onclick: ev => {
-            ev.stopPropagation();
-            const willOpen = studyMenu.hidden;
-            closeAllDropdowns(studyMenu);
-            studyMenu.hidden = !willOpen;
-          },
-        }, 'Học ▾'),
-        studyMenu) : null,
-      h('button', {
-        type: 'button',
-        class: 'ux-btn',
-        onclick: ev => { ev.stopPropagation(); actions.openEditor(entry); },
-      }, 'Sửa'))
-  );
 }
 
 function renderEmptyHome(busy, actions) {
@@ -300,6 +113,35 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       onclick: () => { importMenu.hidden = true; actions.importDeck('dir'); },
     }, 'Từ thư mục (kèm ảnh)…'));
 
+  const sidebarHost = h('aside', { class: `folder-sidebar ${homeUiState.sidebarOpen ? '' : 'collapsed'}` });
+
+  const sidebarToggleBtn = h('button', {
+    type: 'button',
+    class: `ux-btn ${homeUiState.sidebarOpen ? 'active' : ''}`,
+    title: homeUiState.sidebarOpen ? 'Thu gọn danh mục thư mục' : 'Mở danh mục thư mục',
+    onclick: () => toggleSidebar(),
+  }, homeUiState.sidebarOpen ? '📁 Thư mục ▾' : '📁 Thư mục ▸');
+
+  function toggleSidebar(forceState) {
+    homeUiState.sidebarOpen = typeof forceState === 'boolean' ? forceState : !homeUiState.sidebarOpen;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('turtle_folder_sidebar_open', String(homeUiState.sidebarOpen));
+      } catch {}
+    }
+    if (homeUiState.sidebarOpen) {
+      sidebarHost.classList.remove('collapsed');
+      sidebarToggleBtn.classList.add('active');
+      sidebarToggleBtn.textContent = '📁 Thư mục ▾';
+      sidebarToggleBtn.title = 'Thu gọn danh mục thư mục';
+    } else {
+      sidebarHost.classList.add('collapsed');
+      sidebarToggleBtn.classList.remove('active');
+      sidebarToggleBtn.textContent = '📁 Thư mục ▸';
+      sidebarToggleBtn.title = 'Mở danh mục thư mục';
+    }
+  }
+
   const toolbar = h('div', { class: 'toolbar' },
     h('button', {
       type: 'button',
@@ -307,6 +149,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
       disabled: busy,
       onclick: () => actions.openNewDeckModal(),
     }, '+ Bộ thẻ mới'),
+    sidebarToggleBtn,
     h('button', {
       type: 'button',
       class: 'ux-btn',
@@ -353,7 +196,195 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         h('div', { class: 'today-card-label' }, 'Đã ôn hôm nay'),
         h('div', { class: 'today-card-value accent-ok' }, String(reviewedToday)))));
 
+  const bannerHost = h('div', { class: 'home-banner-host' });
   const listHost = h('div', { class: 'home-list-host' });
+
+  let rawFolderTree = [];
+  let flatFolders = [];
+
+  async function refreshFolders() {
+    if (window.api?.getFolderTree) {
+      try {
+        rawFolderTree = await window.api.getFolderTree();
+        flatFolders = flattenFolders(rawFolderTree);
+      } catch (e) {
+        console.warn('Không thể nạp cây thư mục:', e);
+      }
+    }
+    renderSidebar();
+    renderDeckSection();
+  }
+
+  function handleFolderAction(actionType, folder) {
+    if (actionType === 'create') {
+      openFolderModal({
+        type: 'create',
+        folder,
+        onConfirm: async (name) => {
+          const res = await window.api?.createFolder(name, folder?.id || null);
+          if (res && !res.ok) throw new Error(res.error);
+          await refreshFolders();
+        },
+      });
+    } else if (actionType === 'rename') {
+      openFolderModal({
+        type: 'rename',
+        folder,
+        onConfirm: async (newName) => {
+          const res = await window.api?.renameFolder(folder.id, newName);
+          if (res && !res.ok) throw new Error(res.error);
+          await refreshFolders();
+        },
+      });
+    } else if (actionType === 'move') {
+      openFolderModal({
+        type: 'move',
+        folder,
+        folders: flatFolders,
+        onConfirm: async (newParentId) => {
+          const res = await window.api?.moveFolder(folder.id, newParentId);
+          if (res && !res.ok) throw new Error(res.error);
+          await refreshFolders();
+        },
+      });
+    } else if (actionType === 'delete') {
+      openFolderModal({
+        type: 'delete',
+        folder,
+        onConfirm: async () => {
+          const res = await window.api?.deleteFolder(folder.id);
+          if (res && !res.ok) throw new Error(res.error);
+          if (homeUiState.selectedFolderId === folder.id) {
+            homeUiState.selectedFolderId = 'all';
+          }
+          await refreshFolders();
+        },
+      });
+    }
+  }
+
+  function handleDropDeck(deckId, targetFolderId) {
+    const entry = entries.find(e => e.deck?.meta?.id === deckId);
+    const deckTitle = entry?.deck?.meta?.title || 'Bộ thẻ';
+    const targetFolder = flatFolders.find(f => f.id === targetFolderId);
+    const folderName = targetFolder ? targetFolder.name : 'Thư mục gốc';
+
+    promptDropAction({
+      deckTitle,
+      folderName,
+      onChoose: async (choice) => {
+        if (choice === 'move') {
+          const res = await window.api?.moveDeck(deckId, targetFolderId);
+          if (res && !res.ok) alert(res.error);
+        } else if (choice === 'link') {
+          const res = await window.api?.linkDeck(deckId, targetFolderId);
+          if (res && !res.ok) alert(res.error);
+        }
+        await refreshFolders();
+        actions.reloadLibrary?.();
+      },
+    });
+  }
+
+  // Tác vụ di chuyển và liên kết từ menu của thẻ
+  const deckCardActions = {
+    ...actions,
+    onMoveDeck: (entry) => {
+      const deckId = entry.deck?.meta?.id;
+      if (!deckId) return;
+      openFolderModal({
+        type: 'move',
+        folder: { name: entry.deck?.meta?.title || fileName(entry.path), parentId: null, path: '' },
+        folders: flatFolders,
+        onConfirm: async (targetFolderId) => {
+          const res = await window.api?.moveDeck(deckId, targetFolderId);
+          if (res && !res.ok) throw new Error(res.error);
+          await refreshFolders();
+          actions.reloadLibrary?.();
+        },
+      });
+    },
+    onLinkDeck: (entry) => {
+      const deckId = entry.deck?.meta?.id;
+      if (!deckId) return;
+      openFolderModal({
+        type: 'move',
+        folder: { name: entry.deck?.meta?.title || fileName(entry.path), parentId: null, path: '' },
+        folders: flatFolders,
+        onConfirm: async (targetFolderId) => {
+          const res = await window.api?.linkDeck(deckId, targetFolderId);
+          if (res && !res.ok) throw new Error(res.error);
+          await refreshFolders();
+          actions.reloadLibrary?.();
+        },
+      });
+    },
+    onUnlinkDeck: async (entry) => {
+      if (!confirm(`Bạn có chắc muốn xoá liên kết bộ thẻ "${entry.deck?.meta?.title}" khỏi thư mục này?`)) return;
+      if (entry.locationId) {
+        await window.api?.unlinkDeck(entry.locationId, true);
+        await refreshFolders();
+        actions.reloadLibrary?.();
+      }
+    },
+  };
+
+  function renderSidebar() {
+    sidebarHost.replaceChildren(
+      renderFolderTree({
+        folders: flatFolders,
+        selectedFolderId: homeUiState.selectedFolderId,
+        onFolderSelect: (fId) => {
+          homeUiState.selectedFolderId = fId;
+          renderSidebar();
+          renderCardsOnly();
+        },
+        onFolderAction: handleFolderAction,
+        onDropDeck: handleDropDeck,
+        onToggleSidebar: () => toggleSidebar(false),
+      })
+    );
+  }
+
+  function updateBanner(count = 0) {
+    if (homeUiState.selectedFolderId === 'all') {
+      bannerHost.replaceChildren();
+      bannerHost.hidden = true;
+      return;
+    }
+
+    let folderName = 'Thư mục gốc (Root)';
+    let folderIcon = '🏠';
+    if (homeUiState.selectedFolderId !== null) {
+      const targetFolder = flatFolders.find(f => f.id === homeUiState.selectedFolderId);
+      if (targetFolder) {
+        folderName = targetFolder.path || targetFolder.name;
+        folderIcon = '📁';
+      }
+    }
+
+    bannerHost.hidden = false;
+    bannerHost.replaceChildren(
+      h('div', { class: 'active-folder-banner' },
+        h('div', { class: 'active-folder-banner-left' },
+          h('span', null, folderIcon),
+          h('span', { style: 'font-weight: 600;' }, 'Đang xem thư mục:'),
+          h('span', { class: 'ux-chip active' }, folderName),
+          h('span', { class: 'muted', style: 'font-size: 13px;' }, `(${count} bộ thẻ)`)),
+        h('button', {
+          type: 'button',
+          class: 'ux-btn sm ghost',
+          title: 'Hiển thị tất cả bộ thẻ',
+          onclick: () => {
+            homeUiState.selectedFolderId = 'all';
+            renderSidebar();
+            renderDeckSection();
+          },
+        }, '✕ Bỏ lọc'))
+    );
+  }
+
+  let renderCardsOnly = () => {};
 
   function renderDeckSection() {
     if (!entries.length) {
@@ -397,20 +428,6 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     const searchWrap = h('div', { class: 'ux-search-wrap home-search-box' });
     searchWrap.append(createSearchSvg(), searchInput, clearBtn);
 
-    const distinctGroups = [...new Set(entries.map(e => e.group).filter(Boolean))].sort();
-
-    const groupSelect = distinctGroups.length > 0 ? h('select', {
-      class: 'ux-select',
-      'aria-label': 'Lọc theo nhóm thư mục',
-      onchange: ev => {
-        homeUiState.filterGroup = ev.target.value;
-        renderCardsOnly();
-      },
-    },
-      h('option', { value: 'all', selected: homeUiState.filterGroup === 'all' }, 'Tất cả nhóm'),
-      ...distinctGroups.map(g => h('option', { value: g, selected: homeUiState.filterGroup === g }, `Nhóm: ${g}`))
-    ) : null;
-
     const sortSelect = h('select', {
       class: 'ux-select',
       'aria-label': 'Sắp xếp bộ thẻ',
@@ -435,21 +452,35 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         }, opt.label))),
       h('div', { class: 'home-filter-right' },
         searchWrap,
-        groupSelect,
         sortSelect));
 
     const cardsContainer = h('div');
 
-    function renderCardsOnly() {
+    renderCardsOnly = function() {
       const qNorm = stripAccents(homeUiState.searchQuery.trim());
       const filtered = entries.filter(e => {
+        // 1. Lọc theo thư mục đang chọn trong sidebar
+        if (homeUiState.selectedFolderId !== 'all') {
+          if (homeUiState.selectedFolderId === null) {
+            // Thư mục gốc: không có group hoặc relPath không chứa dấu phân cách thư mục
+            if (e.group || (e.relPath && e.relPath.includes('/'))) return false;
+          } else {
+            const targetFolder = flatFolders.find(f => f.id === homeUiState.selectedFolderId);
+            if (targetFolder) {
+              const matchesGroup = e.group === targetFolder.path;
+              const matchesRel = e.relPath && (e.relPath === targetFolder.path || e.relPath.startsWith(`${targetFolder.path}/`));
+              if (!matchesGroup && !matchesRel) return false;
+            }
+          }
+        }
+
+        // 2. Lọc theo loại thẻ
         if (homeUiState.filterKind !== 'all') {
           if (e.status !== 'ok' || !e.deck) return false;
           if (kindOf(e.deck) !== homeUiState.filterKind) return false;
         }
-        if (homeUiState.filterGroup !== 'all') {
-          if (e.group !== homeUiState.filterGroup) return false;
-        }
+
+        // 3. Tìm kiếm theo từ khoá
         if (qNorm) {
           const title = e.deck?.meta?.title || fileName(e.path) || '';
           const desc = e.deck?.meta?.description || '';
@@ -477,7 +508,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         if (homeUiState.sortBy === 'title') {
           return titleA.localeCompare(titleB, 'vi');
         }
-        // Mặc định 'due': Cần ôn nhất (nhiều thẻ đến hạn trước, sau đó tổng thẻ hôm nay)
+        // Mặc định 'due': Cần ôn nhất
         const dueA = stA.due + stA.learning;
         const dueB = stB.due + stB.learning;
         if (dueB !== dueA) return dueB - dueA;
@@ -487,18 +518,22 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         return titleA.localeCompare(titleB, 'vi');
       });
 
+      updateBanner(filtered.length);
+
       if (!filtered.length) {
         cardsContainer.replaceChildren(
           h('div', { class: 'empty', style: 'padding: 32px;' },
             h('p', { style: 'font-weight: 600; margin: 0 0 6px;' }, 'Không tìm thấy bộ thẻ nào khớp bộ lọc.'),
             h('p', { class: 'muted', style: 'margin: 0 0 14px; font-size: 13px;' },
-              'Thử chọn lại loại bộ thẻ hoặc xoá từ khoá tìm kiếm.'),
+              'Thử chọn lại loại bộ thẻ, thư mục hoặc xoá từ khoá tìm kiếm.'),
             h('button', {
               type: 'button',
               class: 'ux-btn sm',
               onclick: () => {
                 homeUiState.filterKind = 'all';
+                homeUiState.selectedFolderId = 'all';
                 homeUiState.searchQuery = '';
+                renderSidebar();
                 renderDeckSection();
               },
             }, 'Xoá bộ lọc'))
@@ -510,14 +545,17 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         h('div', { class: 'deck-grid' },
           ...filtered.map(e => renderDeckCard(e, statsByUid.get(e.uid) || {
             new: 0, learning: 0, due: 0, mastered: 0, newLeftToday: 0, lastStudied: null,
-          }, actions)))
+          }, deckCardActions)))
       );
-    }
+    };
 
     renderCardsOnly();
     listHost.replaceChildren(filterBar, cardsContainer);
   }
 
+  // Khởi tạo ban đầu
+  refreshFolders();
+  renderSidebar();
   renderDeckSection();
 
   root.replaceChildren(
@@ -526,7 +564,26 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
         h('p', { class: 'eyebrow' }, 'TURTLE DECK'),
         h('h1', null, 'Bộ thẻ của bạn')),
       toolbar),
-    todaySection,
-    listHost
+    h('div', { class: 'home-layout' },
+      sidebarHost,
+      h('main', { class: 'home-content' },
+        todaySection,
+        bannerHost,
+        listHost
+      )
+    )
   );
+
+  const onHomeKeyDown = (e) => {
+    if (!root.isConnected) {
+      window.removeEventListener('keydown', onHomeKeyDown);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+      e.preventDefault();
+      toggleSidebar();
+    }
+  };
+  window.addEventListener('keydown', onHomeKeyDown);
 }

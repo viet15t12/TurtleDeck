@@ -11,6 +11,7 @@ export interface WatcherDeps {
   packageStore: PackageStore;
   knownSaves: Map<string, number>;
   notify: (channel: string, payload: any) => void;
+  syncFromFileSystem?: (dir: string) => Promise<any>;
 }
 
 export class WatcherService {
@@ -24,7 +25,7 @@ export class WatcherService {
     return this.watchedDirs.has(path.resolve(dirPath));
   }
 
-  async watchRecursively(dirPath: string, maxDepth = 4): Promise<void> {
+  async watchRecursively(dirPath: string, maxDepth = 9): Promise<void> {
     const queue: Array<{ dir: string; depth: number }> = [{ dir: path.resolve(dirPath), depth: 0 }];
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -49,10 +50,25 @@ export class WatcherService {
 
     try {
       const watcher = fsSync.watch(resolved, { recursive: false }, (eventType, filename) => {
-        if (!filename || !filename.toLowerCase().endsWith('.sdeck')) return;
+        if (!filename) return;
+
+        // Nếu là thư mục mới được tạo bên trong thư mục đang theo dõi
+        const fullItemPath = path.join(resolved, filename);
+        try {
+          if (fsSync.existsSync(fullItemPath) && fsSync.statSync(fullItemPath).isDirectory() && !filename.startsWith('.')) {
+            this.watchPath(fullItemPath);
+            this.deps.notify('folder:changed', { action: 'sync', path: fullItemPath });
+            if (this.deps.syncFromFileSystem) {
+              this.deps.syncFromFileSystem(resolved).catch(() => {});
+            }
+            return;
+          }
+        } catch {}
+
+        if (!filename.toLowerCase().endsWith('.sdeck')) return;
         if (filename.endsWith('.tmp') || filename.endsWith('.bak')) return;
 
-        const fullFile = path.join(resolved, filename);
+        const fullFile = fullItemPath;
         const timerKey = fullFile;
         if (this.watchDebouncers.has(timerKey)) {
           clearTimeout(this.watchDebouncers.get(timerKey)!);

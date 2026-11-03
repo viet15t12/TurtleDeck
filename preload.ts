@@ -104,8 +104,23 @@ const api = {
   restoreBackup: (name: string) => invokeTyped('backup:restore', name),
   openBackupsFolder: () => invokeTyped('backup:openFolder', undefined),
 
+  // Quản lý thư mục cây phân cấp & vị trí bộ thẻ
+  createFolder: (name: string, parentId: string | null = null) => invokeTyped('folder:create', { name, parentId }),
+  renameFolder: (id: string, newName: string) => invokeTyped('folder:rename', { id, newName }),
+  moveFolder: (id: string, newParentId: string | null) => invokeTyped('folder:move', { id, newParentId }),
+  deleteFolder: (id: string) => invokeTyped('folder:delete', { id }),
+  getFolderTree: () => invokeTyped('folder:getTree', undefined),
+  moveDeck: (deckId: string, newFolderId: string | null) => invokeTyped('deck:move', { deckId, newFolderId }),
+  linkDeck: (deckId: string, targetFolderId: string | null) => invokeTyped('deck:link', { deckId, targetFolderId }),
+  unlinkDeck: (locationId: string, deleteFile: boolean = false) => invokeTyped('deck:unlink', { locationId, deleteFile }),
+  getDeckLocations: (deckId: string) => invokeTyped('deck:getLocations', { deckId }),
+
   // Đăng ký sự kiện từ main
   onDeckChanged: (cb: (data: IpcEvents['deck:changed']) => void) => onEvent('deck:changed', cb),
+  onFolderChanged: (cb: (data: IpcEvents['folder:changed']) => void) => onEvent('folder:changed', cb),
+  onDeckMoved: (cb: (data: IpcEvents['deck:moved']) => void) => onEvent('deck:moved', cb),
+  onDeckLinked: (cb: (data: IpcEvents['deck:linked']) => void) => onEvent('deck:linked', cb),
+  onDeckUnlinked: (cb: (data: IpcEvents['deck:unlinked']) => void) => onEvent('deck:unlinked', cb),
   onWatchError: (cb: (data: IpcEvents['deck:watchError']) => void) => onEvent('deck:watchError', cb),
   onFileAdded: (cb: (data: IpcEvents['deck:fileAdded']) => void) => onEvent('deck:fileAdded', cb),
   onFileRemoved: (cb: (data: IpcEvents['deck:fileRemoved']) => void) => onEvent('deck:fileRemoved', cb),

@@ -210,6 +210,10 @@ const actions = {
     render();
   },
 
+  reloadLibrary() {
+    return this.scanLibrary();
+  },
+
   openSettings() {
     state.route = { name: 'settings' };
     render();
@@ -701,6 +705,22 @@ async function init() {
       entry.status = 'missing';
       render();
     }
+  });
+
+  api.onFolderChanged?.(() => {
+    render();
+  });
+
+  api.onDeckMoved?.(() => {
+    actions.scanLibrary();
+  });
+
+  api.onDeckLinked?.(() => {
+    actions.scanLibrary();
+  });
+
+  api.onDeckUnlinked?.(() => {
+    actions.scanLibrary();
   });
 
   const [loadedSettings, loadedProgress] = await Promise.all([

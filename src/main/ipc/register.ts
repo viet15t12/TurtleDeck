@@ -14,7 +14,11 @@ import { registerDeckIpc } from './deck.ipc.js';
 import { registerLibraryIpc } from './library.ipc.js';
 import { registerDraftIpc } from './draft.ipc.js';
 import { registerBackupIpc } from './backup.ipc.js';
+import { registerFolderIpc } from './folder.ipc.js';
+import { registerDeckLocationIpc } from './deck-location.ipc.js';
 import { registerTypedIpcHandlers } from '../ipc-handlers.js';
+import type { FolderService } from '../services/folder-service.js';
+import type { DeckLocationService } from '../services/deck-location-service.js';
 
 export interface IpcDispatcher {
   handle(channel: string, listener: (event: any, ...args: any[]) => any): void;
@@ -29,6 +33,8 @@ export interface IpcContext {
   notify?: (channel: string, payload: any) => void;
   watchPath?: (dir: string) => void;
   knownSaves?: Map<string, number>;
+  folderService?: FolderService;
+  deckLocationService?: DeckLocationService;
 }
 
 export const defaultDispatcher: IpcDispatcher = ipcMain;
@@ -40,6 +46,8 @@ const ARRAY_CHANNELS = new Set([
   'draft:list',
   'backup:list',
   'library:scan',
+  'folder:getTree',
+  'deck:getLocations',
 ]);
 
 export function getFallbackErrorResponse(channel: string, errorMsg: string): any {
@@ -51,7 +59,9 @@ export function getFallbackErrorResponse(channel: string, errorMsg: string): any
 
 export function isValidSenderFrame(url?: string): boolean {
   if (!url) return true;
-  return url.startsWith('file://') && url.includes('src/index.html');
+  if (!url.startsWith('file://')) return false;
+  const cleanUrl = url.split('?')[0].split('#')[0];
+  return cleanUrl.endsWith('/index.html') || cleanUrl.endsWith('\\index.html');
 }
 
 export function registerTypedHandler<C extends IpcChannel>(
@@ -84,6 +94,8 @@ export function registerAll(dispatcher: IpcDispatcher, ctx: IpcContext): void {
   registerLibraryIpc(dispatcher, ctx);
   registerDraftIpc(dispatcher, ctx);
   registerBackupIpc(dispatcher, ctx);
+  registerFolderIpc(dispatcher, ctx);
+  registerDeckLocationIpc(dispatcher, ctx);
 
   if (ctx.dbManager) {
     registerTypedIpcHandlers(ctx.dbManager, dispatcher);

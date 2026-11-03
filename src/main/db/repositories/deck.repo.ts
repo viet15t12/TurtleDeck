@@ -76,6 +76,10 @@ export class DeckRepository {
     return this.stmtGetDeck.get(deckId) || null;
   }
 
+  public updateFilePath(deckId: string, filePath: string): void {
+    this.db.prepare(`UPDATE decks SET file_path = ?, updated_at = ? WHERE id = ?`).run(filePath, Date.now(), deckId);
+  }
+
   public getDeckHash(deckId: string): string | null {
     const row = this.stmtGetDeckHash.get(deckId) as any;
     return row?.deck_hash || null;

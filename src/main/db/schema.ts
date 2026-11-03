@@ -124,8 +124,71 @@ export function initSchema(db: Database.Database): void {
         INSERT INTO items_fts(deck_id, item_id, search_text)
         VALUES (new.deck_id, new.id, new.search_text);
       END;
+
+      -- Bảng thư mục (cấu trúc cây phân cấp tối đa 10 cấp)
+      CREATE TABLE IF NOT EXISTS folders (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        parent_id TEXT,
+        path TEXT NOT NULL UNIQUE,
+        depth INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
+
+      -- Bảng vị trí deck (hỗ trợ nhiều vị trí cho cùng 1 deck - symlink)
+      CREATE TABLE IF NOT EXISTS deck_locations (
+        id TEXT PRIMARY KEY,
+        deck_id TEXT NOT NULL,
+        folder_id TEXT,
+        file_path TEXT NOT NULL,
+        is_link INTEGER DEFAULT 0,
+        link_target TEXT,
+        created_at INTEGER NOT NULL,
+        UNIQUE(deck_id, folder_id),
+        FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_deck_locations_deck ON deck_locations(deck_id);
+      CREATE INDEX IF NOT EXISTS idx_deck_locations_folder ON deck_locations(folder_id);
     `);
 
     db.pragma(`user_version = ${CURRENT_SCHEMA_VERSION}`);
   }
+
+  // Đảm bảo bảng folders và deck_locations luôn tồn tại kể cả khi database đã ở version >= 1
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS folders (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      parent_id TEXT,
+      path TEXT NOT NULL UNIQUE,
+      depth INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
+
+    CREATE TABLE IF NOT EXISTS deck_locations (
+      id TEXT PRIMARY KEY,
+      deck_id TEXT NOT NULL,
+      folder_id TEXT,
+      file_path TEXT NOT NULL,
+      is_link INTEGER DEFAULT 0,
+      link_target TEXT,
+      created_at INTEGER NOT NULL,
+      UNIQUE(deck_id, folder_id),
+      FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_deck_locations_deck ON deck_locations(deck_id);
+    CREATE INDEX IF NOT EXISTS idx_deck_locations_folder ON deck_locations(folder_id);
+  `);
 }
