@@ -10,6 +10,8 @@ export declare class WatcherService {
     private readonly watchers;
     private readonly watchDebouncers;
     constructor(deps: WatcherDeps);
+    isWatching(dirPath: string): boolean;
+    watchRecursively(dirPath: string, maxDepth?: number): Promise<void>;
     watchPath(dirPath: string): void;
     onWatchedFileChanged(filePath: string): Promise<void>;
     closeAll(): void;

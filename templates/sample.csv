@@ -1,0 +1,8 @@
+term,definition,phonetic,pos,example,forms,synonyms,tags
+turtle,con rùa (biểu tượng của Turtle Deck),/ˈtɜː.təl/,noun,The turtle moves slowly but steadily.,turtles,,animal;biology
+persistent,kiên trì bền bỉ không bỏ cuộc,/pəˈsɪs.tənt/,adj,She was persistent in her studies.,persistence;persistently,determined;tenacious,vocab;english
+algorithm,tập hợp các chỉ thị giải quyết vấn đề,/ˈæl.ɡə.rɪ.ðəm/,noun,QuickSort is an efficient sorting algorithm.,algorithms,,cs;programming
+resilient,có khả năng phục hồi nhanh sau khó khăn,/rɪˈzɪl.jənt/,adj,A resilient mindset helps you overcome obstacles.,resilience,,mindset;psychology
+"E = mc^2","Hệ thức liên hệ khối lượng và năng lượng, trong đó c là tốc độ ánh sáng",,/formula,"Theo Einstein, năng lượng nghỉ được xác định bởi công thức E = mc^2.",,,physics;science
+"Linux Kernel","Nhân hệ điều hành mã nguồn mở nguyên bản do Linus Torvalds phát triển",,/concept,"Linux Kernel quản lý tài nguyên phần cứng và điều phối tiến trình.",,,os;linux
+

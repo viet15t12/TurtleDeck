@@ -4,6 +4,26 @@ import path from 'node:path';
 import * as fsutil from '../../core/fsutil.js';
 import * as progressio from '../../core/progressio.js';
 const errMsg = (e) => (e && e.message) || String(e);
+export async function pruneTemporaryDbBackups(dir, maxKeep = 5) {
+    try {
+        const files = await fs.readdir(dir);
+        const preImport = files.filter(f => f.startsWith('pre-import-') && f.endsWith('.db')).sort();
+        const preRestore = files.filter(f => f.startsWith('pre-restore-') && f.endsWith('.db')).sort();
+        if (preImport.length > maxKeep) {
+            const toDelete = preImport.slice(0, preImport.length - maxKeep);
+            for (const f of toDelete) {
+                await fs.rm(path.join(dir, f), { force: true }).catch(() => { });
+            }
+        }
+        if (preRestore.length > maxKeep) {
+            const toDelete = preRestore.slice(0, preRestore.length - maxKeep);
+            for (const f of toDelete) {
+                await fs.rm(path.join(dir, f), { force: true }).catch(() => { });
+            }
+        }
+    }
+    catch { }
+}
 export async function ensureDailyBackup(deps) {
     const tz = deps.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const now = deps.now ? deps.now() : Date.now();
@@ -47,6 +67,8 @@ export async function ensureDailyBackup(deps) {
         }
     }
     catch { }
+    // Dọn dẹp các bản sao lưu db tạm thời
+    await pruneTemporaryDbBackups(dir, 5);
 }
 export async function createBackup(deps) {
     const dir = deps.backupsDir;
@@ -94,7 +116,7 @@ export async function listBackups(backupsDir) {
     return result;
 }
 export async function restoreBackup(deps, name) {
-    if (typeof name !== 'string' || name.includes('/') || name.includes('\\')) {
+    if (typeof name !== 'string' || !/^progress-[\w-]+\.json$/.test(name)) {
         return { ok: false, error: 'Tên file sao lưu không hợp lệ.' };
     }
     const src = path.join(deps.backupsDir, name);

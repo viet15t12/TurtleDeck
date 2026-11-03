@@ -101,7 +101,11 @@ declare const api: {
         canceled?: boolean;
     }>;
     addImages: (deckKey: string) => Promise<any>;
-    addImageBytes: (deckKey: string, name: string, bytes: any) => Promise<any>;
+    addImageBytes: (deckKey: string, name: string, bytes: any) => Promise<{
+        ok: boolean;
+        path?: string;
+        error?: string;
+    }>;
     listAssets: (deckKey: string) => Promise<string[]>;
     removeAsset: (deckKey: string, assetPath: string) => Promise<{
         ok: boolean;

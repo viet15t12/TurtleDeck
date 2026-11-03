@@ -137,6 +137,10 @@ Bạn có thể đưa dữ liệu sẵn có vào Turtle Deck chỉ trong vài gi
    - **Markdown**: Danh sách dạng danh mục hoặc bảng Markdown.
 3. Xem trước (Preview) kết quả phân tích dữ liệu trước khi đồng ý nạp vào bộ thẻ.
 
+> [!TIP]
+> **Tạo bộ thẻ mà không cần dùng Editor**:
+> Xem toàn bộ các tệp mẫu (`.txt`, `.csv`, `.tsv`, `.md`, `.json`) tại thư mục [`templates/`](./templates/) và tài liệu hướng dẫn quy tắc chi tiết tại [`templates/QUY_TAC_TAO_BO_THE.md`](./templates/QUY_TAC_TAO_BO_THE.md).
+
 ---
 
 ## 🧠 Các chế độ học tập

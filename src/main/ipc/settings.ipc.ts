@@ -11,3 +11,4 @@ export function registerSettingsIpc(dispatcher: IpcDispatcher, ctx: IpcContext):
     return await settingsService.saveSettings(ctx.paths.settingsFile(), data);
   });
 }
+

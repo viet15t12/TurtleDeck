@@ -8,3 +8,4 @@ export async function loadSettings(settingsFile: string): Promise<any> {
 export async function saveSettings(settingsFile: string, data: any): Promise<{ ok: boolean; error?: string }> {
   return await fsutil.saveSettingsFile(settingsFile, data);
 }
+

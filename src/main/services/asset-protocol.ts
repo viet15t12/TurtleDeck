@@ -7,3 +7,4 @@ export function handleAssetRequest(url: string, packageStore: PackageStore): any
     resolveDeckKey: (key: string) => packageStore.get(key),
   });
 }
+

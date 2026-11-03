@@ -10,3 +10,4 @@ export declare function exportProgress(cards: any[], logs: any[], meta?: any): a
 export declare function mergeProgress(current: any, imported: any): any;
 export declare function pickBackupsToDelete(files: string[], keepCount?: number): string[];
 export declare function validateProgress(data: any): { ok: boolean; progress?: any; error?: string; stats?: any };
+

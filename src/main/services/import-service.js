@@ -55,10 +55,20 @@ export async function collectImportAssets(sourceDir, items) {
     return { assets, issues };
 }
 export async function previewImport(packageStore, args) {
-    const { path: filePath, text: rawText, format, options = {} } = args || {};
+    const { token, text: rawText, format, options = {} } = args || {};
     let content = rawText;
     let hasSourceDir = false;
     let sourceDir = null;
+    let filePath;
+    if (token && typeof token === 'string') {
+        filePath = packageStore.getTempImport(token);
+        if (!filePath) {
+            return { ok: false, error: 'Token tệp nhập không hợp lệ hoặc đã hết hạn.' };
+        }
+    }
+    else if (args?.path || args?.filePath) {
+        return { ok: false, error: 'Đường dẫn chưa được cấp phép. Vui lòng chọn file qua hộp thoại.' };
+    }
     if (typeof filePath === 'string' && filePath.trim()) {
         try {
             content = await fs.readFile(filePath, 'utf8');

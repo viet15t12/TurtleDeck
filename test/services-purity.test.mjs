@@ -20,3 +20,4 @@ test('services purity: src/main/services must NOT import electron', async () => 
     );
   }
 });
+

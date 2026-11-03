@@ -6,6 +6,7 @@ export interface BackupDeps {
     now?: () => number;
     timeZone?: string;
 }
+export declare function pruneTemporaryDbBackups(dir: string, maxKeep?: number): Promise<void>;
 export declare function ensureDailyBackup(deps: BackupDeps): Promise<void>;
 export declare function createBackup(deps: BackupDeps): Promise<{
     ok: boolean;

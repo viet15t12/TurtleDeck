@@ -16,6 +16,8 @@ export interface IpcContext {
     knownSaves?: Map<string, number>;
 }
 export declare const defaultDispatcher: IpcDispatcher;
+export declare function getFallbackErrorResponse(channel: string, errorMsg: string): any;
+export declare function isValidSenderFrame(url?: string): boolean;
 export declare function registerTypedHandler<C extends IpcChannel>(dispatcher: IpcDispatcher, channel: C, fn: (event: any, request: IpcRequest<C>) => Promise<IpcResponse<C>> | IpcResponse<C>): void;
 export declare function registerAll(dispatcher: IpcDispatcher, ctx: IpcContext): void;
 //# sourceMappingURL=register.d.ts.map

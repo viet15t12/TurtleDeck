@@ -1,0 +1,7 @@
+term	definition	phonetic	pos	example	tags
+compile	biên dịch mã nguồn thành mã máy hoặc mã byte	/kəmˈpaɪl/	verb	Run tsc to compile TypeScript into JavaScript.	programming;dev
+interpreter	trình thông dịch thực thi mã trực tiếp không qua biên dịch trước	/ɪnˈtɜː.prɪ.tər/	noun	Python uses an interpreter to execute scripts line by line.	programming;python
+database	hệ thống cơ sở dữ liệu có cấu trúc	/ˈdeɪ.tə.beɪs/	noun	SQLite is a lightweight embedded database.	database;sql
+asynchronous	bất đồng bộ không chặn luồng chính	/eɪˈsɪŋ.krə.nəs/	adj	Use async/await for asynchronous operations in Node.js.	javascript;async
+cache	vùng nhớ đệm tạm thời nhằm tăng tốc truy xuất dữ liệu	/kæʃ/	noun	The browser stores static assets in the cache.	system;performance
+

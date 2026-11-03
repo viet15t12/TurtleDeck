@@ -5,6 +5,12 @@ import * as sdeck from '../../core/sdeck.js';
 import * as parser from '../../core/parser.js';
 import * as fsutil from '../../core/fsutil.js';
 import * as library from '../../core/library.js';
+export function isPathInsideRoot(targetPath, rootDir) {
+    const normRoot = path.resolve(rootDir);
+    const rootPrefix = normRoot.endsWith(path.sep) ? normRoot : normRoot + path.sep;
+    const normTarget = path.resolve(targetPath);
+    return normTarget.startsWith(rootPrefix) || normTarget === normRoot;
+}
 export async function getActiveLibraryDir(settingsFile, defaultDir) {
     try {
         const s = await fsutil.loadSettingsFile(settingsFile);
@@ -30,6 +36,7 @@ export async function scanLibraryRecursively(dir, rootDir, depth = 0, results = 
         realRoot = await fs.realpath(rootDir);
     }
     catch { }
+    const rootPrefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
     for (const ent of dirents) {
         if (results.length >= maxFiles)
             break;
@@ -39,7 +46,7 @@ export async function scanLibraryRecursively(dir, rootDir, depth = 0, results = 
         const fullPath = path.join(dir, name);
         try {
             const real = await fs.realpath(fullPath);
-            if (!real.startsWith(realRoot))
+            if (!real.startsWith(rootPrefix))
                 continue;
         }
         catch {
@@ -57,6 +64,7 @@ export async function scanLibraryRecursively(dir, rootDir, depth = 0, results = 
     }
     return results;
 }
+export const libraryCache = new Map();
 export async function scanLibrary(libDir) {
     await fs.mkdir(libDir, { recursive: true }).catch(() => { });
     const scannedFiles = await scanLibraryRecursively(libDir, libDir);
@@ -67,6 +75,18 @@ export async function scanLibrary(libDir) {
             const st = await fs.stat(item.fullPath);
             if (st.size > sdeck.LIMITS.total)
                 continue;
+            const cached = libraryCache.get(item.fullPath);
+            if (cached && cached.mtime === st.mtimeMs && cached.size === st.size) {
+                decks.push({
+                    path: item.fullPath,
+                    relPath: item.relPath,
+                    group,
+                    ok: true,
+                    deck: cached.deck,
+                    total: cached.total,
+                });
+                continue;
+            }
             const bytes = await fs.readFile(item.fullPath);
             const metaRes = sdeck.readPackageMeta(bytes);
             if (!metaRes.ok) {
@@ -90,6 +110,12 @@ export async function scanLibrary(libDir) {
                 });
                 continue;
             }
+            libraryCache.set(item.fullPath, {
+                mtime: st.mtimeMs,
+                size: st.size,
+                deck: parsed.deck,
+                total: parsed.total,
+            });
             decks.push({
                 path: item.fullPath,
                 relPath: item.relPath,

@@ -116,8 +116,12 @@ export interface IpcContracts {
             deckKey: string;
             name: string;
             bytes: number[] | Uint8Array;
-        } | any;
-        response: any;
+        };
+        response: {
+            ok: boolean;
+            path?: string;
+            error?: string;
+        };
     };
     'asset:list': {
         request: {
@@ -129,7 +133,7 @@ export interface IpcContracts {
         request: {
             deckKey: string;
             assetPath: string;
-        } | any;
+        };
         response: {
             ok: boolean;
             error?: string;

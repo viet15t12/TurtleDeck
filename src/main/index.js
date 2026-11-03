@@ -9,19 +9,18 @@ const { app, protocol } = electron || {};
 const gotTheLock = app ? app.requestSingleInstanceLock() : true;
 if (!gotTheLock) {
     app?.quit();
+    process.exit(0);
 }
-else {
-    // 2. Đăng ký scheme asset:// trước khi app ready
-    if (protocol) {
-        protocol.registerSchemesAsPrivileged([
-            { scheme: 'asset', privileges: { standard: true, secure: true, supportFetchAPI: true } },
-        ]);
-    }
-    // 3. Đường dẫn preload và HTML renderer
-    const preloadPath = path.resolve(import.meta.dirname, '../preload.js');
-    const fallbackPreload = path.resolve(import.meta.dirname, '../../preload.js');
-    const actualPreload = path.resolve(import.meta.dirname, '../preload.js');
-    const htmlPath = path.resolve(import.meta.dirname, '../../src/index.html');
-    initAppLifecycle(defaultPaths, defaultPackageStore, actualPreload, htmlPath);
+// 2. Đăng ký scheme asset:// trước khi app ready
+if (protocol) {
+    protocol.registerSchemesAsPrivileged([
+        { scheme: 'asset', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+    ]);
 }
+// 3. Đường dẫn preload và HTML renderer
+const preloadPath = path.resolve(import.meta.dirname, '../preload.js');
+const fallbackPreload = path.resolve(import.meta.dirname, '../../preload.js');
+const actualPreload = path.resolve(import.meta.dirname, '../preload.js');
+const htmlPath = path.resolve(import.meta.dirname, '../../src/index.html');
+initAppLifecycle(defaultPaths, defaultPackageStore, actualPreload, htmlPath);
 //# sourceMappingURL=index.js.map

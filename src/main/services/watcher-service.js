@@ -13,6 +13,27 @@ export class WatcherService {
     constructor(deps) {
         this.deps = deps;
     }
+    isWatching(dirPath) {
+        return this.watchedDirs.has(path.resolve(dirPath));
+    }
+    async watchRecursively(dirPath, maxDepth = 4) {
+        const queue = [{ dir: path.resolve(dirPath), depth: 0 }];
+        while (queue.length > 0) {
+            const current = queue.shift();
+            this.watchPath(current.dir);
+            if (current.depth >= maxDepth)
+                continue;
+            try {
+                const entries = await fs.readdir(current.dir, { withFileTypes: true });
+                for (const ent of entries) {
+                    if (ent.isDirectory() && !ent.name.startsWith('.')) {
+                        queue.push({ dir: path.join(current.dir, ent.name), depth: current.depth + 1 });
+                    }
+                }
+            }
+            catch { }
+        }
+    }
     watchPath(dirPath) {
         if (!dirPath || typeof dirPath !== 'string')
             return;

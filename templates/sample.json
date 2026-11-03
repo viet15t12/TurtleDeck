@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "id": "sample-deck-offline",
+    "title": "Bộ thẻ mẫu JSON chuẩn Turtle Deck",
+    "kind": "quiz",
+    "lang": "vi",
+    "format": "studydeck",
+    "formatVersion": 1,
+    "description": "Tệp mẫu JSON có thể đóng gói trực tiếp thành .sdeck bằng lệnh CLI mà không cần mở Editor"
+  },
+  "items": [
+    {
+      "id": "card_pytago",
+      "type": "card",
+      "front": "Phát biểu và công thức của **Định lý Pytago**?",
+      "back": "Trong tam giác vuông, bình phương cạnh huyền bằng tổng bình phương hai cạnh góc vuông:\n\n$$a^2 + b^2 = c^2$$",
+      "topic": "Hình học",
+      "tags": ["toan_hoc", "co_ban"]
+    },
+    {
+      "id": "mc_http_status",
+      "type": "single",
+      "question": "Mã trạng thái HTTP nào biểu thị tài nguyên được yêu cầu **không tìm thấy** (Not Found)?",
+      "choices": [
+        "200 OK",
+        "401 Unauthorized",
+        "403 Forbidden",
+        "404 Not Found"
+      ],
+      "answer": [3],
+      "explanation": "Mã **404 Not Found** cho biết máy chủ không thể tìm thấy tài nguyên theo URL được yêu cầu.",
+      "topic": "Mạng máy tính",
+      "tags": ["web", "http"]
+    },
+    {
+      "id": "multi_primary_colors",
+      "type": "multi",
+      "question": "Trong hệ màu cộng ánh sáng (RGB), những màu nào là màu cơ bản?",
+      "choices": [
+        "Đỏ (Red)",
+        "Lục (Green)",
+        "Lam (Blue)",
+        "Vàng (Yellow)"
+      ],
+      "answer": [0, 1, 2],
+      "explanation": "Hệ màu RGB cấu thành từ 3 màu cơ sở: Đỏ (Red), Lục (Green) và Lam (Blue).",
+      "topic": "Đồ họa",
+      "tags": ["mau_sac", "rgb"]
+    },
+    {
+      "id": "fill_einstein",
+      "type": "fill",
+      "question": "Phương trình nổi tiếng của Albert Einstein liên hệ khối lượng và năng lượng là $E =$ [___]?",
+      "answer": [
+        "mc^2",
+        "m*c^2",
+        "m c^2"
+      ],
+      "answerDisplay": "$mc^2$",
+      "explanation": "Hệ thức $E = mc^2$ khẳng định năng lượng và khối lượng có thể chuyển đổi qua lại.",
+      "topic": "Vật lý",
+      "tags": ["thuyet_tuong_doi", "khoa_hoc"]
+    },
+    {
+      "id": "cmd_list_hidden",
+      "type": "command",
+      "question": "Gõ lệnh Linux để liệt kê tất cả các file trong thư mục, bao gồm cả **file ẩn** và hiển thị chi tiết (long format):",
+      "answer": [
+        "ls -la",
+        "ls -al",
+        "ls -l -a",
+        "ls -a -l"
+      ],
+      "match": "normalized",
+      "explanation": "Tùy chọn `-a` hiển thị file ẩn (bắt đầu bằng dấu chấm), tùy chọn `-l` hiển thị thông tin chi tiết quyền, chủ sở hữu, kích thước.",
+      "topic": "Linux",
+      "tags": ["cli", "bash"]
+    }
+  ]
+}

@@ -9,3 +9,4 @@ export declare function loadProgressFile(filePath: string): Promise<any>;
 export declare function saveProgressFile(filePath: string, data: any, opts?: any): Promise<{ ok: boolean; error?: string }>;
 export declare function loadSettingsFile(filePath: string): Promise<any>;
 export declare function saveSettingsFile(filePath: string, data: any): Promise<{ ok: boolean; error?: string }>;
+

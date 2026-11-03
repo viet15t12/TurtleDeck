@@ -46,3 +46,4 @@ export class ExternalFilesManager {
     return this.rendererReady;
   }
 }
+

@@ -31,3 +31,4 @@ export function registerDraftIpc(dispatcher: IpcDispatcher, ctx: IpcContext): vo
     return await draftService.loadDraft(ctx.paths.draftsDir(), draftId, getDeckDeps());
   });
 }
+

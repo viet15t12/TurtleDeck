@@ -1,0 +1,11 @@
+cat	con mèo
+dog	con chó
+turtle	con rùa
+persistent	kiên trì, bền bỉ
+algorithm	thuật toán xử lý dữ liệu
+CPU	Central Processing Unit - bộ xử lý trung tâm
+RAM	Random Access Memory - bộ nhớ truy xuất ngẫu nhiên
+$E = mc^2$	Hệ thức liên hệ giữa khối lượng và năng lượng của Einstein
+$\lim_{x \to 0} \frac{\sin x}{x} = 1$	Giới hạn cơ bản trong giải tích
+Hà Nội	Thủ đô của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam
+
