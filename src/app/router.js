@@ -1,8 +1,8 @@
 // src/app/router.js — Router điều hướng và render các view dựa trên state.route
 
-import { renderHome } from '../views/home.js';
+import { renderHome, detachHomeKeyboard } from '../views/home.js';
 import { renderDeck } from '../views/deck.js';
-import { renderSession } from '../views/session.js';
+import { renderSession, disposeSession } from '../views/session.js';
 import { renderEditor } from '../views/editor.js';
 import { renderSettings } from '../views/settings.js';
 import { renderStats } from '../views/stats.js';
@@ -16,6 +16,13 @@ const api = window.api;
 
 export function createRouter({ state, actions, root }) {
   return function render() {
+    if (state.route.name !== 'home') {
+      detachHomeKeyboard();
+    }
+    if (state.route.name !== 'session') {
+      disposeSession();
+    }
+
     document.body.classList.toggle('in-editor', state.route.name === 'editor');
 
     if (state.route.name === 'stats') {
@@ -195,3 +202,4 @@ export function createRouter({ state, actions, root }) {
     if (state.modal) root.append(state.modal);
   };
 }
+

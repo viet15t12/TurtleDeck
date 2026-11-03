@@ -7,6 +7,7 @@ export function createFolderStore() {
   let flatFolders = [];
   let deckLocations = [];
   let locationsByDeckId = new Map();
+  let isLoaded = false;
 
   async function refreshDeckLocations() {
     if (window.api?.getDeckLocations) {
@@ -20,7 +21,10 @@ export function createFolderStore() {
     }
   }
 
-  async function refreshFolders() {
+  async function refreshFolders(force = false) {
+    if (!force && isLoaded) {
+      return;
+    }
     if (window.api?.getFolderTree) {
       try {
         rawFolderTree = await window.api.getFolderTree();
@@ -30,6 +34,11 @@ export function createFolderStore() {
       }
     }
     await refreshDeckLocations();
+    isLoaded = true;
+  }
+
+  function invalidate() {
+    isLoaded = false;
   }
 
   function findFolder(fId) {
@@ -51,6 +60,7 @@ export function createFolderStore() {
   return {
     refreshFolders,
     refreshDeckLocations,
+    invalidate,
     findFolder,
     getBreadcrumbChain,
     get rawFolderTree() {
@@ -67,3 +77,4 @@ export function createFolderStore() {
     },
   };
 }
+
