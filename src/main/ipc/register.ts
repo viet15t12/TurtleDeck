@@ -33,6 +33,22 @@ export interface IpcContext {
 
 export const defaultDispatcher: IpcDispatcher = ipcMain;
 
+const ARRAY_CHANNELS = new Set([
+  'deck:open',
+  'asset:add',
+  'asset:list',
+  'draft:list',
+  'backup:list',
+  'library:scan',
+]);
+
+export function getFallbackErrorResponse(channel: string, errorMsg: string): any {
+  if (ARRAY_CHANNELS.has(channel)) {
+    return [];
+  }
+  return { ok: false, error: `Lỗi không mong muốn: ${errorMsg}` };
+}
+
 export function registerTypedHandler<C extends IpcChannel>(
   dispatcher: IpcDispatcher,
   channel: C,
@@ -43,8 +59,9 @@ export function registerTypedHandler<C extends IpcChannel>(
       const param = args.length <= 1 ? args[0] : args;
       return await fn(event, param as IpcRequest<C>);
     } catch (e: any) {
+      const msg = (e && e.message) || String(e);
       console.error(`[IPC Error] ${channel}:`, e);
-      return { ok: false, error: (e && e.message) || String(e) } as any;
+      return getFallbackErrorResponse(channel, msg);
     }
   });
 }

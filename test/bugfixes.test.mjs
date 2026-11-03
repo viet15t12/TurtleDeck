@@ -241,3 +241,18 @@ test('Issue 11: restoreBackup validates name using strict regex whitelist', asyn
   await fs.writeFile(path.join(tmpDir, 'custom-name.json'), validJson);
   assert.equal((await restoreBackup({ backupsDir: tmpDir, progressFile: '/tmp/p.json' }, 'custom-name.json')).ok, false, 'Files not matching progress-*.json must be rejected');
 });
+
+// Test Lỗi 12: getFallbackErrorResponse trả mảng rỗng [] cho các kênh mảng khi có lỗi bất ngờ
+test('Issue 12: getFallbackErrorResponse returns [] for array channels and {ok:false,error} for others', async () => {
+  const { getFallbackErrorResponse } = await import('../src/main/ipc/register.js');
+
+  assert.deepEqual(getFallbackErrorResponse('deck:open', 'crash'), []);
+  assert.deepEqual(getFallbackErrorResponse('asset:add', 'crash'), []);
+  assert.deepEqual(getFallbackErrorResponse('draft:list', 'crash'), []);
+  assert.deepEqual(getFallbackErrorResponse('backup:list', 'crash'), []);
+  assert.deepEqual(getFallbackErrorResponse('library:scan', 'crash'), []);
+
+  const objRes = getFallbackErrorResponse('deck:save', 'crash');
+  assert.equal(objRes.ok, false);
+  assert.ok(objRes.error.includes('crash'));
+});
