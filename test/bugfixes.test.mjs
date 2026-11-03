@@ -162,3 +162,30 @@ test('Issue 7: scanLibrary caches decks by mtime and size', async () => {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 });
+
+// Test Lỗi 8: Watcher theo dõi thư mục con và có hàm closeAll
+test('Issue 8: WatcherService watches subdirectories recursively and can closeAll', async () => {
+  const { WatcherService } = await import('../src/main/services/watcher-service.js');
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'study-issue8-'));
+  const sub1 = path.join(tmpDir, 'sub1');
+  const sub2 = path.join(sub1, 'sub2');
+  await fs.mkdir(sub2, { recursive: true });
+
+  const notifications = [];
+  const watcher = new WatcherService({
+    packageStore: new PackageStore(),
+    knownSaves: new Map(),
+    notify: (channel, payload) => notifications.push({ channel, payload }),
+  });
+
+  try {
+    await watcher.watchRecursively(tmpDir);
+    assert.equal(watcher.isWatching(tmpDir), true);
+    assert.equal(watcher.isWatching(sub1), true);
+    assert.equal(watcher.isWatching(sub2), true);
+  } finally {
+    watcher.closeAll();
+    assert.equal(watcher.isWatching(tmpDir), false);
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
