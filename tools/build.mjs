@@ -3,8 +3,8 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-console.log('Building TypeScript sources...');
-execSync('npx tsc', { stdio: 'inherit' });
+console.log('Typechecking TypeScript sources...');
+execSync('npx tsc --noEmit', { stdio: 'inherit' });
 
 // Compile preload.ts -> dist/preload.js (CommonJS)
 fs.writeFileSync('tsconfig.preload.json', JSON.stringify({
@@ -45,3 +45,4 @@ for (const f of fs.readdirSync('src/core')) {
 }
 
 console.log('Build completed successfully.');
+

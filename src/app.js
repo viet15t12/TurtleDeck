@@ -476,7 +476,7 @@ function render() {
   document.body.classList.toggle('in-editor', state.route.name === 'editor');
 
   if (state.route.name === 'stats') {
-    document.title = 'Thống kê học tập — Study App';
+    document.title = 'Thống kê học tập — Turtle Deck';
     setShortcutScope('stats', {
       onEscape: () => actions.home(),
     });
@@ -490,7 +490,7 @@ function render() {
   }
 
   if (state.route.name === 'settings') {
-    document.title = 'Cài đặt — Study App';
+    document.title = 'Cài đặt — Turtle Deck';
     setShortcutScope('settings', {
       onEscape: () => actions.home(),
     });
@@ -506,7 +506,7 @@ function render() {
   if (state.route.name === 'editor') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `Soạn thảo: ${entry.deck.meta.title} — Study App`;
+      document.title = `Soạn thảo: ${entry.deck.meta.title} — Turtle Deck`;
       setShortcutScope('editor');
       renderEditor(root, { entry, initialItemId: state.route.itemId || null }, actions);
       if (state.modal) root.append(state.modal);
@@ -522,7 +522,7 @@ function render() {
       const effectiveEntry = state.route.trialDeck
         ? { ...entry, deck: state.route.trialDeck }
         : entry;
-      document.title = `Học: ${effectiveEntry.deck.meta.title} — Study App`;
+      document.title = `Học: ${effectiveEntry.deck.meta.title} — Turtle Deck`;
       const sessionActions = state.route.fromEditor
         ? { ...actions, openDeckView: () => actions.openEditor(entry) }
         : actions;
@@ -542,7 +542,7 @@ function render() {
   if (state.route.name === 'learn') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `Học thích ứng: ${entry.deck.meta.title} — Study App`;
+      document.title = `Học thích ứng: ${entry.deck.meta.title} — Turtle Deck`;
       setShortcutScope('session');
       renderLearn(root, {
         entry,
@@ -561,7 +561,7 @@ function render() {
   if (state.route.name === 'match') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `Ghép thẻ: ${entry.deck.meta.title} — Study App`;
+      document.title = `Ghép thẻ: ${entry.deck.meta.title} — Turtle Deck`;
       setShortcutScope('session');
       renderMatch(root, {
         entry,
@@ -582,7 +582,7 @@ function render() {
   if (state.route.name === 'exam') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `Thi thử: ${entry.deck.meta.title} — Study App`;
+      document.title = `Thi thử: ${entry.deck.meta.title} — Turtle Deck`;
       setShortcutScope('session');
       renderExam(root, {
         entry,
@@ -602,7 +602,7 @@ function render() {
   if (state.route.name === 'deck') {
     const entry = state.entries.find(e => e.uid === state.route.uid);
     if (entry?.status === 'ok') {
-      document.title = `${entry.deck.meta.title} — Study App`;
+      document.title = `${entry.deck.meta.title} — Turtle Deck`;
       setShortcutScope('deck', {
         onEscape: () => actions.home(),
       });
@@ -613,7 +613,7 @@ function render() {
     state.route = { name: 'home' };
   }
 
-  document.title = 'Study App';
+  document.title = 'Turtle Deck';
   setShortcutScope('home');
   renderHome(root, {
     entries: state.entries,

@@ -1,5 +1,7 @@
 {
-  "name": "study-app",
+  "name": "turtle-deck",
+  "productName": "Turtle Deck",
+  "desktopName": "turtle-deck.desktop",
   "version": "0.1.0",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
   "main": "dist/main/index.js",
@@ -8,14 +10,16 @@
     "typecheck": "tsc --noEmit",
     "build": "node tools/build.mjs",
     "start": "electron .",
-    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples"
+    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
+    "dist": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder --linux",
+    "dist:dir": "npm run build && electron-builder --dir"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/viet15t12/studyApp.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Turtle Deck Team <support@turtledeck.app>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/viet15t12/studyApp/issues"
@@ -40,5 +44,45 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "build": {
+    "appId": "com.turtledeck.app",
+    "productName": "Turtle Deck",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/**/*",
+      "build/icons/**/*",
+      "build/icon.png",
+      "logo.svg",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "rpm"
+      ],
+      "maintainer": "Turtle Deck Team <support@turtledeck.app>",
+      "category": "Education",
+      "syncDesktopName": true,
+      "icon": "build/icons",
+      "mimeTypes": [
+        "application/x-studydeck"
+      ],
+      "fileAssociations": [
+        {
+          "ext": "sdeck",
+          "name": "Turtle Deck Study Deck",
+          "description": "Gói bộ thẻ học tập Turtle Deck",
+          "mimeType": "application/x-studydeck",
+          "role": "Editor"
+        }
+      ]
+    }
   }
 }

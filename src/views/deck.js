@@ -521,5 +521,5 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     itemsPanel
   );
 
-  root.ownerDocument.title = `${meta.title} — ${fileName(entry.path) || 'Study App'}`;
+  root.ownerDocument.title = `${meta.title} — ${fileName(entry.path) || 'Turtle Deck'}`;
 }

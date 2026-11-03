@@ -1,4 +1,6 @@
 // src/main/app/window.ts — Quản lý cửa sổ chính của ứng dụng
+import fs from 'node:fs';
+import path from 'node:path';
 import electron from 'electron';
 
 const { BrowserWindow } = (electron as any) || {};
@@ -14,9 +16,14 @@ export function winOf(event?: any): any {
 }
 
 export function createWindow(preloadPath: string, htmlPath: string): any {
+  const iconCandidate = path.resolve(import.meta.dirname, '../../../build/icon.png');
+  const icon = fs.existsSync(iconCandidate) ? iconCandidate : undefined;
+
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 760,
+    title: 'Turtle Deck',
+    icon,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,

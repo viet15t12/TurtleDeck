@@ -76,7 +76,7 @@ export function renderStats(root, { progress, entries, settings }, actions) {
           'Bạn chưa hoàn thành lượt học nào. Hãy bắt đầu một phiên học bất kỳ để hệ thống ghi nhận tiến trình, chuỗi học và phân tích hiệu suất ghi nhớ.'),
         h('button', { type: 'button', class: 'ux-btn primary', onclick: actions.home }, 'Bắt đầu học ngay'))
     );
-    root.ownerDocument.title = 'Thống kê — Study App';
+    root.ownerDocument.title = 'Thống kê — Turtle Deck';
     return;
   }
 
@@ -399,7 +399,7 @@ export function renderStats(root, { progress, entries, settings }, actions) {
   );
 
   updateChartsAndLists();
-  root.ownerDocument.title = 'Thống kê — Study App';
+  root.ownerDocument.title = 'Thống kê — Turtle Deck';
 
   // Lắng nghe theme thay đổi để tự vẽ lại màu chart
   const observer = new MutationObserver(() => {

@@ -401,5 +401,5 @@ export function renderSettings(root, { settings, progress, entries }, actions) {
         '💡 Mẹo: Bạn có thể chọn đặt lại cho một bộ thẻ riêng lẻ hoặc toàn bộ hệ thống. Thao tác cần xác nhận và không thể hoàn tác.'))
   );
 
-  root.ownerDocument.title = 'Cài đặt — Study App';
+  root.ownerDocument.title = 'Cài đặt — Turtle Deck';
 }

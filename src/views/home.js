@@ -523,7 +523,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   root.replaceChildren(
     h('header', { class: 'page-head' },
       h('div', null,
-        h('p', { class: 'eyebrow' }, 'STUDY APP'),
+        h('p', { class: 'eyebrow' }, 'TURTLE DECK'),
         h('h1', null, 'Bộ thẻ của bạn')),
       toolbar),
     todaySection,

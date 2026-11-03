@@ -1,131 +1,186 @@
-# Study App
+# 🐢 Turtle Deck
 
-**Study App** là ứng dụng desktop (Electron) học tập ngoại tuyến (offline-first), hỗ trợ học tập đa năng thông qua Flashcard, Trắc nghiệm (Quiz), Luyện lệnh/Điền khuyết, Từ vựng ngoại ngữ và thuật toán lặp lại ngắt quãng (SRS - Spaced Repetition).
-
-Toàn bộ dữ liệu bộ thẻ được lưu trữ cục bộ dưới dạng gói tệp tin độc lập `.sdeck`, không phụ thuộc vào internet hay dịch vụ đám mây, đảm bảo tối đa quyền riêng tư và tốc độ phản hồi.
-
----
-
-## 🌟 Tính năng nổi bật
-
-### 1. Định dạng bộ thẻ độc lập (`.sdeck`)
-- Lưu trữ trọn gói câu hỏi, từ vựng và tài nguyên hình ảnh trong một tệp `.sdeck` (định dạng ZIP mở, an toàn).
-- Dễ dàng chia sẻ, sao lưu hoặc di chuyển giữa các thiết bị mà không cần cơ sở dữ liệu cồng kềnh.
-
-### 2. Ba loại bộ thẻ chuyên biệt
-- **Hỏi - Đáp (`qa`)**: Dành cho flashcard lật thẻ truyền thống (ghi nhớ kiến thức, khái niệm).
-- **Trắc nghiệm (`quiz`)**: Hỗ trợ câu hỏi đơn lựa chọn (`single`), nhiều lựa chọn (`multi`), điền khuyết (`fill`), và gõ câu lệnh (`command`).
-- **Từ vựng ngoại ngữ (`vocab`)**: Quản lý từ vựng đầy đủ từ loại, phiên âm IPA, giải nghĩa, ví dụ, và các dạng biến thể từ.
-
-### 3. Nhiều chế độ học tập đa dạng
-- 🗂 **Flashcard**: Lật thẻ 2 chiều (trước/sau hoặc thuật ngữ/định nghĩa), tự đánh giá mức độ ghi nhớ.
-- ✍️ **Luyện tập (Practice)**: Trắc nghiệm và điền câu trả lời có tính điểm tức thì, phản hồi chi tiết và giải thích đáp án.
-- 🔄 **SRS (Spaced Repetition System)**: Thuật toán giãn cách SM-2 chuẩn hóa (Again, Hard, Good, Easy) với chu trình học thẻ mới và ôn thẻ đến hạn (`due`), tính toán theo mốc thời gian thực tế.
-- 🧠 **Learn (Học thích ứng)**: Chu trình học qua nhiều vòng kết hợp nhiều hình thức câu hỏi cho đến khi nắm vững toàn bộ kiến thức.
-- ⚡ **Match (Ghép thẻ)**: Trò chơi ghép cặp nhanh tính thời gian giữa câu hỏi - câu trả lời hoặc từ vựng - nghĩa.
-- ⏱ **Exam (Thi thử)**: Mô phỏng phòng thi bấm giờ, chấm điểm tổng kết và tự động gom các câu làm sai vào chu trình ôn tập SRS.
-
-### 4. Soạn thảo bộ thẻ mạnh mẽ (Deck Editor)
-- Trình biên tập trực quan tạo mới và chỉnh sửa câu hỏi nhanh chóng.
-- **Hỗ trợ Markdown & Công thức toán học LaTeX (KaTeX)**: Soạn thảo công thức trực quan với popover hỗ trợ ký hiệu toán học phong phú.
-- **Quản lý hình ảnh**: Thêm ảnh minh họa trực tiếp vào gói `.sdeck`, xem trước kích thước lớn qua Lightbox.
-- **Nhập hàng loạt (Bulk Import)**: Hỗ trợ nạp dữ liệu nhanh từ CSV, TSV, Quizlet, hoặc Markdown.
-- **Lịch sử Undo / Redo**: Hoàn tác và làm lại thao tác soạn thảo linh hoạt, an toàn.
-
-### 5. Hỗ trợ học ngoại ngữ & Từ vựng
-- **Tự động sinh câu hỏi đa dạng**: Tự động sinh câu hỏi trắc nghiệm (MC), gõ từ (Write), điền khuyết theo ngữ cảnh (Cloze) và nghe chép chính tả (Listen & Write).
-- **Text-to-Speech (TTS)**: Phát âm từ vựng và câu ví dụ chuẩn xác qua Web Speech API với bộ lọc chọn giọng đọc theo ngôn ngữ thông minh.
-
-### 6. Bảo mật & Hiệu năng cao
-- Renderer chạy hoàn toàn cô lập (`contextIsolation: true`, `nodeIntegration: false`), giao tiếp qua IPC an toàn (`preload.js`).
-- Phục vụ ảnh nội bộ qua giao thức an toàn `asset://` với chính sách CSP nghiêm ngặt, chống path traversal.
-- Toàn bộ nội dung hiển thị qua `DOMPurify` ngăn chặn triệt để mã độc XSS.
-- Mọi thao tác ghi file (tiến độ, cài đặt, gói thẻ) đều đảm bảo tính nguyên tử (atomic write).
+<p align="center">
+  <img src="./build/icons/256x256.png" alt="Turtle Deck Logo" width="128" height="128">
+  <br>
+  <strong>Ứng dụng học tập offline-first bằng flashcard, trắc nghiệm và giãn cách ngắt quãng (SRS)</strong>
+</p>
 
 ---
 
-## 🛠 Môi trường phát triển
+## 📖 Giới thiệu
 
-- **Hệ điều hành**: Fedora Linux, Ubuntu, macOS hoặc Windows.
-- **Node.js**: Phiên bản LTS (Node.js 20 trở lên).
-- **npm**: Đi kèm với Node.js.
+**Turtle Deck** là ứng dụng desktop (Electron + SQLite + TypeScript) dành cho việc học tập sâu, ôn luyện bền bỉ và cá nhân hóa:
+- **Tập trung & Kiên trì**: Lấy cảm hứng từ hình tượng chú rùa kiên nhẫn, Turtle Deck chú trọng việc ghi nhớ dài hạn thông qua thuật toán lặp lại ngắt quãng (Spaced Repetition System - SRS).
+- **Offline-First & Bảo mật**: Toàn bộ dữ liệu bộ thẻ và tiến trình được lưu trữ hoàn toàn cục bộ trên máy tính của bạn dưới định dạng `.sdeck` độc lập. Không cần tài khoản, không phụ thuộc internet hay máy chủ đám mây, bảo vệ quyền riêng tư tuyệt đối.
+- **Đa năng**: Hỗ trợ đầy đủ từ Flashcard truyền thống, Trắc nghiệm (Quiz), Điền từ khuyết, Gõ lệnh lập trình, Ghép thẻ nhanh, Thi thử bấm giờ, đến Từ vựng ngoại ngữ kèm phát âm Text-to-Speech (TTS).
 
 ---
 
-## 🚀 Cài đặt và Khởi chạy
+## 🚀 Cài đặt & Khởi chạy
 
-### 1. Cài đặt các gói phụ thuộc
+### 1. Dùng trực tiếp qua AppImage (Linux đa nền tảng)
+Tải tệp `Turtle Deck-0.1.0.AppImage` trong thư mục `release/`, cấp quyền thực thi và mở ứng dụng:
 ```bash
-npm install
+chmod +x "Turtle Deck-0.1.0.AppImage"
+./"Turtle Deck-0.1.0.AppImage"
 ```
 
-### 2. Chạy ứng dụng ở chế độ phát triển
+### 2. Cài đặt trên Fedora / RHEL qua gói RPM
+Trên Fedora hoặc các bản phân phối họ Red Hat:
 ```bash
+sudo dnf install ./release/turtle-deck-0.1.0.x86_64.rpm
+```
+Sau khi cài đặt, hệ thống sẽ tự động liên kết định dạng `.sdeck` (`application/x-studydeck`) với Turtle Deck và xuất hiện trong menu ứng dụng (Education).
+
+### 3. Chạy từ mã nguồn (Dành cho nhà phát triển)
+Yêu cầu: **Node.js >= 20** và **npm**.
+```bash
+# 1. Cài đặt các gói phụ thuộc
+npm install
+
+# 2. Biên dịch mã nguồn (TypeScript & Assets)
+npm run build
+
+# 3. Đóng gói các bộ thẻ mẫu
+npm run build:samples
+
+# 4. Khởi chạy ứng dụng
 npm start
 ```
-*Lưu ý: Ở lần chạy đầu tiên, Electron sẽ khởi tạo môi trường runtime.*
 
-### 3. Đóng gói các bộ thẻ mẫu
-Các bộ thẻ mẫu dạng thư mục nguồn nằm trong `data/samples-src/`. Để đóng gói thành các tệp `.sdeck` sẵn sàng mở trong app:
+### 4. Đóng gói phân phối
 ```bash
-npm run build:samples
-```
-Các tệp đầu ra sẽ nằm tại `data/samples/` (bao gồm: `lpic-sample.sdeck`, `math-sample.sdeck`, `vocab-sample.sdeck`).
-
----
-
-## 📁 Cấu trúc thư mục dự án
-
-```text
-studyApp/
-├── data/
-│   ├── samples/             # Các tệp bộ thẻ mẫu (.sdeck) đã đóng gói
-│   └── samples-src/         # Thư mục nguồn của các bộ thẻ mẫu
-├── src/
-│   ├── app.js               # Điều phối giao diện chính của renderer
-│   ├── index.html           # Khung HTML chính của ứng dụng
-│   ├── tts.js               # Module phát âm Text-To-Speech
-│   ├── core/                # Logic nghiệp vụ thuần (Pure ESM, kiểm thử độc lập)
-│   │   ├── assetprotocol.js # Xử lý giao thức asset:// an toàn
-│   │   ├── builder.js       # Sinh câu hỏi và bài tập từ bộ thẻ
-│   │   ├── deckkinds.js     # Phân loại bộ thẻ (qa, quiz, vocab)
-│   │   ├── deckmodel.js     # Thao tác dữ liệu bộ thẻ, item, undo/redo
-│   │   ├── deckstats.js     # Thống kê tiến độ học tập và thẻ đến hạn
-│   │   ├── exam.js          # Logic tạo đề và chấm bài thi thử
-│   │   ├── filters.js       # Bộ lọc câu hỏi theo tag, topic, trạng thái
-│   │   ├── grader.js        # Chấm điểm câu trả lời (trắc nghiệm, điền khuyết, regex)
-│   │   ├── learnplanner.js  # Lập kế hoạch cho chế độ Learn thích ứng
-│   │   ├── matchgame.js     # Logic trò chơi ghép thẻ (Match)
-│   │   ├── richtext.js      # Parser Markdown + LaTeX (KaTeX) + DOMPurify
-│   │   ├── sdeck.js         # Đọc / ghi gói file nén .sdeck
-│   │   ├── srs.js           # Thuật toán lặp lại ngắt quãng SM-2
-│   │   └── validate.js      # Kiểm tra tính hợp lệ của bộ thẻ và dữ liệu
-│   ├── styles/              # CSS theo hệ thống Design Token và từng màn hình
-│   └── views/               # Các màn hình và thành phần giao diện (UI modules)
-│       ├── deck.js          # Màn hình chi tiết bộ thẻ
-│       ├── editor/          # Toàn bộ module giao diện soạn thảo (Deck Editor)
-│       ├── exam.js          # Màn hình thi thử
-│       ├── home.js          # Màn hình danh sách bộ thẻ chính
-│       ├── learn.js         # Màn hình chế độ học thích ứng (Learn)
-│       ├── match.js         # Màn hình trò chơi ghép thẻ (Match)
-│       ├── session.js       # Màn hình học Flashcard / Luyện tập
-│       └── settings.js      # Màn hình cài đặt (SRS, âm thanh, dữ liệu)
-├── test/                    # Các kịch bản kiểm thử tự động
-├── tools/
-│   ├── sdeck.mjs            # Công cụ CLI đóng gói và kiểm tra file .sdeck
-│   └── gen-fixtures.mjs     # Công cụ sinh dữ liệu kiểm thử
-├── main.js                  # Electron Main Process (quản lý cửa sổ, IPC, I/O)
-├── preload.js               # Electron Preload Script (cầu nối bảo mật window.api)
-└── package.json             # Cấu hình dự án và dependencies
+# Tạo bản cài đặt AppImage và RPM trong thư mục release/
+npm run dist
 ```
 
 ---
 
-## 📖 Tài liệu liên quan
+## 📦 Định dạng bộ thẻ `.sdeck` & Cứu dữ liệu khẩn cấp
 
-- [`study-app.md`](./study-app.md): Đặc tả chi tiết sản phẩm, cấu trúc dữ liệu tệp `.sdeck` và các thuật toán.
-- [`study-app-phases.md`](./study-app-phases.md): Kế hoạch phân chia giai đoạn phát triển và tiêu chuẩn nghiệm thu.
-- [`study-app-architecture-ts-sqlite.md`](./study-app-architecture-ts-sqlite.md): Thiết kế kiến trúc định hướng TypeScript & SQLite.
-- [`study-app-editor-ux.md`](./study-app-editor-ux.md): Đặc tả chi tiết giao diện và trải nghiệm người dùng của Deck Editor.
+### 1. Cấu trúc gói `.sdeck`
+Một tệp `.sdeck` thực chất là **một gói lưu trữ ZIP tiêu chuẩn (không mã hóa)** chứa:
+- `deck.json`: Siêu dữ liệu bộ thẻ (`meta`), danh sách câu hỏi/thẻ học (`items`), cấu hình và liên kết.
+- `img/`: Thư mục chứa toàn bộ hình ảnh minh họa (PNG, JPG, GIF, WebP, SVG).
+
+Toàn bộ gói được đọc trực tiếp vào bộ nhớ và phục vụ hình ảnh qua giao thức nội bộ an toàn `asset://`, không bao giờ giải nén rác ra ổ đĩa.
+
+### 2. Cứu dữ liệu khẩn cấp (Data Rescue)
+Nếu một tệp `.sdeck` bị lỗi phần mềm, bạn muốn lấy lại nội dung thủ công hoặc muốn trích xuất dữ liệu mà không cần mở ứng dụng:
+1. **Đổi đuôi tệp**: Đổi tên `ten_bo_the.sdeck` thành `ten_bo_the.zip`.
+2. **Giải nén**: Nhấp đúp chuột hoặc dùng bất kỳ công cụ giải nén ZIP nào (Archive Manager, 7-Zip, WinRAR, lệnh `unzip`):
+   ```bash
+   unzip ten_bo_the.zip -d thu_muc_giai_nen/
+   ```
+3. Xem và chỉnh sửa trực tiếp tệp `deck.json` hoặc sao chép các ảnh trong thư mục `img/`.
+
+### 3. Công cụ dòng lệnh `tools/sdeck.mjs`
+Dự án đi kèm bộ công cụ CLI tiện ích:
+```bash
+# Giải nén một file .sdeck ra thư mục
+node tools/sdeck.mjs unpack data/samples/math-sample.sdeck temp/math-deck
+
+# Đóng gói một thư mục thành file .sdeck
+node tools/sdeck.mjs pack temp/math-deck my-math.sdeck
+
+# Kiểm tra tính toàn vẹn và dung lượng gói
+node tools/sdeck.mjs check my-math.sdeck
+
+# Đóng gói tất cả thư mục mẫu
+node tools/sdeck.mjs pack-all data/samples-src data/samples
+```
 
 ---
+
+## ✍️ Soạn thảo bộ thẻ bằng Deck Editor
+
+Trình soạn thảo **Deck Editor** tích hợp sẵn cung cấp trải nghiệm mượt mà, chuyên nghiệp:
+
+### 1. Phân loại bộ thẻ (`kind`)
+- **Hỏi - Đáp (`qa`)**: Chuyên về thẻ ghi nhớ flashcard (Mặt trước / Mặt sau).
+- **Trắc nghiệm (`quiz`)**: Hỗ trợ 4 định dạng câu hỏi linh hoạt:
+  - `single`: Trắc nghiệm 1 đáp án đúng (tự động xáo trộn lựa chọn).
+  - `multi`: Trắc nghiệm chọn nhiều đáp án đúng.
+  - `fill`: Điền từ/cụm từ vào chỗ trống (hỗ trợ nhiều đáp án tương đương).
+  - `command`: Luyện gõ lệnh terminal/code với tùy chọn bỏ qua khoảng trắng hoặc kiểm tra regex.
+- **Từ vựng ngoại ngữ (`vocab`)**: Quản lý từ vựng kèm phiên âm IPA, từ loại (pos), định nghĩa, ví dụ câu, và hỗ trợ phát âm TTS.
+
+### 2. Soạn thảo Markdown & Công thức toán LaTeX (KaTeX)
+- **Định dạng văn bản**: Hỗ trợ in đậm (`**text**`), in nghiêng (`*text*`), code inline (`` `code` ``), khối trích dẫn (`> quote`), danh sách.
+- **Công thức toán học**:
+  - Công thức trong dòng (inline): `$E = mc^2$` hoặc `$\alpha + \beta = \gamma$`.
+  - Khối công thức nổi bật (block):
+    ```markdown
+    $$\int_{a}^{b} f(x) dx = F(b) - F(a)$$
+    ```
+  - Thanh công cụ toán học (Math Toolbar) trực quan giúp chèn nhanh các ký hiệu phân số, tích phân, căn bậc hai, ma trận và chữ cái Hy Lạp.
+
+### 3. Quản lý hình ảnh
+- Chèn ảnh vào thẻ câu hỏi dễ dàng qua nút bấm hoặc kéo thả file ảnh vào khung soạn thảo.
+- Tự động đặt tên an toàn dạng `img/asset_xxxx.png` và nén tối ưu.
+- Xem trước ảnh kích thước lớn qua tính năng Lightbox.
+
+### 4. An toàn dữ liệu & Lịch sử
+- **Tự động lưu nháp (Auto-draft)**: Mỗi 30 giây, trình soạn thảo tự động ghi một bản nháp vào thư mục dữ liệu cục bộ. Nếu ứng dụng bị đóng đột ngột, khi mở lại bạn sẽ được hỏi có muốn khôi phục bản nháp chưa lưu hay không.
+- **Lịch sử Undo / Redo**: Nhấn `Ctrl+Z` để hoàn tác và `Ctrl+Y` (`Ctrl+Shift+Z`) để làm lại mọi thao tác thêm, xóa, sửa nội dung thẻ.
+
+---
+
+## 📥 Nhập dữ liệu hàng loạt (Bulk Import)
+
+Bạn có thể đưa dữ liệu sẵn có vào Turtle Deck chỉ trong vài giây:
+1. Nhấn nút **Nhập hàng loạt** trong Deck Editor.
+2. Dán nội dung theo một trong các định dạng:
+   - **CSV / TSV**: Hỗ trợ phân cách bằng dấu tab (`\t`), dấu phẩy (`,`), hoặc dấu chấm phẩy (`;`).
+   - **Quizlet**: Sao chép danh sách thẻ từ Quizlet (mặc định phân cách giữa thuật ngữ và định nghĩa bằng Tab, giữa các thẻ bằng dòng mới).
+   - **Markdown**: Danh sách dạng danh mục hoặc bảng Markdown.
+3. Xem trước (Preview) kết quả phân tích dữ liệu trước khi đồng ý nạp vào bộ thẻ.
+
+---
+
+## 🧠 Các chế độ học tập
+
+| Chế độ | Mô tả |
+| :--- | :--- |
+| **Flashcard** | Lật thẻ 2 chiều (Trước ↔ Sau hoặc Thuật ngữ ↔ Định nghĩa). Tự đánh giá mức độ nhớ theo 4 nút: `Again`, `Hard`, `Good`, `Easy`. |
+| **Luyện tập (Practice)** | Làm trắc nghiệm và điền câu trả lời, có chấm điểm tức thì kèm giải thích chi tiết đáp án. |
+| **SRS (Spaced Repetition)** | Thuật toán SM-2 chuẩn hóa: tính toán khoảng cách ngày ôn tập tự động dựa trên lịch sử nhớ/quên, tối ưu hóa thời gian học. |
+| **Học thích ứng (Learn)** | Vòng lặp học thông minh: tự động đưa lại các câu chưa thuộc ở các hình thức khác nhau cho đến khi bạn nắm vững 100%. |
+| **Ghép thẻ (Match)** | Trò chơi ghép cặp nhanh giữa câu hỏi và đáp án, đua tốc độ bảng vàng cá nhân. |
+| **Thi thử (Exam)** | Đề thi bấm giờ tổng hợp ngẫu nhiên, chấm điểm phần trăm và tự động gom các câu làm sai để bạn ôn lại. |
+
+---
+
+## ⌨️ Bảng phím tắt tiện lợi (Shortcuts)
+
+| Màn hình | Phím tắt | Chức năng |
+| :--- | :--- | :--- |
+| **Chung** | `Ctrl + O` | Mở tệp bộ thẻ `.sdeck` |
+| | `Ctrl + ,` | Mở màn hình Cài đặt |
+| | `Esc` | Quay lại màn hình chính (Home) |
+| **Học tập (Session)** | `Space` / `Enter` | Lật thẻ Flashcard hoặc nộp câu trả lời |
+| | `1`, `2`, `3`, `4` | Chọn đáp án trắc nghiệm hoặc đánh giá SRS (`Again`, `Hard`, `Good`, `Easy`) |
+| | `S` | Đánh dấu sao (Star) câu hỏi để ôn lại sau |
+| | `R` | Nghe lại phát âm Text-To-Speech (với thẻ từ vựng) |
+| **Soạn thảo (Editor)** | `Ctrl + S` | Lưu bộ thẻ |
+| | `Ctrl + N` | Thêm thẻ / câu hỏi mới |
+| | `Ctrl + Z` | Hoàn tác (Undo) |
+| | `Ctrl + Y` / `Ctrl + Shift + Z` | Làm lại (Redo) |
+| | `Ctrl + M` | Bật/tắt thanh công thức toán học LaTeX |
+
+---
+
+## 🛡️ An toàn & Sao lưu dữ liệu (Backup)
+
+- **Thư viện mặc định**: Ứng dụng tự động theo dõi thư mục `~/StudyDecks`. Mọi tệp `.sdeck` bạn lưu vào đây sẽ lập tức xuất hiện trên màn hình chính của ứng dụng.
+- **Tự động sao lưu tiến trình (Daily Auto-Backup)**: Mỗi ngày học tập, Turtle Deck tự động tạo bản sao lưu tiến trình và lịch sử học vào thư mục `userData/backups/`, tự động giữ 7 bản sao mới nhất.
+- **Xuất / Nhập thủ công**: Trong phần **Cài đặt**, bạn có thể xuất toàn bộ tiến độ ra tệp `.json` để chuyển sang máy khác, hoặc nhập lại dữ liệu bất cứ lúc nào.
+- **An toàn giao thức & Bộ nhớ**: Kiểm duyệt mã độc bằng DOMPurify, Content Security Policy nghiêm ngặt (chặn kết nối mạng ngoài, cô lập iframe, vô hiệu hóa eval), bảo vệ hệ thống tuyệt đối.
+
+---
+
+## ⚖️ Giấy phép
+
+Dự án phát hành dưới giấy phép mã nguồn mở ISC License.
+Logo & thương hiệu thuộc về dự án **Turtle Deck**.
