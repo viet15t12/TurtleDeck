@@ -21,7 +21,7 @@ fs.writeFileSync('tsconfig.preload.json', JSON.stringify({
 }, null, 2));
 execSync('npx tsc -p tsconfig.preload.json', { stdio: 'inherit' });
 
-// Compile src -> dist
+// Compile TypeScript sources (main & preload & core)
 fs.writeFileSync('tsconfig.build.json', JSON.stringify({
   extends: './tsconfig.json',
   compilerOptions: {
@@ -31,6 +31,10 @@ fs.writeFileSync('tsconfig.build.json', JSON.stringify({
   include: ['src/main/**/*.ts', 'src/core/**/*.ts']
 }, null, 2));
 execSync('npx tsc -p tsconfig.build.json', { stdio: 'inherit' });
+
+// Bundle renderer app.js via esbuild
+console.log('Bundling renderer with esbuild...');
+execSync('npx esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js', { stdio: 'inherit' });
 
 // Copy package.json for dist/main and dist/core
 fs.mkdirSync('dist/main', { recursive: true });
@@ -49,7 +53,7 @@ for (const f of fs.readdirSync('src/core')) {
 }
 
 // Copy renderer assets to dist/
-const staticFiles = ['index.html', 'app.js', 'shortcuts.js', 'theme-init.js', 'tts.js', 'styles.css'];
+const staticFiles = ['index.html', 'shortcuts.js', 'theme-init.js', 'tts.js', 'styles.css'];
 for (const f of staticFiles) {
   const srcPath = path.join('src', f);
   if (fs.existsSync(srcPath)) {

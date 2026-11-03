@@ -9,6 +9,8 @@
     "test": "node --import ./tools/register-test-hooks.mjs --test",
     "typecheck": "tsc --noEmit",
     "build": "node tools/build.mjs",
+    "build:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js",
+    "dev:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js --watch",
     "start": "npm run build && electron .",
     "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
     "dist": "npm run build && electron-builder --linux",
@@ -40,6 +42,7 @@
     "@types/node": "^26.6.6",
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   },
   "dependencies": {
