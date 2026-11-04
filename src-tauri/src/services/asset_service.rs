@@ -122,8 +122,6 @@ pub fn remove_asset(
         package_store.set(deck_key.to_string(), pkg);
         Ok(json!({ "ok": true }))
     } else {
-        Err(AppError::Custom(
-            "Không tìm thấy ảnh trong gói.".into(),
-        ))
+        Err(AppError::Custom("Không tìm thấy ảnh trong gói.".into()))
     }
 }

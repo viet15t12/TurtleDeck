@@ -31,9 +31,18 @@ pub struct TempImport {
     pub created_at: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct TempImportSession {
+    pub assets: HashMap<String, Vec<u8>>,
+    pub source_dir: Option<PathBuf>,
+    pub items: Vec<Value>,
+    pub created_at: u64,
+}
+
 pub struct PackageStore {
     packages: RwLock<HashMap<String, OpenPackage>>,
     temp_imports: RwLock<HashMap<String, TempImport>>,
+    temp_import_sessions: RwLock<HashMap<String, TempImportSession>>,
     known_saves: RwLock<HashMap<PathBuf, u64>>,
 }
 
@@ -48,6 +57,7 @@ impl PackageStore {
         Self {
             packages: RwLock::new(HashMap::new()),
             temp_imports: RwLock::new(HashMap::new()),
+            temp_import_sessions: RwLock::new(HashMap::new()),
             known_saves: RwLock::new(HashMap::new()),
         }
     }
@@ -90,7 +100,8 @@ impl PackageStore {
 
     pub fn find_by_file(&self, file_path: &Path) -> Option<(String, OpenPackage)> {
         let lock = self.packages.read().ok()?;
-        let canonical_target = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
+        let canonical_target =
+            fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
         for (k, v) in lock.iter() {
             if let Some(f) = &v.file {
                 let canonical_f = fs::canonicalize(f).unwrap_or_else(|_| f.clone());
@@ -107,13 +118,21 @@ impl PackageStore {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
+        self.set_temp_import_at(token, path, now);
+    }
+
+    pub fn set_temp_import_at(&self, token: String, path: PathBuf, created_at: u64) {
         if let Ok(mut lock) = self.temp_imports.write() {
-            lock.insert(token, TempImport { path, created_at: now });
+            lock.insert(token, TempImport { path, created_at });
         }
     }
 
     pub fn get_temp_import(&self, token: &str) -> Option<PathBuf> {
-        self.temp_imports.read().ok()?.get(token).map(|e| e.path.clone())
+        self.temp_imports
+            .read()
+            .ok()?
+            .get(token)
+            .map(|e| e.path.clone())
     }
 
     pub fn delete_temp_import(&self, token: &str) -> bool {
@@ -127,6 +146,27 @@ impl PackageStore {
     pub fn prune_temp_imports(&self, max_age_ms: u64, now: u64) {
         if let Ok(mut lock) = self.temp_imports.write() {
             lock.retain(|_, entry| now.saturating_sub(entry.created_at) <= max_age_ms);
+        }
+        if let Ok(mut lock) = self.temp_import_sessions.write() {
+            lock.retain(|_, entry| now.saturating_sub(entry.created_at) <= max_age_ms);
+        }
+    }
+
+    pub fn set_temp_import_session(&self, id: String, session: TempImportSession) {
+        if let Ok(mut lock) = self.temp_import_sessions.write() {
+            lock.insert(id, session);
+        }
+    }
+
+    pub fn get_temp_import_session(&self, id: &str) -> Option<TempImportSession> {
+        self.temp_import_sessions.read().ok()?.get(id).cloned()
+    }
+
+    pub fn delete_temp_import_session(&self, id: &str) -> Option<TempImportSession> {
+        if let Ok(mut lock) = self.temp_import_sessions.write() {
+            lock.remove(id)
+        } else {
+            None
         }
     }
 
@@ -155,6 +195,9 @@ impl PackageStore {
         if let Ok(mut lock) = self.temp_imports.write() {
             lock.clear();
         }
+        if let Ok(mut lock) = self.temp_import_sessions.write() {
+            lock.clear();
+        }
         if let Ok(mut lock) = self.known_saves.write() {
             lock.clear();
         }
@@ -166,7 +209,10 @@ pub fn is_safe_entry(name: &str) -> bool {
     if name.is_empty() || name.starts_with('/') || name.contains('\\') {
         return false;
     }
-    if name.chars().any(|c| (c as u32) <= 0x1f || (c as u32) == 0x7f) {
+    if name
+        .chars()
+        .any(|c| (c as u32) <= 0x1f || (c as u32) == 0x7f)
+    {
         return false;
     }
     name.split('/')
@@ -307,9 +353,7 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
     }
 
     let text = deck_text.ok_or_else(|| {
-        AppError::Custom(
-            "Gói không có deck.json — đây không phải bộ thẻ hợp lệ.".into(),
-        )
+        AppError::Custom("Gói không có deck.json — đây không phải bộ thẻ hợp lệ.".into())
     })?;
 
     Ok(ReadPackageResult {
@@ -369,8 +413,11 @@ pub fn collect_image_refs(deck: &Value) -> HashSet<String> {
                     let idx = start + pos;
                     if let Some(close_bracket) = val.as_str().and_then(|t| t[idx..].find("](")) {
                         let open_paren = idx + close_bracket + 2;
-                        if let Some(close_paren) = val.as_str().and_then(|t| t[open_paren..].find(')')) {
-                            let url_part = &val.as_str().unwrap()[open_paren..open_paren + close_paren];
+                        if let Some(close_paren) =
+                            val.as_str().and_then(|t| t[open_paren..].find(')'))
+                        {
+                            let url_part =
+                                &val.as_str().unwrap()[open_paren..open_paren + close_paren];
                             let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
                             if !img_path.is_empty() {
                                 out.insert(img_path.to_string());
@@ -405,6 +452,59 @@ pub fn collect_image_refs(deck: &Value) -> HashSet<String> {
     out
 }
 
+pub fn item_image_refs(item: &Value) -> HashSet<String> {
+    let mut out = HashSet::new();
+    let re = regex_lite_or_simple_scan();
+
+    fn walk(val: &Value, out: &mut HashSet<String>, key: Option<&str>) {
+        match val {
+            Value::String(s) => {
+                if key == Some("image") || key == Some("answerImage") {
+                    let trimmed = s.trim();
+                    if !trimmed.is_empty() {
+                        out.insert(trimmed.to_string());
+                    }
+                }
+                let mut start = 0;
+                while let Some(pos) = val.as_str().and_then(|t| t[start..].find("![")) {
+                    let idx = start + pos;
+                    if let Some(close_bracket) = val.as_str().and_then(|t| t[idx..].find("](")) {
+                        let open_paren = idx + close_bracket + 2;
+                        if let Some(close_paren) =
+                            val.as_str().and_then(|t| t[open_paren..].find(')'))
+                        {
+                            let url_part =
+                                &val.as_str().unwrap()[open_paren..open_paren + close_paren];
+                            let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
+                            if !img_path.is_empty() {
+                                out.insert(img_path.to_string());
+                            }
+                            start = open_paren + close_paren + 1;
+                            continue;
+                        }
+                    }
+                    start = idx + 2;
+                }
+            }
+            Value::Array(arr) => {
+                for it in arr {
+                    walk(it, out, key);
+                }
+            }
+            Value::Object(map) => {
+                for (k, v) in map {
+                    walk(v, out, Some(k));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    walk(item, &mut out, None);
+    let _ = re;
+    out
+}
+
 fn regex_lite_or_simple_scan() -> bool {
     true
 }
@@ -424,7 +524,11 @@ pub fn write_package(
     let mut deck: Value = serde_json::from_str(deck_text)
         .map_err(|e| AppError::Custom(format!("deck.json không hợp lệ: {e}")))?;
 
-    if deck.get("meta").and_then(|m| m.get("id")).and_then(|v| v.as_str()).is_none()
+    if deck
+        .get("meta")
+        .and_then(|m| m.get("id"))
+        .and_then(|v| v.as_str())
+        .is_none()
         || !deck.get("items").map(|i| i.is_array()).unwrap_or(false)
     {
         return Err(AppError::Custom(
@@ -476,8 +580,7 @@ pub fn write_package(
         let cursor = Cursor::new(&mut buf);
         let mut zip = ZipWriter::new(cursor);
 
-        let options = SimpleFileOptions::default()
-            .compression_method(CompressionMethod::Deflated);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
         zip.start_file("deck.json", options)
             .map_err(|e| AppError::Custom(format!("Lỗi tạo entry deck.json: {e}")))?;
@@ -507,18 +610,22 @@ pub fn slugify(s: &str) -> String {
     for c in s.chars() {
         match c {
             'á' | 'à' | 'ả' | 'ã' | 'ạ' | 'ă' | 'ắ' | 'ằ' | 'ẳ' | 'ẵ' | 'ặ' | 'â' | 'ấ' | 'ầ'
-            | 'ẩ' | 'ẫ' | 'ậ' | 'Á' | 'À' | 'Ả' | 'Ã' | 'Ạ' | 'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ'
-            | 'Ặ' | 'Â' | 'Ấ' | 'Ầ' | 'Ẩ' | 'Ẫ' | 'Ậ' => out.push('a'),
+            | 'ẩ' | 'ẫ' | 'ậ' | 'Á' | 'À' | 'Ả' | 'Ã' | 'Ạ' | 'Ă' | 'Ắ' | 'Ằ' | 'Ẳ' | 'Ẵ' | 'Ặ'
+            | 'Â' | 'Ấ' | 'Ầ' | 'Ẩ' | 'Ẫ' | 'Ậ' => out.push('a'),
             'đ' | 'Đ' => out.push('d'),
-            'é' | 'è' | 'ẻ' | 'ẽ' | 'ẹ' | 'ê' | 'ế' | 'ề' | 'ể' | 'ễ' | 'ệ' | 'É' | 'È'
-            | 'Ẻ' | 'Ẽ' | 'Ẹ' | 'Ê' | 'Ế' | 'Ề' | 'Ể' | 'Ễ' | 'Ệ' => out.push('e'),
-            'í' | 'ì' | 'ỉ' | 'ĩ' | 'ị' | 'Í' | 'Ì' | 'Ỉ' | 'Ĩ' | 'Ị' => out.push('i'),
-            'ó' | 'ò' | 'ỏ' | 'õ' | 'ọ' | 'ô' | 'ố' | 'ồ' | 'ổ' | 'ỗ' | 'ộ' | 'ơ' | 'ớ'
-            | 'ờ' | 'ở' | 'ợ' | 'Ó' | 'Ò' | 'Ỏ' | 'Õ' | 'Ọ' | 'Ô' | 'Ố' | 'Ồ' | 'Ổ'
-            | 'Ỗ' | 'Ộ' | 'Ơ' | 'Ớ' | 'Ờ' | 'Ở' | 'Ỡ' | 'Ợ' => out.push('o'),
-            'ú' | 'ù' | 'ủ' | 'ũ' | 'ụ' | 'ư' | 'ứ' | 'ừ' | 'ử' | 'ữ' | 'ự' | 'Ú' | 'Ù'
-            | 'Ủ' | 'Ũ' | 'Ụ' | 'Ư' | 'Ứ' | 'Ừ' | 'Ử' | 'Ữ' | 'Ự' => out.push('u'),
-            'ý' | 'ỳ' | 'ỷ' | 'ỹ' | 'ỵ' | 'Ý' | 'Ỳ' | 'Ỷ' | 'Ỹ' | 'Ỵ' => out.push('y'),
+            'é' | 'è' | 'ẻ' | 'ẽ' | 'ẹ' | 'ê' | 'ế' | 'ề' | 'ể' | 'ễ' | 'ệ' | 'É' | 'È' | 'Ẻ'
+            | 'Ẽ' | 'Ẹ' | 'Ê' | 'Ế' | 'Ề' | 'Ể' | 'Ễ' | 'Ệ' => out.push('e'),
+            'í' | 'ì' | 'ỉ' | 'ĩ' | 'ị' | 'Í' | 'Ì' | 'Ỉ' | 'Ĩ' | 'Ị' => {
+                out.push('i')
+            }
+            'ó' | 'ò' | 'ỏ' | 'õ' | 'ọ' | 'ô' | 'ố' | 'ồ' | 'ổ' | 'ỗ' | 'ộ' | 'ơ' | 'ớ' | 'ờ'
+            | 'ở' | 'ợ' | 'Ó' | 'Ò' | 'Ỏ' | 'Õ' | 'Ọ' | 'Ô' | 'Ố' | 'Ồ' | 'Ổ' | 'Ỗ' | 'Ộ' | 'Ơ'
+            | 'Ớ' | 'Ờ' | 'Ở' | 'Ỡ' | 'Ợ' => out.push('o'),
+            'ú' | 'ù' | 'ủ' | 'ũ' | 'ụ' | 'ư' | 'ứ' | 'ừ' | 'ử' | 'ữ' | 'ự' | 'Ú' | 'Ù' | 'Ủ'
+            | 'Ũ' | 'Ụ' | 'Ư' | 'Ứ' | 'Ừ' | 'Ử' | 'Ữ' | 'Ự' => out.push('u'),
+            'ý' | 'ỳ' | 'ỷ' | 'ỹ' | 'ỵ' | 'Ý' | 'Ỳ' | 'Ỷ' | 'Ỹ' | 'Ỵ' => {
+                out.push('y')
+            }
             'a'..='z' | '0'..='9' => out.push(c),
             'A'..='Z' => out.push(c.to_ascii_lowercase()),
             _ => out.push('-'),

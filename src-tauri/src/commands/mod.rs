@@ -6,6 +6,7 @@ pub mod draft;
 pub mod folder;
 pub mod import;
 pub mod library;
+pub mod lifecycle;
 pub mod progress;
 pub mod settings;
 pub mod srs;

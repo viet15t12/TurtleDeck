@@ -180,10 +180,7 @@ pub async fn deck_close(state: State<'_, AppState>, deck_key: String) -> AppResu
 }
 
 #[tauri::command]
-pub async fn deck_duplicate(
-    state: State<'_, AppState>,
-    old_deck_key: String,
-) -> AppResult<Value> {
+pub async fn deck_duplicate(state: State<'_, AppState>, old_deck_key: String) -> AppResult<Value> {
     let old_pkg = state.package_store.get(&old_deck_key);
     let new_deck_key = state.package_store.new_key();
 
@@ -217,8 +214,9 @@ pub async fn deck_export_copy(
     _state: State<'_, AppState>,
     file_path: String,
 ) -> AppResult<Value> {
-    let valid = validate_sdeck_path(&file_path)
-        .ok_or_else(|| AppError::Custom("Bộ thẻ chưa có file trên đĩa hoặc đường dẫn không hợp lệ.".into()))?;
+    let valid = validate_sdeck_path(&file_path).ok_or_else(|| {
+        AppError::Custom("Bộ thẻ chưa có file trên đĩa hoặc đường dẫn không hợp lệ.".into())
+    })?;
 
     let default_name = valid
         .file_name()
@@ -244,8 +242,8 @@ pub async fn deck_export_copy(
         None => return Ok(json!({ "ok": false, "canceled": true })),
     };
 
-    let bytes = fs::read(&valid)
-        .map_err(|e| AppError::Custom(format!("Không thể đọc file nguồn: {e}")))?;
+    let bytes =
+        fs::read(&valid).map_err(|e| AppError::Custom(format!("Không thể đọc file nguồn: {e}")))?;
 
     crate::services::package_store::atomic_write(Path::new(&dest_str), &bytes)
         .map_err(|e| AppError::Custom(format!("Không thể xuất bản sao: {e}")))?;
@@ -345,7 +343,12 @@ pub async fn deck_import(
         .map_err(|e| AppError::Custom(format!("Không đọc được file: {e}")))?;
 
     // Nếu là file json
-    if target_file.extension().and_then(|e| e.to_str()).unwrap_or("") == "json" {
+    if target_file
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        == "json"
+    {
         let deck: Value = serde_json::from_str(&content)
             .map_err(|e| AppError::Custom(format!("deck.json không hợp lệ: {e}")))?;
 
@@ -410,7 +413,10 @@ pub async fn deck_import(
         .unwrap_or("bo-the-moi")
         .to_string();
 
-    let deck_id = format!("deck-{}", &uuid::Uuid::new_v4().to_string().replace('-', "")[..8]);
+    let deck_id = format!(
+        "deck-{}",
+        &uuid::Uuid::new_v4().to_string().replace('-', "")[..8]
+    );
     let deck_key = state.package_store.new_key();
 
     state.package_store.set(

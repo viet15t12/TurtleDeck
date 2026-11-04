@@ -258,9 +258,9 @@ Nếu sau Ngày 5 chưa qua Gate 3 → **dừng, giữ Electron làm bản chín
 | 1 chiều | GĐ1 Khung + api | ☑ | Hoàn thành khung Tauri v2, window.api shim, cargo clippy/fmt/test và 207 tests JS |
 | 2 | GĐ2 DB/Settings/Progress/Folder | ☑ | Hoàn thành toàn bộ SQLite DDL + FTS5, SRS repo, Stats repo (Asia/Saigon), Folder repo, Settings/Progress services và 9 unit tests Rust pass 100% |
 | 3–4 | GĐ3 Deck/.sdeck/asset/library | ☑ | Hoàn thành PackageStore, ZIP .sdeck, asset protocol, asset/deck/library commands, notify watcher và 15 unit tests Rust pass 100% |
-| 5 sáng | GĐ4 Import/Draft/Backup | ☐ | |
-| 5 chiều–6 | GĐ5 Lifecycle/đóng gói | ☐ | |
-| 7 | GĐ6 Kiểm thử cuối, đệm | ☐ | |
+| 5 sáng | GĐ4 Import/Draft/Backup | ☑ | Hoàn thành ImportService (CSV/TSV/Markdown, token security, TTL), DraftService (autosave, list, load, delete), BackupService (daily 7 bản, full backup ZIP + DB dump/restore, whitelist regex) và 21 unit tests Rust pass 100% |
+| 5 chiều–6 | GĐ5 Lifecycle/đóng gói | ☑ | Hoàn thành single-instance, mở file ngoài argv/.sdeck, queue & flush khi app_ready, cấu hình release LTO strip, đóng gói RPM/DEB 5.75 MiB (unpacked 11 MiB, giảm 98.25% dung lượng so với Electron) và 23 unit tests Rust pass 100% |
+| 7 | GĐ6 Dọn Electron, v0.2.1 | ☑ | Gỡ bỏ hoàn toàn Electron (electron, electron-builder, better-sqlite3, preload.ts, src/main), nâng version 0.2.1, thiết lập GitHub Actions CI/CD tự động đóng gói DEB, RPM và NSIS EXE |
 
 ## 11. Cấu trúc thư mục dự kiến thêm vào repo
 

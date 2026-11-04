@@ -16,10 +16,7 @@ pub async fn asset_add(
         .dialog()
         .file()
         .set_title("Thêm ảnh vào bộ thẻ")
-        .add_filter(
-            "Hình ảnh",
-            &["png", "jpg", "jpeg", "gif", "webp", "svg"],
-        )
+        .add_filter("Hình ảnh", &["png", "jpg", "jpeg", "gif", "webp", "svg"])
         .blocking_pick_files();
 
     let paths: Vec<String> = match picked {

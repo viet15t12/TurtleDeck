@@ -18,8 +18,6 @@
   },
   "include": [
     "src/core/**/*.ts",
-    "src/main/**/*.ts",
-    "preload.ts",
     "src/types/**/*.d.ts",
     "test/unit-*.ts",
     "test/**/*.ts"

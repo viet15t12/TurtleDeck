@@ -5,8 +5,8 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 
-test('Electron app entry files and renderer are present', () => {
-  for (const file of ['src/main/index.ts', 'preload.ts', 'src/index.html', 'src/app.js']) {
+test('Tauri app entry files and renderer are present', () => {
+  for (const file of ['src-tauri/src/main.rs', 'src-tauri/src/lib.rs', 'src/platform/tauri-api.js', 'src/index.html', 'src/app.js']) {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   }
 });

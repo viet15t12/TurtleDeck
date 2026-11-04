@@ -2,25 +2,19 @@
   "name": "turtle-deck",
   "productName": "Turtle Deck",
   "desktopName": "turtle-deck.desktop",
-  "version": "0.1.4",
+  "version": "0.2.1",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
-  "main": "dist/main/index.js",
   "scripts": {
     "test": "node --import ./tools/register-test-hooks.mjs --test",
     "typecheck": "tsc --noEmit",
     "build": "node tools/build.mjs",
     "build:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js",
     "dev:renderer": "esbuild src/app.js --bundle --format=esm --sourcemap --outfile=dist/app.js --watch",
-    "start": "npm run build && electron .",
+    "start": "node tools/build.mjs && tauri dev",
     "tauri": "tauri",
-    "tauri:dev": "node tools/build.mjs --shell=tauri && tauri dev",
-    "tauri:build": "node tools/build.mjs --shell=tauri && tauri build",
-    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples",
-    "dist": "npm run build && electron-builder --linux",
-    "dist:compat": "npm run build && LD_LIBRARY_PATH=\"$PWD/build/compat-lib:$LD_LIBRARY_PATH\" electron-builder --linux",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:all": "npm run build && electron-builder -lw",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "tauri:dev": "node tools/build.mjs && tauri dev",
+    "tauri:build": "node tools/build.mjs && tauri build",
+    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples"
   },
   "repository": {
     "type": "git",
@@ -43,15 +37,11 @@
   "devDependencies": {
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/cli": "^2.12.4",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
-    "electron": "^45.2.1",
-    "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "chart.js": "^4.6.1",
     "dompurify": "^3.4.17",
     "fflate": "^0.8.3",
@@ -62,57 +52,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "build": {
-    "appId": "com.turtledeck.app",
-    "productName": "Turtle Deck",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "src/**/*",
-      "build/icons/**/*",
-      "build/icon.png",
-      "logo.svg",
-      "package.json"
-    ],
-    "asarUnpack": [
-      "**/node_modules/better-sqlite3/**"
-    ],
-    "linux": {
-      "target": [
-        "AppImage",
-        "rpm"
-      ],
-      "maintainer": "Viet15t12 <quocviet15t12@gmail.com>",
-      "category": "Education",
-      "syncDesktopName": true,
-      "icon": "build/icons",
-      "mimeTypes": [
-        "application/x-studydeck"
-      ],
-      "fileAssociations": [
-        {
-          "ext": "sdeck",
-          "name": "Turtle Deck Study Deck",
-          "description": "Gói bộ thẻ học tập Turtle Deck",
-          "mimeType": "application/x-studydeck",
-          "role": "Editor"
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "build/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
   }
 }

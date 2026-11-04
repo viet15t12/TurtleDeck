@@ -8,6 +8,7 @@ use crate::services::watcher::AppWatcher;
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, RwLock};
 
 pub struct AppState {
@@ -16,6 +17,8 @@ pub struct AppState {
     pub package_store: Arc<PackageStore>,
     pub library_cache: RwLock<HashMap<PathBuf, LibraryCacheEntry>>,
     pub watcher: Mutex<Option<Arc<AppWatcher>>>,
+    pub renderer_ready: AtomicBool,
+    pub pending_external_files: Mutex<Vec<PathBuf>>,
 }
 
 impl AppState {
@@ -26,6 +29,8 @@ impl AppState {
             package_store: Arc::new(PackageStore::new()),
             library_cache: RwLock::new(HashMap::new()),
             watcher: Mutex::new(None),
+            renderer_ready: AtomicBool::new(false),
+            pending_external_files: Mutex::new(Vec::new()),
         }
     }
 

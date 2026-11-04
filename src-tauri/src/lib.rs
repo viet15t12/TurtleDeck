@@ -37,6 +37,8 @@ pub fn run() {
                 package_store: Arc::new(services::package_store::PackageStore::new()),
                 library_cache: std::sync::RwLock::new(std::collections::HashMap::new()),
                 watcher: std::sync::Mutex::new(None),
+                renderer_ready: std::sync::atomic::AtomicBool::new(false),
+                pending_external_files: std::sync::Mutex::new(Vec::new()),
             }
         }
         Err(e) => {
@@ -66,8 +68,17 @@ pub fn run() {
     builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {
-            // Sẽ xử lý sự kiện deck:openExternal ở Giai đoạn 5
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            // Khi mở instance thứ hai (nhấp đúp file .sdeck), kích hoạt lại cửa sổ chính
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+            let base_dir = std::path::Path::new(&cwd);
+            let files = services::external_files::extract_sdeck_files(&args, Some(base_dir));
+            let state = app.state::<AppState>();
+            services::external_files::handle_external_files(app, &state, files);
         }))
         .manage(app_state)
         .setup(|app| {
@@ -81,6 +92,13 @@ pub fn run() {
             if let Ok(mut lock) = state.watcher.lock() {
                 *lock = Some(watcher);
             }
+
+            // Xử lý tham số mở file ngoài lúc khởi động ứng dụng từ dòng lệnh (argv)
+            let raw_args: Vec<String> = std::env::args().skip(1).collect();
+            let cwd = std::env::current_dir().ok();
+            let files = services::external_files::extract_sdeck_files(&raw_args, cwd.as_deref());
+            services::external_files::handle_external_files(app.handle(), &state, files);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -151,6 +169,8 @@ pub fn run() {
             // Stats commands
             commands::stats::stats_get_deck_report,
             commands::stats::stats_get_overall_streak,
+            // Lifecycle commands
+            commands::lifecycle::app_ready,
         ]);
 
     builder

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "turtle-deck",
-  "version": "0.1.4",
+  "version": "0.2.1",
   "identifier": "com.turtledeck.app",
   "build": {
     "frontendDist": "../dist",
@@ -36,7 +36,10 @@
       "icons/icon.ico"
     ],
     "category": "Education",
+    "copyright": "Copyright © 2026 Viet15t12",
+    "license": "MIT",
     "shortDescription": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
+    "longDescription": "Turtle Deck là ứng dụng học tập offline bằng flashcard và trắc nghiệm, hỗ trợ thuật toán lặp lại ngắt quãng SRS, định dạng gói thẻ .sdeck bảo mật và tối ưu.",
     "fileAssociations": [
       {
         "ext": ["sdeck"],
