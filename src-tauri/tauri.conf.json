@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "turtle-deck",
+  "productName": "Turtle Deck",
+  "mainBinaryName": "turtle-deck",
   "version": "0.2.1",
   "identifier": "com.turtledeck.app",
   "build": {
