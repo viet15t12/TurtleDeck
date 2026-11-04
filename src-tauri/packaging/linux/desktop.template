@@ -1,0 +1,13 @@
+[Desktop Entry]
+Categories={{categories}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}} %U
+Icon={{icon}}
+Name=Turtle Deck
+Terminal=false
+Type=Application
+MimeType=application/x-studydeck;
+StartupWMClass={{exec}}
+

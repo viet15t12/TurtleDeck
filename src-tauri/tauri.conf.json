@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Turtle Deck",
+  "productName": "turtle-deck",
   "mainBinaryName": "turtle-deck",
   "version": "0.2.1",
   "identifier": "com.turtledeck.app",
@@ -48,6 +48,23 @@
         "mimeType": "application/x-studydeck",
         "role": "Editor"
       }
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "startMenuFolder": "Turtle Deck"
+      }
+    },
+    "linux": {
+      "deb": {
+        "desktopTemplate": "packaging/linux/desktop.template",
+        "postInstallScript": "packaging/linux/postinstall.sh",
+        "postRemoveScript": "packaging/linux/postremove.sh"
+      },
+      "rpm": {
+        "desktopTemplate": "packaging/linux/desktop.template",
+        "postInstallScript": "packaging/linux/postinstall.sh",
+        "postRemoveScript": "packaging/linux/postremove.sh"
+      }
+    }
   }
 }
