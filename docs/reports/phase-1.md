@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Giai đoạn 1
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - Thiết lập dự án Tauri v2 song song không ảnh hưởng bản Electron hiện tại.
 - Xây dựng lớp tương thích `window.api` để tái sử dụng 100% giao diện renderer mà không cần sửa mã nguồn UI.
 - Chuẩn hóa xử lý lỗi tiếng Việt và cơ chế fallback chống crash renderer.

@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Thực Hiện
 
-Theo yêu cầu của dự án và kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo yêu cầu của dự án và kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 1. **Dọn dẹp mã nguồn & gỡ bỏ toàn bộ Electron:**
    - Xóa bỏ thư mục `src/main/**` (~5.400 dòng TypeScript của main process cũ).
    - Xóa bỏ `preload.ts`, `tsconfig.preload.json`, và `src/platform/electron-shim.js`.

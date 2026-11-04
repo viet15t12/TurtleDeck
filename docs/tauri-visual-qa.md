@@ -8,16 +8,16 @@ Bảng theo dõi hiển thị giao diện người dùng trên WebKitGTK (Linux)
 
 | Màn hình / Thành phần | Linux (WebKitGTK) | Windows (WebView2) | Ghi chú & Lỗi phát hiện | Trạng thái |
 |---|---|---|---|---|
-| **Màn Home** (Danh sách bộ thẻ, sidebar) | ☐ | ☐ | Kiểm tra hiển thị icon, khoảng cách, font | Chưa test |
-| **Cây thư mục** (Kéo thả, đóng/mở) | ☐ | ☐ | Kiểm tra hiệu ứng hover, drop target | Chưa test |
-| **Màn Session** (Học thẻ SRS) | ☐ | ☐ | Thẻ câu hỏi, nút lật thẻ, thanh tiến độ | Chưa test |
-| **Màn Feedback** (Kết quả trả lời) | ☐ | ☐ | Banner, nút đánh giá SRS, phím tắt | Chưa test |
-| **Màn Editor** (Biên soạn bộ thẻ) | ☐ | ☐ | Bảng danh sách câu hỏi, form nhập | Chưa test |
-| **Màn Stats** (Thống kê & biểu đồ) | ☐ | ☐ | Chart.js biểu đồ đường/cột, heatmap 90 ngày | Chưa test |
-| **Màn Settings** (Cài đặt) | ☐ | ☐ | Form cài đặt, nút bấm, chuyển tab | Chưa test |
-| **Màn Learn** (Học tập tự do) | ☐ | ☐ | Chế độ câu hỏi trắc nghiệm, gõ từ | Chưa test |
-| **Màn Match** (Ghép thẻ tính giờ) | ☐ | ☐ | Lưới ghép thẻ, đồng hồ đếm giây | Chưa test |
-| **Màn Exam** (Thi thử) | ☐ | ☐ | Danh sách câu hỏi thi, nộp bài | Chưa test |
+| **Màn Home** (Danh sách bộ thẻ, sidebar) | ☑ | ☑ | Hiển thị icon, khoảng cách, font chữ, badge bộ thẻ sắc nét | Đạt (Pass) |
+| **Cây thư mục** (Kéo thả, đóng/mở) | ☑ | ☑ | Sidebar phong cách Nautilus, hiển thị cây phân cấp và bookmark | Đạt (Pass) |
+| **Màn Session** (Học thẻ SRS) | ☑ | ☑ | Thẻ câu hỏi, thanh tiến độ phân đoạn, công thức KaTeX căn chuẩn | Đạt (Pass) |
+| **Màn Feedback** (Kết quả trả lời) | ☑ | ☑ | Banner kết quả đúng/sai, giải thích KaTeX, nút đánh giá SRS chuẩn | Đạt (Pass) |
+| **Màn Editor** (Biên soạn bộ thẻ) | ☑ | ☑ | Thanh công cụ ký hiệu toán KaTeX, live preview, danh sách thẻ | Đạt (Pass) |
+| **Màn Stats** (Thống kê & biểu đồ) | ☑ | ☑ | Chart.js biểu đồ cột stacked, heatmap 90 ngày, streak hoạt động | Đạt (Pass) |
+| **Màn Settings** (Cài đặt) | ☑ | ☑ | Form cài đặt, chọn thư mục, chuyển tab và toggle theme | Đạt (Pass) |
+| **Màn Learn** (Học tập tự do) | ☑ | ☑ | Chế độ câu hỏi trắc nghiệm, điền từ khuyết, gõ lệnh | Đạt (Pass) |
+| **Màn Match** (Ghép thẻ tính giờ) | ☑ | ☑ | Lưới 12 thẻ cân đối, hiệu ứng chọn thẻ, đồng hồ đếm giây chuẩn | Đạt (Pass) |
+| **Màn Exam** (Thi thử) | ☑ | ☑ | Danh sách câu hỏi thi, nộp bài tính điểm | Đạt (Pass) |
 
 ---
 

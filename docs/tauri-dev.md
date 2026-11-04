@@ -44,8 +44,7 @@ src-tauri/
 
 src/platform/
 ├── channels.js                 # Ánh xạ kênh IPC và đánh dấu kênh trả mảng
-├── tauri-api.js                # Lớp bọc window.api dùng trong Webview
-└── electron-shim.js            # Shim khi chạy trên Electron
+└── tauri-api.js                # Lớp bọc window.api dùng trong Webview tương thích Tauri v2
 ```
 
 ---
@@ -54,10 +53,11 @@ src/platform/
 
 | Mục đích | Lệnh |
 |---|---|
-| Chạy dev bản Tauri | `npm run tauri:dev` |
-| Build release bản Tauri | `npm run tauri:build` |
-| Chạy bản Electron cũ | `npm start` |
-| Đóng gói bản Electron cũ | `npm run dist` |
+| Khởi chạy app phát triển (Dev) | `npm start` hoặc `npm run tauri:dev` |
+| Build release bản Tauri desktop | `npm run tauri:build` |
+| Biên dịch bundle renderer | `npm run build` |
+| Đóng gói các bộ thẻ mẫu `.sdeck` | `npm run build:samples` |
+| Tự động tạo ảnh chụp màn hình | `node tools/generate-screenshots.js` |
 | Kiểm tra kiểu TypeScript | `npm run typecheck` |
 | Chạy bộ kiểm thử JS | `npm test` |
 | Chạy bộ kiểm thử Rust | `cd src-tauri && cargo test` |

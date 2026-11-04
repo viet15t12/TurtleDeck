@@ -1,20 +1,23 @@
 <div align="center">
 
-<img src="./build/icons/256x256.png" alt="Turtle Deck Logo" width="140" height="140" style="margin-bottom: 12px;">
+<img src="./build/icons/256x256.png" alt="Turtle Deck Logo" width="130" height="130" style="margin-bottom: 12px;">
 
 # Turtle Deck 🐢
 
 ### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
+**Thế hệ mới tối ưu hoá bằng Tauri v2 & Rust — Siêu nhẹ, Khởi động tức thì, Tiết kiệm RAM**
 
-[![Platform](https://img.shields.io/badge/Platform-Linux%20(AppImage%20%7C%20RPM)-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![Electron](https://img.shields.io/badge/Electron-45.2.1-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Version](https://img.shields.io/badge/Version-0.2.1-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20(RPM%20%7C%20DEB%20%7C%20AppImage)%20%7C%20Windows-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-DEA584?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x%20Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![SQLite](https://img.shields.io/badge/Database-SQLite%20(better--sqlite3)-003B57?logo=sqlite&logoColor=white)](https://github.com/WiseLibs/better-sqlite3)
-[![Tests](https://img.shields.io/badge/Tests-194%20Passed-brightgreen?logo=node.js&logoColor=white)](./test)
+[![SQLite](https://img.shields.io/badge/Database-SQLite%20(rusqlite)-003B57?logo=sqlite&logoColor=white)](https://github.com/rusqlite/rusqlite)
+[![Tests](https://img.shields.io/badge/Tests-193%20JS%20%2B%20Rust%20Passed-brightgreen?logo=node.js&logoColor=white)](./test)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 <p align="center">
+  <a href="#-giao-diện-ứng-dụng-screenshots">Ảnh chụp giao diện</a> •
   <a href="#-cài-đặt--khởi-chạy">Cài đặt nhanh</a> •
   <a href="#-tính-năng-nổi-bật">Tính năng</a> •
   <a href="#-các-chế-độ-học-tập">Chế độ học</a> •
@@ -31,60 +34,119 @@
 
 **Turtle Deck** là ứng dụng máy tính cá nhân (Desktop Application) được thiết kế cho việc học sâu, bền bỉ và tập trung cao độ:
 - **Biểu tượng chú rùa (Turtle)**: Đại diện cho sự kiên trì, từng bước vững chắc. Ứng dụng sử dụng thuật toán lặp lại ngắt quãng (**Spaced Repetition System - SRS**) chuẩn SM-2 để tối ưu hóa khả năng ghi nhớ dài hạn mà không gây quá tải.
-- **Offline-First & Bảo mật tuyệt đối**: Dữ liệu bộ thẻ và tiến trình được lưu trữ hoàn toàn cục bộ trên máy tính của bạn dưới dạng tệp gói `.sdeck` độc lập. Không cần đăng ký tài khoản, không phụ thuộc vào kết nối mạng, chặn hoàn toàn mã độc qua chính sách **Content Security Policy (CSP)** nghiêm ngặt và thư viện **DOMPurify**.
+- **Offline-First & Bảo mật tuyệt đối**: Dữ liệu bộ thẻ và tiến trình được lưu trữ hoàn toàn cục bộ trên máy tính của bạn dưới dạng tệp gói `.sdeck` độc lập và cơ sở dữ liệu SQLite nhúng. Không cần đăng ký tài khoản, không gửi dữ liệu ra ngoài Internet, chặn hoàn toàn mã độc qua chính sách **Content Security Policy (CSP)** nghiêm ngặt.
 - **Đa năng & Tự động hoá**: Hỗ trợ toàn diện từ Flashcard truyền thống, Trắc nghiệm đơn/đa lựa chọn, Điền từ khuyết, Gõ lệnh lập trình, Luyện từ vựng phát âm chuẩn (Text-To-Speech) đến Trò chơi ghép thẻ và Thi thử bấm giờ.
+- **Kiến trúc Tauri v2 & Rust**: Binary thực thi chỉ vỏn vẹn **~11 MB** (so với 329 MB trước đây), chiếm dưới **60 MB RAM** khi chạy và mở cửa sổ trong chưa đầy **0.3 giây**.
+
+---
+
+## 📸 Giao diện ứng dụng (Screenshots)
+
+### 1. Thư viện Bộ thẻ & Cây thư mục (Home)
+Quản lý tập trung mọi bộ thẻ theo cấu trúc cây thư mục phân cấp phong cách Nautilus, thống kê nhanh số lượng thẻ cần ôn hôm nay và thanh tìm kiếm tiện lợi.
+
+![Thư viện bộ thẻ Turtle Deck](docs/screenshots/01-home.png)
+
+---
+
+### 2. Phiên học Lặp lại ngắt quãng (Flashcard SRS)
+Hỗ trợ đầy đủ công thức Toán học KaTeX chuẩn xác ($\int_0^1 x^2\,dx$), phản hồi tức thì đúng/sai, thanh tiến độ phân đoạn và chấm điểm theo thuật toán SM-2.
+
+![Phiên học Flashcard SRS với KaTeX](docs/screenshots/02-session.png)
+
+---
+
+### 3. Trình soạn thảo bộ thẻ chuyên nghiệp (Deck Editor)
+Tích hợp thanh công cụ ký hiệu toán học trực quan (phân số, căn, tích phân, ma trận...), xem trước công thức KaTeX thời gian thực, quản lý đáp án và tự động lưu nháp an toàn.
+
+![Trình soạn thảo bộ thẻ Deck Editor](docs/screenshots/03-editor.png)
+
+---
+
+### 4. Báo cáo Thống kê & Phân tích tiến độ (Analytics)
+Theo dõi chuỗi ngày học liên tục (Streak 🔥), biểu đồ số lượt ôn tập hàng ngày bằng Chart.js, Heatmap 90 ngày và danh sách các thẻ khó cần ôn tập lại.
+
+![Thống kê học tập và Heatmap](docs/screenshots/04-stats.png)
+
+---
+
+### 5. Trò chơi Ghép thẻ phản xạ tính giờ (Match Game)
+Thử thách trí nhớ và tốc độ với chế độ ghép đôi từ vựng hoặc thuật ngữ - định nghĩa tính thời gian kỷ lục cá nhân.
+
+![Chế độ trò chơi ghép thẻ Match Game](docs/screenshots/05-match.png)
+
+---
+
+## ⚡ So sánh hiệu năng: Tauri v2 vs Electron cũ
+
+| Tiêu chí so sánh | Electron cũ (v0.1.x) | Tauri v2 hiện tại (v0.2.x) | Mức độ cải thiện |
+|---|---|---|---|
+| **Dung lượng file cài đặt (RPM / AppImage)** | ~98 MiB | **~11 MiB** | **Giảm ~89%** 🚀 |
+| **Dung lượng bung ra đĩa (Unpacked)** | ~329 MiB | **~28 MiB** | **Giảm ~91%** 💾 |
+| **Bộ nhớ RAM tiêu thụ (Idle)** | ~180 – 250 MB | **~40 – 60 MB** | **Tiết kiệm ~75% RAM** ⚡ |
+| **Thời gian khởi động ứng dụng** | ~1.8 – 2.5 giây | **≤ 0.3 giây** | **Nhanh hơn gấp 6 lần** ⏱️ |
+| **Bảo mật & Mã nguồn backend** | Node.js / ASAR | **Rust native nhị phân** | Tối ưu & an toàn bộ nhớ 🛡️ |
 
 ---
 
 ## 🚀 Cài đặt & Khởi chạy
 
-### 📦 Dành cho người dùng cuối (Linux)
+### 📦 Dành cho người dùng cuối (Linux & Windows)
+
+Tải phiên bản mới nhất từ [GitHub Releases](https://github.com/viet15t12/TurtleDeck/releases):
 
 #### 1. Cài đặt qua gói RPM (Khuyên dùng cho Fedora / RHEL)
-Tải tệp RPM từ [GitHub Releases](https://github.com/viet15t12/TurtleDeck/releases) và cài đặt:
 ```bash
-sudo dnf install ./turtle-deck-0.1.1.x86_64.rpm
+sudo dnf install ./turtle-deck-0.2.1-1.x86_64.rpm
 ```
 > [!NOTE]
 > Gói RPM tự động tích hợp biểu tượng desktop, phân loại vào menu **Education**, và đăng ký MIME type `application/x-studydeck` để bạn chỉ cần nhấp đúp vào bất kỳ file `.sdeck` nào là ứng dụng sẽ mở ngay lập tức.
 
-#### 2. Chạy trực tiếp qua AppImage (Linux mọi bản phân phối)
-Tải tệp AppImage từ [GitHub Releases](https://github.com/viet15t12/TurtleDeck/releases) và cấp quyền thực thi:
+#### 2. Cài đặt qua gói DEB (Ubuntu / Debian / Linux Mint)
 ```bash
-chmod +x "Turtle Deck-0.1.1.AppImage"
-./"Turtle Deck-0.1.1.AppImage"
+sudo dpkg -i ./turtle-deck_0.2.1_amd64.deb
+```
+
+#### 3. Chạy trực tiếp qua AppImage (Mọi bản phân phối Linux)
+```bash
+chmod +x "turtle-deck_0.2.1_amd64.AppImage"
+./"turtle-deck_0.2.1_amd64.AppImage"
 ```
 
 ---
 
 ### 💻 Dành cho nhà phát triển (Build từ nguồn)
 
-**Yêu cầu hệ thống:** Node.js `>= 20.0.0` và `npm`.
+**Yêu cầu hệ thống:**
+- **Node.js**: $\ge$ 20.0.0 & `npm`
+- **Rust toolchain**: $\ge$ 1.80 (`rustc`, `cargo`)
+- **Thư viện hệ thống (Linux)**: `webkit2gtk4.1-devel` (Fedora) hoặc `libwebkit2gtk-4.1-dev` (Ubuntu/Debian)
 
 ```bash
-# 1. Tải về và cài đặt các phụ thuộc
+# 1. Cài đặt các phụ thuộc npm
 npm install
 
-# 2. Biên dịch TypeScript sang JavaScript (dist/)
-npm run build
-
-# 3. Đóng gói các bộ thẻ mẫu đi kèm
+# 2. Đóng gói các bộ thẻ mẫu đi kèm
 npm run build:samples
 
-# 4. Khởi chạy ứng dụng chế độ phát triển
+# 3. Biên dịch frontend và khởi chạy chế độ phát triển Tauri
 npm start
+# hoặc:
+npm run tauri:dev
 ```
 
-#### Đóng gói tạo bản cài đặt phân phối:
+#### Đóng gói bản cài đặt phân phối (Release binary):
 ```bash
-# Đóng gói AppImage và RPM vào thư mục release/
-npm run dist
+npm run tauri:build
 ```
+> Tệp nhị phân release và các gói cài đặt (`.rpm`, `.deb`, `.AppImage`) sẽ được sinh tự động tại `src-tauri/target/release/bundle/`.
 
-#### Chạy kiểm thử tự động & Kiểm tra kiểu nghiêm ngặt:
+#### Chạy kiểm thử tự động & Kiểm tra kiểu:
 ```bash
-npm run typecheck    # TypeScript strict type checking
-npm test             # Chạy toàn bộ 193 unit test và characterization test
+npm run typecheck             # TypeScript strict type checking
+npm test                      # Chạy toàn bộ 193 unit & characterization tests (Node.js)
+cd src-tauri && cargo test    # Chạy kiểm thử tự động backend Rust
+cd src-tauri && cargo clippy  # Kiểm tra chất lượng mã nguồn Rust
 ```
 
 ---
@@ -98,7 +160,7 @@ npm test             # Chạy toàn bộ 193 unit test và characterization test
 ### 2. Trình soạn thảo Deck Editor mạnh mẽ
 - **Hỗ trợ công thức Toán học LaTeX (KaTeX)**: Soạn thảo công thức mượt mà với `$inline$` và `$$block$$`, tích hợp thanh công cụ ký hiệu toán trực quan (phân số, căn, tích phân, ma trận...).
 - **Quản lý đa phương tiện**: Kéo thả ảnh trực tiếp vào thẻ, hỗ trợ xem trước qua Lightbox phóng to.
-- **An toàn khi soạn thảo**: Tự động lưu nháp (Auto-draft) mỗi 30 giây vào thư mục cục bộ, tự động phục hồi nếu có sự cố mất điện; đầy đủ lịch sử Hoàn tác (`Ctrl+Z`) và Làm lại (`Ctrl+Y`).
+- **An toàn khi soạn thảo**: Tự động lưu nháp (Auto-draft) định kỳ vào thư mục cục bộ, tự động phục hồi nếu có sự cố mất điện; đầy đủ lịch sử Hoàn tác (`Ctrl+Z`) và Làm lại (`Ctrl+Y`).
 
 ### 3. Hỗ trợ học ngoại ngữ & Từ vựng chuyên sâu
 - Tự động sinh câu hỏi phong phú từ thẻ từ vựng: Trắc nghiệm 4 đáp án, Gõ từ 2 chiều, Điền khuyết theo ngữ cảnh, Nghe chính tả (Listen & Write).
@@ -173,35 +235,46 @@ node tools/sdeck.mjs pack my-source-folder/ ~/StudyDecks/my-deck.sdeck
 
 ---
 
-## 🏗️ Kiến trúc & Công nghệ
+## 🏗️ Cấu trúc dự án
 
 ```text
-turtleDeck/
-├── build/                   # Biểu tượng ứng dụng đa kích thước & thư viện phụ trợ
-├── data/samples/            # Các bộ thẻ mẫu đã đóng gói (.sdeck)
-├── dist/                    # Mã nguồn đã biên dịch (ESM Main & CJS Preload)
-├── release/                 # Các gói cài đặt thành phẩm (.rpm, .AppImage)
-├── src/
-│   ├── app.js               # Điều phối giao diện Renderer chính
-│   ├── index.html           # Khung HTML & chính sách CSP nghiêm ngặt
-│   ├── core/                # Logic nghiệp vụ thuần (Pure TS/ESM, không phụ thuộc DOM)
-│   ├── main/                # Tiến trình Electron Main Process (SQLite, Window, IPC)
-│   └── views/               # Các màn hình (Home, Deck, Session, Editor, Stats, Settings)
+studyApp/
+├── build/                   # Biểu tượng ứng dụng đa kích thước & metadata desktop
+├── data/                    # Các bộ thẻ mẫu nguồn (.sdeck)
+├── dist/                    # Frontend đã biên dịch phục vụ cho Tauri Webview
+├── docs/
+│   ├── plans/               # Kế hoạch tái cấu trúc & di chuyển Tauri hoàn tất
+│   ├── reports/             # Báo cáo nghiệm thu các giai đoạn 1 – 6
+│   ├── screenshots/         # Ảnh chụp màn hình ứng dụng độ phân giải cao
+│   ├── tauri-dev.md         # Hướng dẫn chi tiết thiết lập môi trường Tauri
+│   └── tauri-visual-qa.md   # Bảng kiểm thử hiển thị WebKit/WebView2
+├── src/                     # Giao diện & Core logic thuần túy (JavaScript/TypeScript)
+│   ├── app.js               # Điểm vào chính của Renderer & Routing
+│   ├── core/                # Logic nghiệp vụ thuần (SRS, Parser, Grader, Stats...)
+│   ├── platform/            # Lớp bọc Tauri IPC API tương thích ngược (tauri-api.js)
+│   ├── styles/              # CSS tokens, theme tối/sáng và kiểu dáng các màn hình
+│   └── views/               # Các màn hình (Home, Deck, Session, Editor, Stats...)
+├── src-tauri/               # Backend native viết bằng Rust (Tauri v2)
+│   ├── Cargo.toml           # Định nghĩa crate Rust & các thư viện tối ưu
+│   ├── tauri.conf.json      # Cấu hình cửa sổ, CSP, bundle và quyền truy cập
+│   └── src/
+│       ├── main.rs          # Entry point ứng dụng desktop
+│       ├── commands/        # Toàn bộ IPC commands (deck, srs, stats, folder...)
+│       ├── db/              # SQLite rusqlite, schema, triggers, migration
+│       └── services/        # Package store (.sdeck zip), file watcher, asset protocol
 ├── templates/               # Bộ tệp mẫu (txt, csv, tsv, md, json) & tài liệu quy tắc
-├── test/                    # 193 bài kiểm thử tự động (Unit & Performance tests)
-└── tools/                   # Bộ công cụ CLI đóng gói và xây dựng dự án
+├── test/                    # 193 bài kiểm thử tự động (Unit & Characterization)
+└── tools/                   # Bộ công cụ CLI đóng gói, build và chụp ảnh màn hình
 ```
-
-- **Frontend**: Vanilla JavaScript (Module hóa cao), KaTeX (Toán học), Chart.js (Biểu đồ thống kê), DOMPurify (Lọc mã độc).
-- **Backend / Core**: Electron ESM, SQLite 3 (`better-sqlite3` tối ưu hóa ghi log & SRS), `fflate` (Nén ZIP tốc độ cao).
-- **Bảo mật**: `contextIsolation: true`, `nodeIntegration: false`, chính sách CSP chặn kết nối ngoài, kiểm duyệt chặt chẽ định dạng ảnh.
 
 ---
 
 ## 📖 Tài liệu kỹ thuật chi tiết
 
-Toàn bộ đặc tả nghiệp vụ, mô hình dữ liệu, lược đồ SQLite, thiết kế UX Editor và lịch sử các giai đoạn phát triển được tập hợp đầy đủ tại:
-- 📑 [`SPECIFICATION.md`](./SPECIFICATION.md) — Tài liệu đặc tả kỹ thuật và kiến trúc toàn diện của Turtle Deck.
+- 📑 [`SPECIFICATION.md`](./SPECIFICATION.md) — Đặc tả kỹ thuật toàn diện về sản phẩm, nghiệp vụ lõi và thiết kế hệ thống.
+- 🛠️ [`docs/tauri-dev.md`](./docs/tauri-dev.md) — Hướng dẫn cài đặt môi trường Rust, WebKitGTK và quy trình phát triển Tauri v2.
+- 📋 [`docs/tauri-visual-qa.md`](./docs/tauri-visual-qa.md) — Bảng nghiệm thu hiển thị thị giác giao diện.
+- 🗃️ [`docs/plans/`](./docs/plans/) — Kế hoạch thực hiện tái cấu trúc renderer và di chuyển sang Tauri v2.
 
 ---
 

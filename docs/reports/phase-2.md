@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Giai đoạn 2
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - Port toàn bộ cấu trúc SQLite DDL (`schema.ts`), PRAGMA chuẩn, chỉ mục toàn văn FTS5 và triggers sang Rust (`src-tauri/src/db/schema.rs`).
 - Chuyển đổi và bảo toàn dữ liệu tự động:
   - `migration.rs`: Tự động nạp `progress.json` của bản Electron vào SQLite trong 1 transaction an toàn, đổi tên thành `progress.json.migrated`.

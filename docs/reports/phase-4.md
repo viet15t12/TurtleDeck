@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Giai đoạn 4
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - **Nhập dữ liệu hàng loạt (Import Service):**
   - Hỗ trợ chọn file nguồn qua hộp thoại hệ thống (`import:pickFile`), cấp phát token bảo mật tạm thời `token`.
   - Cơ chế bảo mật (Issue 2): Chặn tuyệt đối renderer gửi đường dẫn tệp tuỳ ý `filePath` / `path` nếu không kèm theo `token` hợp lệ do backend cấp; từ chối token hết hạn.
@@ -90,7 +90,7 @@ Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md)
 
 ## 5. Kế Hoạch Cho Giai Đoạn 5 (Lifecycle & Đóng Gói)
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - Single-instance plugin: ngăn chặn mở nhiều cửa sổ trùng lặp, chuyển đường dẫn file từ instance thứ hai sang instance thứ nhất và phát sự kiện `deck:openExternal`.
 - Quản lý cửa sổ: ghi nhớ kích thước và vị trí cửa sổ, icon ứng dụng (`build/icons`), thiết lập `desktopName`.
 - Cấu hình đóng gói `tauri.conf.json`:

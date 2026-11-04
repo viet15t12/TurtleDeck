@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Giai đoạn 5
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - **Cơ chế Single-Instance & Xử lý File Ngoài:**
   - Tích hợp `tauri-plugin-single-instance`: ngăn chặn ứng dụng chạy nhiều cửa sổ/tiến trình song song; khi mở instance thứ hai (nhấp đúp file `.sdeck`), tự động unminimize, show và focus cửa sổ chính hiện có.
   - Phân tích tham số dòng lệnh (`argv` lúc khởi động ứng dụng và `args` từ instance thứ hai): lọc bỏ các cờ bắt đầu bằng `-`, chỉ trích xuất các file có phần mở rộng `.sdeck` (không phân biệt hoa thường), tự động chuẩn hoá đường dẫn tuyệt đối (canonical path) và loại trừ tệp trùng lặp.
@@ -84,7 +84,7 @@ Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md)
 
 ## 6. Kế Hoạch Cho Giai Đoạn 6 (Kiểm Thử Cuối, Dọn Dẹp, Tài Liệu)
 
-- Kiểm thử checklist nghiệm thu 15 mục (A – O) theo mục 6 trong [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md).
+- Kiểm thử checklist nghiệm thu 15 mục (A – O) theo mục 6 trong [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md).
 - Cập nhật hướng dẫn phát triển trong `docs/tauri-dev.md` và bảng so sánh kích thước/hiệu năng trong `README.md`.
 - Chuẩn bị điều kiện để gỡ bỏ phụ thuộc Electron khi toàn bộ Gate được chốt nghiệm thu.
 

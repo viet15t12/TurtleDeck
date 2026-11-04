@@ -10,7 +10,7 @@
 
 ## 1. Mục tiêu Giai đoạn 3
 
-Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../../TAURI_MIGRATION_PLAN.md):
+Theo kế hoạch tại [TAURI_MIGRATION_PLAN.md](../plans/TAURI_MIGRATION_PLAN.md):
 - **Package Store & Định dạng .sdeck:**
   - Cài đặt đọc, nén và giải nén file `.sdeck` (định dạng ZIP chuẩn, crate `zip 2`) hoàn toàn trong bộ nhớ (không giải nén rác ra đĩa).
   - Giới hạn bảo mật: tối đa 2000 entries, `deck.json` $\le$ 20 MB, ảnh $\le$ 5 MB, tổng dung lượng giải nén $\le$ 500 MB.
