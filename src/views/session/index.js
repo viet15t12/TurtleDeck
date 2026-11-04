@@ -260,7 +260,6 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     setShortcutScope('session', {
       onToggleStar: toggleStar,
       onEscape: requestExit,
-      onKeyDown,
     });
 
     attachImageHandlers(root);

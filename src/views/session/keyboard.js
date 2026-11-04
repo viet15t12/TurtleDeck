@@ -33,6 +33,7 @@ export function createKeyHandler(ctx) {
       return;
     }
     if (ev.key === 'Enter') {
+      if (!session.userAnswer || session.userAnswer.length === 0) return;
       ev.preventDefault();
       submitCurrent();
     }
@@ -40,6 +41,8 @@ export function createKeyHandler(ctx) {
 
   function handleText(ev) {
     if (ev.key === 'Enter') {
+      const val = (session.userAnswer || '').trim();
+      if (!val) return;
       ev.preventDefault();
       submitCurrent();
     }
@@ -70,7 +73,11 @@ export function createKeyHandler(ctx) {
   }
 
   return function onKeyDown(ev) {
-    if (document.querySelector('.lightbox-backdrop')) {
+    if (ev.repeat) {
+      return;
+    }
+
+    if (typeof document !== 'undefined' && document.querySelector('.lightbox-backdrop')) {
       return;
     }
 
@@ -109,6 +116,13 @@ export function createKeyHandler(ctx) {
         nextQuestion();
       }
       return;
+    }
+
+    // Chặn phím Enter/Space nếu câu hỏi mới vừa chuyển chưa đầy 150ms (tránh sự kiện phím từ câu trước lọt sang)
+    if (session.questionStartedAt && Date.now() - session.questionStartedAt < 150) {
+      if (ev.key === 'Enter' || ev.code === 'Space' || ev.key === ' ') {
+        return;
+      }
     }
 
     // Chưa nộp bài

@@ -121,6 +121,7 @@ export function initGlobalShortcuts(actions) {
 
       if (currentHandlers.onEscape) {
         ev.preventDefault();
+        ev.stopPropagation();
         currentHandlers.onEscape();
         return;
       }

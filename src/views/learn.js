@@ -131,7 +131,12 @@ export function renderLearn(root, { entry, progress = {}, onSaveProgress = () =>
         class: 'ux-input',
         style: 'width: 100%; max-width: 450px; font-size: 16px; padding: 10px 14px;',
         placeholder: 'Gõ đáp án vào đây...',
-        onkeydown: ev => { if (ev.key === 'Enter') submitText(); },
+        onkeydown: ev => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            submitText();
+          }
+        },
       });
       const submitBtn = h('button', {
         type: 'button',
@@ -142,6 +147,7 @@ export function renderLearn(root, { entry, progress = {}, onSaveProgress = () =>
 
       function submitText() {
         const val = inputEl.value.trim();
+        if (!val) return;
         const mode = currentQ.match || 'normalized';
         const isOk = gradeText(val, currentQ.answers || [], mode).ok;
         onAnswer(isOk, val, (currentQ.answers || []).join(' | '));

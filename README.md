@@ -7,7 +7,7 @@
 ### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
 **Thế hệ mới tối ưu hoá bằng Tauri v2 & Rust — Siêu nhẹ, Khởi động tức thì, Tiết kiệm RAM**
 
-[![Version](https://img.shields.io/badge/Version-0.2.1-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
+[![Version](https://img.shields.io/badge/Version-0.2.2-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20(RPM%20%7C%20DEB%20%7C%20AppImage)%20%7C%20Windows-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-DEA584?logo=rust&logoColor=white)](https://www.rust-lang.org/)
@@ -97,20 +97,20 @@ Tải phiên bản mới nhất từ [GitHub Releases](https://github.com/viet15
 
 #### 1. Cài đặt qua gói RPM (Khuyên dùng cho Fedora / RHEL)
 ```bash
-sudo dnf install ./turtle-deck-0.2.1-1.x86_64.rpm
+sudo dnf install ./turtle-deck-0.2.2-1.x86_64.rpm
 ```
 > [!NOTE]
 > Gói RPM tự động tích hợp biểu tượng desktop, phân loại vào menu **Education**, và đăng ký MIME type `application/x-studydeck` để bạn chỉ cần nhấp đúp vào bất kỳ file `.sdeck` nào là ứng dụng sẽ mở ngay lập tức.
 
 #### 2. Cài đặt qua gói DEB (Ubuntu / Debian / Linux Mint)
 ```bash
-sudo dpkg -i ./turtle-deck_0.2.1_amd64.deb
+sudo dpkg -i ./turtle-deck_0.2.2_amd64.deb
 ```
 
 #### 3. Chạy trực tiếp qua AppImage (Mọi bản phân phối Linux)
 ```bash
-chmod +x "turtle-deck_0.2.1_amd64.AppImage"
-./"turtle-deck_0.2.1_amd64.AppImage"
+chmod +x "turtle-deck_0.2.2_amd64.AppImage"
+./"turtle-deck_0.2.2_amd64.AppImage"
 ```
 
 ---
