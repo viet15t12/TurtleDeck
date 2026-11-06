@@ -4,8 +4,7 @@
 
 # Turtle Deck
 
-### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
-**Thế hệ mới tối ưu hoá bằng Tauri v2 & Rust — Siêu nhẹ, Khởi động tức thì, Tiết kiệm RAM**
+### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm
 
 [![Version](https://img.shields.io/badge/Version-0.2.4-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20(RPM%20%7C%20DEB%20%7C%20AppImage)%20%7C%20Windows-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
