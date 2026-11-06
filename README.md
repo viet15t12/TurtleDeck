@@ -2,7 +2,7 @@
 
 <img src="./build/icons/256x256.png" alt="Turtle Deck Logo" width="130" height="130" style="margin-bottom: 12px;">
 
-# Turtle Deck 🐢
+# Turtle Deck
 
 ### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
 **Thế hệ mới tối ưu hoá bằng Tauri v2 & Rust — Siêu nhẹ, Khởi động tức thì, Tiết kiệm RAM**
