@@ -1,11 +1,12 @@
 /* src/styles/deck.css — Màn hình chi tiết bộ thẻ (GĐ3B §5): hero stats, chế độ học, bảng mục và cảnh báo thu gọn */
 
 .panel {
-  margin-bottom: 16px;
-  padding: 18px 20px;
+  margin-bottom: 18px;
+  padding: 20px 24px;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .deck-view-title-block {
@@ -51,10 +52,15 @@
 }
 
 .deck-stat-box {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--c-surface-2);
+  transition: transform var(--transition-fast);
+}
+
+.deck-stat-box:hover {
+  transform: translateY(-1px);
 }
 
 .deck-stat-label {
@@ -70,10 +76,21 @@
   margin: 2px 0;
 }
 
-.deck-stat-num.num-new      { color: var(--c-text); }
-.deck-stat-num.num-learning { color: var(--c-primary); }
-.deck-stat-num.num-due      { color: var(--c-warn); }
-.deck-stat-num.num-mastered { color: var(--c-ok); }
+.deck-stat-num.num-new {
+  color: var(--c-text);
+}
+
+.deck-stat-num.num-learning {
+  color: var(--c-primary);
+}
+
+.deck-stat-num.num-due {
+  color: var(--c-warn);
+}
+
+.deck-stat-num.num-mastered {
+  color: var(--c-ok);
+}
 
 .deck-stat-sub {
   font-size: 11px;
@@ -93,19 +110,21 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1.5px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  background: var(--c-surface);
   text-align: left;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
 }
 
-.deck-mode-card:hover:not(:disabled) {
-  border-color: var(--c-primary);
-  box-shadow: var(--shadow-sm);
+.deck-mode-card:hover:not(.mode-disabled):not(:disabled) {
+  border-color: var(--c-border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
   background: var(--c-surface-2);
 }
 
@@ -114,9 +133,12 @@
   background: color-mix(in srgb, var(--c-primary-soft) 45%, var(--c-surface));
 }
 
-.deck-mode-card:disabled {
+.deck-mode-card:disabled,
+.deck-mode-card.mode-disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .deck-mode-card-top {
@@ -185,7 +207,9 @@
   width: 240px;
 }
 
-.table-wrap { overflow-x: auto; }
+.table-wrap {
+  overflow-x: auto;
+}
 
 table.items {
   width: 100%;
@@ -193,15 +217,25 @@ table.items {
   font-size: var(--fs-sm);
 }
 
-.items th, .items td {
+.items th,
+.items td {
   padding: 10px 10px;
   border-bottom: 1px solid var(--c-border);
   text-align: left;
   vertical-align: top;
 }
 
-.items th { color: var(--c-text-muted); font-weight: 600; font-size: var(--fs-xs); }
-.items .num { width: 42px; color: var(--c-text-muted); text-align: right; }
+.items th {
+  color: var(--c-text-muted);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+}
+
+.items .num {
+  width: 42px;
+  color: var(--c-text-muted);
+  text-align: right;
+}
 
 .deck-item-tr {
   cursor: pointer;
@@ -249,12 +283,33 @@ table.items {
   white-space: nowrap;
 }
 
-.item-status-pill.status-new      { background: var(--c-surface-3); color: var(--c-text-muted); }
-.item-status-pill.status-learning { background: var(--c-primary-soft); color: var(--c-primary); }
-.item-status-pill.status-due      { background: var(--c-warn-soft); color: var(--c-warn); }
-.item-status-pill.status-mastered { background: var(--c-ok-soft); color: var(--c-ok); }
+.item-status-pill.status-new {
+  background: var(--c-surface-3);
+  color: var(--c-text-muted);
+}
 
-.issues { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.item-status-pill.status-learning {
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+
+.item-status-pill.status-due {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+
+.item-status-pill.status-mastered {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+
+.issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
 
 .issue {
   display: flex;
@@ -265,8 +320,20 @@ table.items {
   background: var(--c-surface);
 }
 
-.issue.warn { color: var(--c-warn); }
-.issue.error { color: var(--c-danger); }
-.issue-icon { font-weight: 700; }
-.issue code { padding: 0 4px; border-radius: 4px; background: rgb(0 0 0 / 6%); }
+.issue.warn {
+  color: var(--c-warn);
+}
 
+.issue.error {
+  color: var(--c-danger);
+}
+
+.issue-icon {
+  font-weight: 700;
+}
+
+.issue code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 6%);
+}

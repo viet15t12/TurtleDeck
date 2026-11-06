@@ -1,4 +1,4 @@
-/* src/styles/controls.css — Hệ thống control dùng chung (study-app-editor-ux.md §12) */
+/* src/styles/controls.css — Hệ thống control dùng chung theo chuẩn Apple macOS HIG */
 
 input,
 select,
@@ -18,12 +18,13 @@ button {
   height: var(--control-h);
   padding: 0 var(--space-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--c-surface);
   color: var(--c-text);
   font-size: var(--fs);
   line-height: 1.4;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  letter-spacing: -0.006em;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
   outline: none;
 }
 
@@ -34,13 +35,13 @@ button {
   height: var(--control-h-sm);
   padding: 0 var(--space-2);
   font-size: var(--fs-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 
 .ux-textarea,
 textarea.form-control {
   height: auto;
-  min-height: 76px;
+  min-height: 80px;
   padding: var(--space-2) var(--space-3);
   line-height: 1.55;
   resize: vertical;
@@ -80,24 +81,24 @@ textarea.form-control {
   border-color: var(--c-warn) !important;
 }
 
-/* Select với mũi tên tự vẽ bằng CSS thuần (tuân thủ CSP img-src 'self' asset:) */
+/* Select với mũi tên tự vẽ bằng CSS thuần (tuân thủ CSP) */
 .ux-select,
 select.form-control {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 30px;
+  padding-right: 32px;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--c-text-muted) 50%),
     linear-gradient(135deg, var(--c-text-muted) 50%, transparent 50%);
   background-position:
-    calc(100% - 15px) 50%,
-    calc(100% - 10px) 50%;
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   cursor: pointer;
 }
 
-/* Ô tìm kiếm có icon SVG */
+/* Ô tìm kiếm phong cách Apple Spotlight / Search */
 .ux-search-wrap {
   position: relative;
   display: flex;
@@ -107,41 +108,58 @@ select.form-control {
 
 .ux-search-icon {
   position: absolute;
-  left: 10px;
-  width: 14px;
-  height: 14px;
+  left: 11px;
+  width: 15px;
+  height: 15px;
   color: var(--c-text-muted);
   pointer-events: none;
 }
 
 .ux-search-input {
   width: 100%;
-  padding-left: 30px;
-  padding-right: 26px;
+  padding-left: 34px;
+  padding-right: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-3);
+  border-color: transparent;
+  transition: all var(--transition-fast);
+}
+
+.ux-search-input:focus {
+  background: var(--c-surface);
+  border-color: var(--c-primary) !important;
 }
 
 .ux-search-clear {
   position: absolute;
-  right: 6px;
-  width: 20px;
-  height: 20px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
   border: 0;
-  border-radius: 4px;
-  background: transparent;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.08);
   color: var(--c-text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
+  transition: background var(--transition-fast);
 }
 
 .ux-search-clear:hover {
-  background: var(--c-surface-3);
+  background: rgba(0, 0, 0, 0.15);
   color: var(--c-text);
 }
 
-/* ── Nút bấm (Buttons) ──────────────────────────────────────────────────── */
+[data-theme="dark"] .ux-search-clear {
+  background: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .ux-search-clear:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Nút bấm (Apple Human Interface Guidelines Buttons) ──────────────────────────────────────────────────── */
 
 .ux-btn,
 .btn {
@@ -152,21 +170,28 @@ select.form-control {
   height: var(--control-h);
   padding: 0 var(--space-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--c-surface);
   color: var(--c-text);
   font-size: var(--fs);
   font-weight: 500;
+  letter-spacing: -0.008em;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform 100ms ease;
 }
 
 .ux-btn:hover:not(:disabled),
 .btn:hover:not(:disabled) {
   border-color: var(--c-border-strong);
   background: var(--c-surface-2);
+}
+
+.ux-btn:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .ux-btn:focus-visible,
@@ -178,8 +203,9 @@ select.form-control {
 
 .ux-btn:disabled,
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.42;
   cursor: default;
+  box-shadow: none;
 }
 
 .ux-btn.sm,
@@ -187,56 +213,65 @@ select.form-control {
   height: var(--control-h-sm);
   padding: 0 10px;
   font-size: var(--fs-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 
 .ux-btn.primary,
 .btn.primary {
-  border-color: var(--c-primary);
+  border-color: transparent;
   background: var(--c-primary);
   color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 113, 227, 0.25), var(--shadow-sm);
 }
 
 .ux-btn.primary:hover:not(:disabled),
 .btn.primary:hover:not(:disabled) {
   background: var(--c-primary-hover);
-  border-color: var(--c-primary-hover);
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.35);
 }
 
 .ux-btn.ghost,
 .btn.ghost {
   border-color: transparent;
   background: transparent;
+  box-shadow: none;
 }
 
 .ux-btn.ghost:hover:not(:disabled),
 .btn.ghost:hover:not(:disabled) {
-  background: var(--c-surface-3);
+  background: rgba(0, 0, 0, 0.05);
   border-color: transparent;
 }
 
-/* Nút nguy hiểm: chỉ đỏ khi hover (§12) hoặc nguy hiểm trực tiếp */
+[data-theme="dark"] .ux-btn.ghost:hover:not(:disabled),
+[data-theme="dark"] .btn.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Nút nguy hiểm (Apple Red Accent) */
 .ux-btn.danger-hover:hover:not(:disabled),
 .btn.error:hover:not(:disabled) {
   color: var(--c-danger);
-  border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
+  border-color: rgba(255, 59, 48, 0.3);
   background: var(--c-danger-soft);
 }
 
 .ux-btn.danger {
   color: var(--c-danger);
-  border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
+  border-color: rgba(255, 59, 48, 0.3);
   background: var(--c-danger-soft);
+  box-shadow: none;
 }
 
 .ux-btn.danger:hover:not(:disabled) {
   color: #ffffff;
   background: var(--c-danger);
-  border-color: var(--c-danger);
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.35);
 }
 
-
-/* Nút icon ≥ 32px */
+/* Nút icon */
 .ux-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -249,12 +284,20 @@ select.form-control {
   background: transparent;
   color: var(--c-text-muted);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background var(--transition-fast), color var(--transition-fast), transform 100ms ease;
 }
 
 .ux-icon-btn:hover:not(:disabled) {
-  background: var(--c-surface-3);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--c-text);
+}
+
+[data-theme="dark"] .ux-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ux-icon-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .ux-icon-btn:focus-visible {
@@ -263,7 +306,7 @@ select.form-control {
 }
 
 .ux-icon-btn:disabled {
-  opacity: 0.38;
+  opacity: 0.35;
   cursor: default;
 }
 
@@ -277,45 +320,53 @@ select.form-control {
   display: inline-flex;
   align-items: stretch;
   position: relative;
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
 }
 
 .ux-split-btn > .ux-btn:first-child {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+  box-shadow: none;
 }
 
 .ux-split-btn > .ux-split-caret {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  border-left: 1px solid rgb(255 255 255 / 25%);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
   padding: 0 8px;
   min-width: 28px;
+  box-shadow: none;
 }
 
-/* ── Thanh phân đoạn (Segmented Control) ────────────────────────────────── */
+/* ── Thanh phân đoạn (macOS Segmented Control) ────────────────────────────────── */
 
 .ux-segmented {
   display: inline-flex;
   align-items: center;
   padding: 3px;
-  background: var(--c-surface-3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  border-radius: var(--radius-sm);
   gap: 2px;
+}
+
+[data-theme="dark"] .ux-segmented {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ux-seg-btn {
   height: calc(var(--control-h) - 8px);
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: calc(var(--radius-sm) - 2px);
   background: transparent;
   color: var(--c-text-muted);
   font-size: var(--fs-sm);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+  transition: all var(--transition-fast);
 }
 
 .ux-seg-btn:hover:not(.active) {
@@ -324,9 +375,15 @@ select.form-control {
 
 .ux-seg-btn.active {
   background: var(--c-surface);
-  color: var(--c-primary);
+  color: var(--c-text);
   font-weight: 600;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .ux-seg-btn.active {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .ux-segmented.sm .ux-seg-btn {
@@ -335,16 +392,16 @@ select.form-control {
   font-size: var(--fs-xs);
 }
 
-/* ── Chip lọc & Chip "+ Thêm …" ─────────────────────────────────────────── */
+/* ── Chip lọc & Chip "+ Thêm …" (Apple Tag Style) ─────────────────────────────────────────── */
 
 .ux-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   height: 26px;
-  padding: 0 9px;
+  padding: 0 11px;
   border: 1px solid var(--c-border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--c-surface);
   color: var(--c-text-muted);
   font-size: var(--fs-xs);
@@ -352,7 +409,7 @@ select.form-control {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  transition: all var(--transition-fast);
 }
 
 .ux-chip:hover {
@@ -363,20 +420,20 @@ select.form-control {
 
 .ux-chip.active {
   background: var(--c-primary-soft);
-  border-color: color-mix(in srgb, var(--c-primary) 40%, var(--c-border));
+  border-color: rgba(0, 113, 227, 0.35);
   color: var(--c-primary);
   font-weight: 600;
 }
 
 .ux-chip.warn {
   background: var(--c-warn-soft);
-  border-color: color-mix(in srgb, var(--c-warn) 40%, var(--c-border));
+  border-color: rgba(255, 149, 0, 0.35);
   color: var(--c-warn);
 }
 
 .ux-chip.danger {
   background: var(--c-danger-soft);
-  border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
+  border-color: rgba(255, 59, 48, 0.35);
   color: var(--c-danger);
 }
 
@@ -392,24 +449,26 @@ select.form-control {
 }
 
 .ux-chip-clear:hover {
-  background: rgb(0 0 0 / 12%);
+  background: rgba(0, 0, 0, 0.12);
 }
 
-/* ── Popover & Menu thả xuống ───────────────────────────────────────────── */
+/* ── Popover & Menu thả xuống (macOS Translucent Menu) ───────────────────────────────────────────── */
 
 .ux-popover {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   z-index: 90;
-  min-width: 200px;
+  min-width: 210px;
   max-height: 280px;
   overflow-y: auto;
   padding: 6px;
-  background: var(--c-surface);
+  background: var(--c-surface-translucent);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .ux-popover.align-right {
@@ -422,7 +481,7 @@ select.form-control {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -430,15 +489,17 @@ select.form-control {
   font-size: var(--fs-sm);
   text-align: left;
   cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .ux-popover-item:hover {
-  background: var(--c-surface-3);
+  background: var(--c-primary);
+  color: #ffffff;
 }
 
 .ux-popover-item.danger:hover {
-  background: var(--c-danger-soft);
-  color: var(--c-danger);
+  background: var(--c-danger);
+  color: #ffffff;
 }
 
 .ux-popover-sep {
@@ -447,13 +508,13 @@ select.form-control {
   background: var(--c-border);
 }
 
-/* ── Dòng lỗi nhỏ dưới trường (12px, §9) ────────────────────────────────── */
+/* ── Dòng lỗi nhỏ dưới trường (12px) ────────────────────────────────── */
 
 .ux-field-msg {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: var(--fs-xs);
   line-height: 1.35;
 }
@@ -466,11 +527,11 @@ select.form-control {
   color: var(--c-warn);
 }
 
-/* ── Toast góc dưới có nút hành động ("Hoàn tác" / "Xem", §4) ───────────── */
+/* ── Toast góc dưới có nút hành động (macOS Notification Banner) ───────────── */
 
 .ux-toast-host {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 250;
@@ -485,35 +546,40 @@ select.form-control {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 16px;
-  background: #1e293b;
-  color: #f8fafc;
-  border-radius: var(--radius);
+  padding: 10px 18px;
+  background: rgba(30, 30, 34, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: var(--fs-sm);
+  letter-spacing: -0.006em;
 }
 
 .ux-toast-action {
   border: 0;
-  background: transparent;
-  color: #93c5fd;
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-weight: 600;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  transition: background var(--transition-fast);
 }
 
 .ux-toast-action:hover {
-  background: rgb(255 255 255 / 12%);
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.25);
+  text-decoration: none;
 }
 
-/* ── Ô chọn loại bộ thẻ (3 ô lớn, GĐ3B §2.2) ───────────────────────────── */
+/* ── Ô chọn loại bộ thẻ (Apple Bento Style Cards) ───────────────────────────── */
 
 .ux-kind-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 @media (max-width: 640px) {
@@ -527,20 +593,22 @@ select.form-control {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--c-border);
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
   background: var(--c-surface);
   color: var(--c-text);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .ux-kind-card:hover:not(.disabled) {
   border-color: var(--c-border-strong);
-  background: var(--c-surface-2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .ux-kind-card:focus-visible {
@@ -550,26 +618,27 @@ select.form-control {
 
 .ux-kind-card.active[data-kind="qa"] {
   border-color: var(--kind-qa);
-  background: color-mix(in srgb, var(--kind-qa-soft) 45%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-qa) 22%, transparent);
+  background: color-mix(in srgb, var(--kind-qa-soft) 40%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-qa) 24%, transparent), var(--shadow-sm);
 }
 
 .ux-kind-card.active[data-kind="quiz"] {
   border-color: var(--kind-quiz);
-  background: color-mix(in srgb, var(--kind-quiz-soft) 45%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-quiz) 22%, transparent);
+  background: color-mix(in srgb, var(--kind-quiz-soft) 40%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-quiz) 24%, transparent), var(--shadow-sm);
 }
 
 .ux-kind-card.active[data-kind="vocab"] {
   border-color: var(--kind-vocab);
-  background: color-mix(in srgb, var(--kind-vocab-soft) 45%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-vocab) 22%, transparent);
+  background: color-mix(in srgb, var(--kind-vocab-soft) 40%, var(--c-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-vocab) 24%, transparent), var(--shadow-sm);
 }
 
 .ux-kind-card.disabled {
-  opacity: 0.52;
+  opacity: 0.45;
   cursor: not-allowed;
-  background: var(--c-surface-2);
+  background: var(--c-surface-3);
+  box-shadow: none;
 }
 
 .ux-kind-card-head {
@@ -581,15 +650,15 @@ select.form-control {
 }
 
 .ux-kind-icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .ux-kind-soon {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 999px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
   background: var(--c-surface-3);
   border: 1px solid var(--c-border);
   color: var(--c-text-muted);
@@ -598,23 +667,24 @@ select.form-control {
 
 .ux-kind-title {
   font-size: var(--fs);
-  font-weight: 700;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   color: var(--c-text);
 }
 
 .ux-kind-desc {
   font-size: var(--fs-xs);
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--c-text-muted);
 }
 
-/* Huy hiệu loại bộ thẻ (kèm màu + biểu tượng + chữ) */
+/* Huy hiệu loại bộ thẻ */
 .ux-kind-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 9px;
-  border-radius: 999px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
@@ -624,32 +694,30 @@ select.form-control {
 .ux-kind-badge[data-kind="qa"] {
   color: var(--kind-qa);
   background: var(--kind-qa-soft);
-  border-color: color-mix(in srgb, var(--kind-qa) 30%, transparent);
+  border-color: color-mix(in srgb, var(--kind-qa) 25%, transparent);
 }
 
 .ux-kind-badge[data-kind="quiz"] {
   color: var(--kind-quiz);
   background: var(--kind-quiz-soft);
-  border-color: color-mix(in srgb, var(--kind-quiz) 30%, transparent);
+  border-color: color-mix(in srgb, var(--kind-quiz) 25%, transparent);
 }
 
 .ux-kind-badge[data-kind="vocab"] {
   color: var(--kind-vocab);
   background: var(--kind-vocab-soft);
-  border-color: color-mix(in srgb, var(--kind-vocab) 30%, transparent);
+  border-color: color-mix(in srgb, var(--kind-vocab) 25%, transparent);
 }
 
 .ux-mismatch-banner {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, var(--radius));
   background: var(--c-warn-soft);
-  border: 1px solid color-mix(in srgb, var(--c-warn) 35%, var(--c-border));
+  border: 1px solid color-mix(in srgb, var(--c-warn) 30%, var(--c-border));
   color: var(--c-warn);
   font-size: var(--fs-sm);
   line-height: 1.45;
 }
-
-

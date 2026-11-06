@@ -100,6 +100,15 @@ Thích hợp cho danh sách từ vựng ngoại ngữ đầy đủ phiên âm, t
      answer: pwd
      match: normalized
      ```
+  5. `translate`: Dịch câu có sử dụng từ gợi ý bắt buộc (Key Word Transformation):
+     ```markdown
+     ## Q tr_1 | translate | topic=Tiếng Anh | tags=writing,grammar
+     Tôi đã ngăn anh ấy bỏ cuộc.
+     keyword: prevent (v)
+     pattern: prevent\s+\w+\s+from\s+\w+ing
+     answer: I prevented him from giving up. | I prevented him from quitting.
+     > Cấu trúc: prevent someone from doing something. Thì quá khứ đơn chia 'prevented'.
+     ```
   - **Tùy chọn kiểu chấm (`match`):**
     - `normalized`: Chuẩn hóa khoảng trắng và chữ hoa/thường (mặc định).
     - `exact`: Khớp chính xác 100% từng ký tự.
@@ -125,7 +134,7 @@ Thích hợp cho danh sách từ vựng ngoại ngữ đầy đủ phiên âm, t
 
 Đây là định dạng gốc của Turtle Deck. Bạn có thể tự viết file này hoặc dùng script để sinh hàng ngàn câu hỏi.
 
-- **File mẫu:** [`templates/sample.json`](./sample.json)
+- **File mẫu:** [`templates/sample.json`](./sample.json) và [`templates/sample-translate.json`](./sample-translate.json)
 - **Cấu trúc JSON chuẩn:**
   ```json
   {
@@ -158,6 +167,19 @@ Thích hợp cho danh sách từ vựng ngoại ngữ đầy đủ phiên âm, t
         "question": "Điền vào chỗ trống: $1 + 1 =$ [___]?",
         "answer": ["2", "hai"],
         "match": "normalized"
+      },
+      {
+        "id": "q4",
+        "type": "translate",
+        "vi": "Tôi đã ngăn anh ấy bỏ cuộc.",
+        "keyword": "prevent",
+        "pos": "v",
+        "pattern": "prevent\\s+\\w+\\s+from\\s+\\w+ing",
+        "answers": [
+          "I prevented him from giving up.",
+          "I prevented him from quitting."
+        ],
+        "explanation": "Cấu trúc: prevent someone from doing something."
       }
     ]
   }
@@ -168,6 +190,7 @@ Thích hợp cho danh sách từ vựng ngoại ngữ đầy đủ phiên âm, t
 > 1. Dấu gạch chéo ngược `\` trong công thức LaTeX phải viết thành `\\` (ví dụ `\\frac{a}{b}`, `\\sqrt{x}`).
 > 2. `answer` của câu trắc nghiệm (`single`, `multi`) là **mảng chỉ số** bắt đầu từ 0 (ví dụ `[0]` là lựa chọn đầu tiên, `[0, 2]` là lựa chọn thứ 1 và 3).
 > 3. `answer` của câu điền từ (`fill`, `command`) là **mảng chuỗi** các đáp án được chấp nhận (ví dụ `["Hà Nội", "Ha Noi"]`).
+> 4. Câu dịch có từ gợi ý (`translate`): yêu cầu `vi` (câu tiếng Việt), `keyword` (từ neo), `answers` (mảng các câu tiếng Anh chấp nhận được). Tham khảo tệp mẫu chuyên biệt: [`templates/sample-translate.json`](./sample-translate.json).
 
 ---
 
@@ -202,4 +225,3 @@ zip -r ../my-new-deck.sdeck deck.json img/
 ### Bước 3: Học ngay lập tức!
 - Nếu lưu vào `~/StudyDecks`, mở Turtle Deck lên là bộ thẻ đã có sẵn trên trang chính.
 - Hoặc nhấp đúp trực tiếp vào tệp `my-new-deck.sdeck`, hệ thống sẽ tự động khởi động Turtle Deck và nạp bộ thẻ để bạn học ngay!
-

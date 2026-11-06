@@ -187,7 +187,15 @@ impl DeckRepository {
         let updated_at = meta.get("updated").and_then(|u| u.as_i64()).unwrap_or(now);
 
         let items_slice = deck.get("items").and_then(|i| i.as_array());
-        let items_count = items_slice.map(|i| i.len()).unwrap_or(0);
+        let items_count = items_slice
+            .map(|i| i.len())
+            .or_else(|| {
+                meta.get("stats")
+                    .and_then(|s| s.get("totalItems"))
+                    .and_then(|t| t.as_u64())
+                    .map(|t| t as usize)
+            })
+            .unwrap_or(0);
 
         let tx = conn.transaction()?;
 

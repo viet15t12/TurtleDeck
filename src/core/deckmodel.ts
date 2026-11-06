@@ -70,6 +70,8 @@ export function newItem(typeOrKind: any = 'single', id: string | null = null): a
       return { ...base, type: 'card', front: '', back: '' };
     case 'vocab':
       return { ...base, type: 'vocab', term: '', definition: '', tags: [] };
+    case 'translate':
+      return { ...base, type: 'translate', vi: '', keyword: '', answers: [''], pattern: '', explanation: '' };
     default:
       return { ...base, type: 'single', question: '', choices: ['', ''], answer: [0] };
   }

@@ -1,4 +1,4 @@
-// src/views/home/filter-bar.js — Dựng thanh bộ lọc loại thẻ, ô tìm kiếm và sắp xếp
+// src/views/home/filter-bar.js — Dựng thanh bộ lọc loại thẻ, ô tìm kiếm và sắp xếp phong cách Apple macOS
 
 import { h } from '../dom.js';
 import { KINDS } from '../../core/deckkinds.js';
@@ -34,7 +34,7 @@ export function createFilterBar(ctx) {
   const searchInput = h('input', {
     type: 'text',
     class: 'ux-input ux-search-input',
-    placeholder: 'Tìm theo tên thư mục hoặc bộ thẻ…',
+    placeholder: 'Tìm kiếm bộ thẻ, thư mục…',
     value: ui.searchQuery,
     oninput: ev => {
       ui.searchQuery = ev.target.value;
@@ -61,13 +61,13 @@ export function createFilterBar(ctx) {
     '✕'
   );
 
-  const searchWrap = h('div', { class: 'ux-search-wrap home-search-box', style: 'flex: 1; max-width: 320px;' });
+  const searchWrap = h('div', { class: 'ux-search-wrap home-search-box' });
   searchWrap.append(createSearchSvg(), searchInput, clearBtn);
 
   const sortSelect = h(
     'select',
     {
-      class: 'ux-select',
+      class: 'ux-select home-sort-select',
       'aria-label': 'Sắp xếp bộ thẻ',
       onchange: ev => {
         ui.sortBy = ev.target.value;
@@ -79,30 +79,31 @@ export function createFilterBar(ctx) {
     h('option', { value: 'title', selected: ui.sortBy === 'title' }, 'Sắp xếp: Tên A→Z')
   );
 
+  const segmentedGroup = h(
+    'div',
+    { class: 'ux-segmented home-kind-segmented' },
+    ...filterOptions.map(opt =>
+      h(
+        'button',
+        {
+          type: 'button',
+          class: `ux-seg-btn ${ui.filterKind === opt.id ? 'active' : ''}`,
+          onclick: () => {
+            ui.filterKind = opt.id;
+            refresh.deckSection();
+          },
+        },
+        opt.label
+      )
+    )
+  );
+
   const filterBar = h(
     'div',
     { class: 'home-filter-bar' },
-    h(
-      'div',
-      { class: 'home-filter-chips' },
-      ...filterOptions.map(opt =>
-        h(
-          'button',
-          {
-            type: 'button',
-            class: `ux-chip ${ui.filterKind === opt.id ? 'active' : ''}`,
-            onclick: () => {
-              ui.filterKind = opt.id;
-              refresh.deckSection();
-            },
-          },
-          opt.label
-        )
-      )
-    ),
+    segmentedGroup,
     h('div', { class: 'home-filter-right' }, searchWrap, sortSelect)
   );
 
   return filterBar;
 }
-

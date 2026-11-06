@@ -26,3 +26,10 @@ Gõ lệnh Git để tạo một commit mới kèm thông điệp "Initial commi
 answer: git commit -m "Initial commit" | git commit -m 'Initial commit'
 match: normalized
 > Tùy chọn `-m` cho phép đính kèm thông điệp commit trực tiếp trên dòng lệnh.
+
+## Q q5 | translate | topic=Tiếng Anh | tags=collocations,writing
+Tôi đã ngăn anh ấy bỏ cuộc.
+keyword: prevent (v)
+pattern: prevent\s+\w+\s+from\s+\w+ing
+answer: I prevented him from giving up. | I prevented him from quitting.
+> Cấu trúc: prevent someone from doing something. Thì quá khứ đơn chia 'prevented'.

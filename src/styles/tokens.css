@@ -1,69 +1,111 @@
-/* src/styles/tokens.css — Design tokens thống nhất (Light & Dark mode, study-app-editor-ux.md §12) */
+/* src/styles/tokens.css — Design tokens phong cách Apple macOS HIG (Light & Dark mode) */
 
 :root {
   color-scheme: light;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  
+  /* Typography theo chuẩn San Francisco của Apple */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
+  /* Thang khoảng cách 4pt/8pt grid */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-8: 32px;
 
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  /* Bo góc mềm mại chuẩn Apple (Squircle continuous curves) */
+  --radius-xs: 4px;
+  --radius-sm: 7px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
 
+  /* Chiều cao chuẩn cho control & nút bấm */
   --control-h: 36px;
   --control-h-sm: 28px;
+  --control-h-lg: 42px;
 
-  --fs-xs: 12px;
+  /* Cỡ chữ chuẩn Apple Dynamic Type */
+  --fs-xs: 11px;
   --fs-sm: 13px;
   --fs: 14px;
   --fs-lg: 16px;
+  --fs-xl: 19px;
+  --fs-2xl: 24px;
+  --fs-3xl: 30px;
 
-  --c-bg: #f4f6fb;
+  /* Bảng màu Light Mode — Tinh giản, sáng trong đặc trưng của macOS */
+  --c-bg: #f5f5f7;
   --c-surface: #ffffff;
-  --c-surface-2: #f8fafc;
-  --c-surface-3: #f1f5f9;
-  --c-border: #dde3ee;
-  --c-border-strong: #c4cddb;
-  --c-text: #172033;
-  --c-text-muted: #5b677d;
+  --c-surface-2: #fafafc;
+  --c-surface-3: #f0f0f2;
+  --c-surface-hover: rgba(0, 0, 0, 0.04);
+  --c-surface-translucent: rgba(255, 255, 255, 0.82);
+  --c-border: rgba(0, 0, 0, 0.08);
+  --c-border-strong: rgba(0, 0, 0, 0.16);
+  --c-border-subtle: rgba(0, 0, 0, 0.04);
+  
+  --c-text: #1d1d1f;
+  --c-text-muted: #86868b;
+  --c-text-tertiary: #a1a1a6;
 
-  --c-primary: #3b59d9;
-  --c-primary-hover: #2f4ac0;
-  --c-primary-soft: #e8edfc;
+  /* Màu nhấn Apple System Accent: Apple Blue */
+  --c-primary: #0071e3;
+  --c-primary-hover: #0077ed;
+  --c-primary-active: #005bb5;
+  --c-primary-soft: rgba(0, 113, 227, 0.09);
+  --c-primary-light: rgba(0, 113, 227, 0.12);
 
-  --c-danger: #c82829;
-  --c-danger-soft: #fdecea;
-  --c-warn: #b4690e;
-  --c-warn-soft: #fff4dc;
-  --c-ok: #1b7a43;
-  --c-ok-soft: #e5f6ec;
+  /* Màu trạng thái chuẩn Apple */
+  --c-danger: #ff3b30;
+  --c-danger-hover: #e03228;
+  --c-danger-soft: rgba(255, 59, 48, 0.10);
 
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--c-primary) 28%, transparent);
-  --shadow-sm: 0 2px 6px rgb(15 23 42 / 6%);
-  --shadow-md: 0 8px 24px rgb(15 23 42 / 12%);
-  --shadow-lg: 0 16px 40px rgb(15 23 42 / 18%);
+  --c-warn: #ff9500;
+  --c-warn-hover: #e58600;
+  --c-warn-soft: rgba(255, 149, 0, 0.12);
+
+  --c-ok: #34c759;
+  --c-ok-hover: #2db34f;
+  --c-ok-soft: rgba(52, 199, 89, 0.12);
+
+  --c-teal: #30b0c7;
+  --c-indigo: #5856d6;
+  --c-purple: #af52de;
+
+  /* Vòng sáng focus dịu mắt đặc trưng của macOS */
+  --focus-ring: 0 0 0 3.5px rgba(0, 113, 227, 0.32);
+
+  /* Đổ bóng khuếch tán đa tầng (Diffuse Ambient Shadows) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+  --shadow-floating: 0 20px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+  /* Hiệu ứng chuyển động mượt mà (Apple Spring/Ease Transition) */
+  --ease-apple: cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-fast: 150ms var(--ease-apple);
+  --transition-base: 220ms var(--ease-apple);
 
   /* Màu huy hiệu dạng câu hỏi */
-  --c-type-tn: #3b59d9;
-  --c-type-dien: #0d7a5f;
-  --c-type-lenh: #7c3aed;
-  --c-type-the: #b45309;
+  --c-type-tn: #0071e3;
+  --c-type-dien: #008f72;
+  --c-type-lenh: #af52de;
+  --c-type-the: #ff9500;
 
-  /* Màu theo loại bộ thẻ (GĐ3B §3: xanh ngọc, chàm, hổ phách) */
-  --kind-qa: #0d9488;
-  --kind-qa-soft: #ccfbf1;
-  --kind-quiz: #4338ca;
-  --kind-quiz-soft: #e0e7ff;
-  --kind-vocab: #d97706;
-  --kind-vocab-soft: #fef3c7;
+  /* Màu theo loại bộ thẻ */
+  --kind-qa: #008f72;
+  --kind-qa-soft: rgba(0, 143, 114, 0.12);
+  --kind-quiz: #5856d6;
+  --kind-quiz-soft: rgba(88, 86, 214, 0.12);
+  --kind-vocab: #ff9500;
+  --kind-vocab-soft: rgba(255, 149, 0, 0.12);
 
-  /* Tương thích biến cũ ở các màn hình Home / Deck / Session */
+  /* Tương thích biến cũ */
   --accent: var(--c-primary);
   --accent-soft: var(--c-primary-soft);
   --border: var(--c-border);
@@ -78,41 +120,61 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --c-bg: #0f1523;
-  --c-surface: #182032;
-  --c-surface-2: #1e293b;
-  --c-surface-3: #28354b;
-  --c-border: #2e3c54;
-  --c-border-strong: #435472;
-  --c-text: #e6edf7;
-  --c-text-muted: #94a3b8;
 
-  --c-primary: #6384ff;
-  --c-primary-hover: #7c98ff;
-  --c-primary-soft: rgb(99 132 255 / 18%);
+  /* Bảng màu Dark Mode — Chiều sâu trầm ấm chuẩn macOS Sonoma / Sequoia */
+  --c-bg: #1c1c1e;
+  --c-surface: #2c2c2e;
+  --c-surface-2: #343438;
+  --c-surface-3: #3e3e44;
+  --c-surface-hover: rgba(255, 255, 255, 0.07);
+  --c-surface-translucent: rgba(44, 44, 46, 0.85);
+  --c-border: rgba(255, 255, 255, 0.09);
+  --c-border-strong: rgba(255, 255, 255, 0.18);
+  --c-border-subtle: rgba(255, 255, 255, 0.05);
 
-  --c-danger: #f87171;
-  --c-danger-soft: rgb(248 113 113 / 16%);
-  --c-warn: #fbbf24;
-  --c-warn-soft: rgb(251 191 36 / 16%);
-  --c-ok: #4ade80;
-  --c-ok-soft: rgb(74 222 128 / 16%);
+  --c-text: #f5f5f7;
+  --c-text-muted: #98989d;
+  --c-text-tertiary: #68686d;
 
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--c-primary) 38%, transparent);
-  --shadow-sm: 0 2px 6px rgb(0 0 0 / 28%);
-  --shadow-md: 0 8px 24px rgb(0 0 0 / 45%);
-  --shadow-lg: 0 16px 40px rgb(0 0 0 / 60%);
+  /* Màu nhấn Apple System Accent Dark Mode */
+  --c-primary: #0a84ff;
+  --c-primary-hover: #2892ff;
+  --c-primary-active: #0071e3;
+  --c-primary-soft: rgba(10, 132, 255, 0.16);
+  --c-primary-light: rgba(10, 132, 255, 0.22);
 
-  --c-type-tn: #6384ff;
-  --c-type-dien: #34d399;
-  --c-type-lenh: #a78bfa;
-  --c-type-the: #fbbf24;
+  --c-danger: #ff453a;
+  --c-danger-hover: #ff6961;
+  --c-danger-soft: rgba(255, 69, 58, 0.18);
 
-  --kind-qa: #2dd4bf;
-  --kind-qa-soft: rgb(45 212 191 / 18%);
-  --kind-quiz: #818cf8;
-  --kind-quiz-soft: rgb(129 140 248 / 18%);
-  --kind-vocab: #fbbf24;
-  --kind-vocab-soft: rgb(251 191 36 / 18%);
+  --c-warn: #ff9f0a;
+  --c-warn-hover: #ffb340;
+  --c-warn-soft: rgba(255, 159, 10, 0.18);
+
+  --c-ok: #30d158;
+  --c-ok-hover: #48d96e;
+  --c-ok-soft: rgba(48, 209, 88, 0.18);
+
+  --c-teal: #64d2ff;
+  --c-indigo: #5e5ce6;
+  --c-purple: #bf5af2;
+
+  --focus-ring: 0 0 0 3.5px rgba(10, 132, 255, 0.42);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.65);
+  --shadow-floating: 0 24px 54px rgba(0, 0, 0, 0.8);
+
+  --c-type-tn: #0a84ff;
+  --c-type-dien: #30d158;
+  --c-type-lenh: #bf5af2;
+  --c-type-the: #ff9f0a;
+
+  --kind-qa: #30d158;
+  --kind-qa-soft: rgba(48, 209, 88, 0.18);
+  --kind-quiz: #5e5ce6;
+  --kind-quiz-soft: rgba(94, 92, 230, 0.18);
+  --kind-vocab: #ff9f0a;
+  --kind-vocab-soft: rgba(255, 159, 10, 0.18);
 }
-

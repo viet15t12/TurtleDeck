@@ -11,5 +11,6 @@ pub mod import_service;
 pub mod library_service;
 pub mod package_store;
 pub mod progress_service;
+pub mod sdeck_v2;
 pub mod settings_service;
 pub mod watcher;

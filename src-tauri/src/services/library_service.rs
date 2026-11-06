@@ -269,6 +269,13 @@ pub fn scan_library(
             .get("items")
             .and_then(|i| i.as_array())
             .map(|a| a.len())
+            .or_else(|| {
+                deck.get("meta")
+                    .and_then(|m| m.get("stats"))
+                    .and_then(|s| s.get("totalItems"))
+                    .and_then(|t| t.as_u64())
+                    .map(|t| t as usize)
+            })
             .unwrap_or(0);
 
         // Cập nhật cache

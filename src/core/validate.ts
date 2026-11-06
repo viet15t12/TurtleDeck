@@ -6,7 +6,7 @@ import { kindOf, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
 import { normalizeTerm } from './hash.js';
 import { ValidationIssue } from './types/deck.types.js';
 
-export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card'];
+export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card', 'translate'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
 export const MATCH_MODES = ['normalized', 'exact', 'regex', 'number', 'latex'];
 export const SUPPORTED_FORMAT_VERSION = 1;
@@ -18,6 +18,7 @@ const MD_IMG_WITH_ALT = /!\[([^\]]*)\]\(\s*([^)\s]+)[^)]*\)/g;
 const TYPE_LABEL: Record<string, string> = {
   single: 'Trắc nghiệm', multi: 'Trắc nghiệm',
   fill: 'Điền', command: 'Lệnh', card: 'Thẻ', vocab: 'Từ vựng',
+  translate: 'Dịch câu',
 };
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
@@ -84,6 +85,26 @@ function checkTextAnswers(item: any, add: (level: 'error' | 'warn', field: strin
     add('error', 'tolerance', 'Dung sai (tolerance) phải là số không âm.');
 }
 
+function checkTranslateAnswers(item: any, add: (level: 'error' | 'warn', field: string, msg: string) => void) {
+  const { answers, pattern } = item;
+  if (!Array.isArray(answers) || answers.length === 0) {
+    add('error', 'answers', 'Cần ít nhất 1 câu trả lời mẫu chấp nhận được (answers là danh sách chuỗi).');
+    return;
+  }
+  answers.forEach((a, i) => {
+    if (!nonEmpty(a)) {
+      add('error', `answers[${i}]`, `Câu trả lời mẫu ${i + 1} rỗng hoặc không phải chuỗi.`);
+    }
+  });
+  if (pattern !== undefined && isStr(pattern) && nonEmpty(pattern)) {
+    try {
+      new RegExp(pattern);
+    } catch (e: any) {
+      add('error', 'pattern', `Cấu trúc regex không hợp lệ: ${e.message}`);
+    }
+  }
+}
+
 export interface ValidateItemOptions {
   deckKind?: string;
   assets?: any;
@@ -107,11 +128,12 @@ export function validateItem(item: any, { deckKind, assets }: ValidateItemOption
     case 'fill': case 'command': need('question', 'câu hỏi'); checkTextAnswers(item, add); break;
     case 'card': need('front', 'mặt trước'); need('back', 'mặt sau'); break;
     case 'vocab': need('term', 'từ'); need('definition', 'nghĩa'); break;
+    case 'translate': need('vi', 'câu tiếng Việt'); need('keyword', 'từ gợi ý'); checkTranslateAnswers(item, add); break;
   }
 
-  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'imageAlt', 'answerImageAlt', 'answerDisplay', 'phonetic', 'pos', 'example'])
+  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'imageAlt', 'answerImageAlt', 'answerDisplay', 'phonetic', 'pos', 'example', 'vi', 'keyword', 'pattern'])
     if (item[f] !== undefined && !isStr(item[f])) add('error', f, `Trường ${f} phải là chuỗi.`);
-  for (const f of ['tags', 'forms', 'synonyms'])
+  for (const f of ['tags', 'forms', 'synonyms', 'acceptableForms'])
     if (item[f] !== undefined && !(Array.isArray(item[f]) && item[f].every(isStr))) add('error', f, `Trường ${f} phải là danh sách chuỗi.`);
 
   if (nonEmpty(item.image) && item.imageAlt !== undefined && !nonEmpty(item.imageAlt)) {

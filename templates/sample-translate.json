@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "id": "english-sentence-translation-sample",
+    "title": "Bộ thẻ mẫu: Dịch câu có sử dụng từ gợi ý",
+    "kind": "quiz",
+    "lang": "en",
+    "format": "studydeck",
+    "formatVersion": 1,
+    "description": "Dạng bài tập dịch câu tiếng Việt sang tiếng Anh có sử dụng từ gợi ý bắt buộc (Key Word Transformation), chấm điểm phân tầng và hỗ trợ AI / Xuất Markdown."
+  },
+  "items": [
+    {
+      "id": "trans-001",
+      "type": "translate",
+      "vi": "Tôi đã ngăn anh ấy bỏ cuộc.",
+      "keyword": "prevent",
+      "pos": "v",
+      "pattern": "prevent\\s+\\w+\\s+from\\s+\\w+ing",
+      "answers": [
+        "I prevented him from giving up.",
+        "I prevented him from quitting."
+      ],
+      "acceptableForms": ["prevent", "prevents", "prevented", "preventing"],
+      "explanation": "Cấu trúc: prevent someone from doing something. Thì quá khứ đơn (đã ngăn) chia 'prevented'.",
+      "topic": "Collocations",
+      "tags": ["writing", "grammar", "b1_b2"]
+    },
+    {
+      "id": "trans-002",
+      "type": "translate",
+      "vi": "Tôi rất mong chờ được gặp lại bạn sớm.",
+      "keyword": "look forward to",
+      "pattern": "look\\w*\\s+forward\\s+to\\s+\\w+ing",
+      "answers": [
+        "I look forward to seeing you again soon.",
+        "I am looking forward to seeing you soon.",
+        "I look forward to meeting you again soon."
+      ],
+      "acceptableForms": ["look forward to", "looking forward to", "looked forward to", "looks forward to"],
+      "explanation": "Cấu trúc: look forward to + V-ing (mong chờ điều gì).",
+      "topic": "Phrasal Verbs",
+      "tags": ["writing", "patterns"]
+    },
+    {
+      "id": "trans-003",
+      "type": "translate",
+      "vi": "Mặc dù trời mưa to, họ vẫn đi cắm trại.",
+      "keyword": "spite",
+      "pos": "n",
+      "pattern": "in\\s+spite\\s+of",
+      "answers": [
+        "In spite of the heavy rain, they went camping.",
+        "They went camping in spite of the heavy rain."
+      ],
+      "acceptableForms": ["in spite of", "spite"],
+      "explanation": "Cấu trúc: in spite of + Noun Phrase / V-ing (mặc dù).",
+      "topic": "Connectors",
+      "tags": ["writing", "ielts"]
+    }
+  ]
+}
+

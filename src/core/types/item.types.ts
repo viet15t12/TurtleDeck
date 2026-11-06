@@ -1,4 +1,4 @@
-export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab';
+export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab' | 'translate';
 
 export type TextMatchMode = 'exact' | 'normalized' | 'regex' | 'number';
 
@@ -69,11 +69,22 @@ export interface VocabItem extends BaseItem {
   audio?: string;
 }
 
+export interface TranslateItem extends BaseItem {
+  type: 'translate';
+  vi: string;
+  keyword: string;
+  pos?: string;
+  pattern?: string;
+  answers: string[];
+  acceptableForms?: string[];
+}
+
 export type DeckItem =
   | SingleChoiceItem
   | MultiChoiceItem
   | FillItem
   | CommandItem
   | FlashcardItem
-  | VocabItem;
+  | VocabItem
+  | TranslateItem;
 

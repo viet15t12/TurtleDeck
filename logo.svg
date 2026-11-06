@@ -1,19 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512" role="img" aria-label="Turtle Deck">
   <title>Turtle Deck</title>
-  <rect width="256" height="256" rx="56" fill="#0F3A35"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2C2C2E"/>
+      <stop offset="1" stop-color="#1C1C1E"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="57" fill="url(#bg)"/>
   <g transform="translate(32 48) scale(0.8)">
-    <path d="M44 168 L24 178 L48 180 Z" fill="#8AD6BB"/>
-    <rect x="62" y="162" width="28" height="26" rx="10" fill="#8AD6BB"/>
-    <rect x="150" y="162" width="28" height="26" rx="10" fill="#8AD6BB"/>
-    <ellipse cx="206" cy="154" rx="24" ry="17" fill="#8AD6BB"/>
-    <circle cx="214" cy="150" r="3.5" fill="#0F3A35"/>
-    <path d="M88 130 V46 Q88 24 110 24 H130 Q152 24 152 46 V130 Z" fill="#F5EFE0"/>
-    <rect x="110" y="36" width="20" height="16" rx="3" fill="#D9482B"/>
-    <rect x="102" y="64" width="36" height="5" rx="2.5" fill="#B9AE93"/>
-    <rect x="102" y="78" width="36" height="5" rx="2.5" fill="#B9AE93"/>
-    <rect x="102" y="92" width="24" height="5" rx="2.5" fill="#B9AE93"/>
-    <path d="M36 172 Q36 108 120 108 Q204 108 204 172 Z" fill="#5CBF9E"/>
-    <path d="M92 116 Q84 146 88 168 M148 116 Q156 146 152 168 M44 148 Q120 132 196 148" fill="none" stroke="#1E6E59" stroke-width="5" stroke-linecap="round"/>
-    <rect x="30" y="168" width="180" height="12" rx="6" fill="#2F8A70"/>
+    <path d="M44 168 L24 178 L48 180 Z" fill="#8E8E93"/>
+    <rect x="62" y="162" width="28" height="26" rx="10" fill="#8E8E93"/>
+    <rect x="150" y="162" width="28" height="26" rx="10" fill="#8E8E93"/>
+    <ellipse cx="206" cy="154" rx="24" ry="17" fill="#8E8E93"/>
+    <circle cx="214" cy="150" r="3.5" fill="#1C1C1E"/>
+    <path d="M88 130 V46 Q88 24 110 24 H130 Q152 24 152 46 V130 Z" fill="#F2F2F7"/>
+    <rect x="110" y="36" width="20" height="16" rx="3" fill="#FF453A"/>
+    <rect x="102" y="64" width="36" height="5" rx="2.5" fill="#C7C7CC"/>
+    <rect x="102" y="78" width="36" height="5" rx="2.5" fill="#C7C7CC"/>
+    <rect x="102" y="92" width="24" height="5" rx="2.5" fill="#C7C7CC"/>
+    <path d="M36 172 Q36 108 120 108 Q204 108 204 172 Z" fill="#AEAEB2"/>
+    <path d="M92 116 Q84 146 88 168 M148 116 Q156 146 152 168 M44 148 Q120 132 196 148" fill="none" stroke="#636366" stroke-width="5" stroke-linecap="round"/>
+    <rect x="30" y="168" width="180" height="12" rx="6" fill="#636366"/>
   </g>
 </svg>

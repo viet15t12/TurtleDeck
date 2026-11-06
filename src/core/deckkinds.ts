@@ -144,6 +144,7 @@ export const ITEM_TYPE_LABELS: Record<string, string> = {
   card: 'Thẻ',
   vocab: 'Từ vựng',
   listen: 'Nghe–Gõ',
+  translate: 'Dịch câu',
 };
 
 export function isValidKind(kind: unknown): kind is DeckKind {
@@ -157,6 +158,7 @@ export function detectItemType(item: any, deckKind?: string): string | null {
     return item.type.trim();
   }
   if ('term' in item || 'definition' in item) return 'vocab';
+  if ('keyword' in item || 'vi' in item) return 'translate';
   if ('question' in item || 'choices' in item) return 'single';
   if ('front' in item || 'back' in item) return 'card';
   if (deckKind === 'vocab') return 'vocab';

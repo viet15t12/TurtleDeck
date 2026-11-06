@@ -145,11 +145,16 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   renderDeckSection();
 
   root.replaceChildren(
-    h('header', { class: 'page-head' },
-      h('div', null,
-        h('p', { class: 'eyebrow' }, 'TURTLE DECK — FILE MANAGER'),
-        h('h1', null, 'Quản lý Bộ thẻ & Thư mục')),
-      toolbarObj.toolbar),
+    h('header', { class: 'page-head home-header' },
+      h('div', { class: 'home-brand-block' },
+        h('img', { src: './assets/logo.svg', alt: 'Turtle Deck', class: 'home-brand-logo' }),
+        h('div', null,
+          h('h1', { class: 'home-brand-title' }, 'Turtle Deck'),
+          h('p', { class: 'home-brand-subtitle' }, `${entries.length} bộ thẻ · Thư viện học tập`)
+        )
+      ),
+      toolbarObj.toolbar
+    ),
     h('div', { class: 'home-layout' },
       sidebarHost,
       h('main', { class: 'home-content' },

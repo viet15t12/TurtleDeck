@@ -75,6 +75,22 @@
       "explanation": "Tùy chọn `-a` hiển thị file ẩn (bắt đầu bằng dấu chấm), tùy chọn `-l` hiển thị thông tin chi tiết quyền, chủ sở hữu, kích thước.",
       "topic": "Linux",
       "tags": ["cli", "bash"]
+    },
+    {
+      "id": "trans_prevent_giving_up",
+      "type": "translate",
+      "vi": "Tôi đã ngăn anh ấy bỏ cuộc.",
+      "keyword": "prevent",
+      "pos": "v",
+      "pattern": "prevent\\s+\\w+\\s+from\\s+\\w+ing",
+      "answers": [
+        "I prevented him from giving up.",
+        "I prevented him from quitting."
+      ],
+      "acceptableForms": ["prevent", "prevents", "prevented", "preventing"],
+      "explanation": "Cấu trúc: prevent someone from doing something (quá khứ đơn: prevented).",
+      "topic": "Tiếng Anh",
+      "tags": ["writing", "collocations"]
     }
   ]
 }

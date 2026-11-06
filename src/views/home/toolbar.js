@@ -47,7 +47,7 @@ export function createToolbar(ctx) {
       title: ui.sidebarOpen ? 'Thu gọn thanh bên' : 'Mở thanh bên (Bookmarks)',
       onclick: () => toggleSidebar(),
     },
-    ui.sidebarOpen ? '📁 Thanh bên ▾' : '📁 Thanh bên ▸'
+    ui.sidebarOpen ? '◨ Thanh bên' : '◧ Thanh bên'
   );
 
   function toggleSidebar(forceState) {
@@ -56,11 +56,11 @@ export function createToolbar(ctx) {
     if (ui.sidebarOpen) {
       ctx.sidebarHost.classList.remove('collapsed');
       sidebarToggleBtn.classList.add('active');
-      sidebarToggleBtn.textContent = '📁 Thanh bên ▾';
+      sidebarToggleBtn.textContent = '◨ Thanh bên';
     } else {
       ctx.sidebarHost.classList.add('collapsed');
       sidebarToggleBtn.classList.remove('active');
-      sidebarToggleBtn.textContent = '📁 Thanh bên ▸';
+      sidebarToggleBtn.textContent = '◧ Thanh bên';
     }
   }
 

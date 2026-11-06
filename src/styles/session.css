@@ -87,9 +87,9 @@
 }
 
 .question-card {
-  padding: 28px 32px;
+  padding: 32px 36px;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--c-surface);
   box-shadow: var(--shadow-sm);
 }
@@ -143,13 +143,17 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border: 1.5px solid var(--c-border);
-  border-radius: 10px;
+  padding: 13px 18px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   background: var(--c-surface);
   user-select: none;
-  transition: border-color 0.14s, background-color 0.14s;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform 100ms ease;
+}
+
+.choice-label:active {
+  transform: scale(0.99);
 }
 
 .choice-label input[type="checkbox"],
@@ -286,17 +290,17 @@
 .flashcard {
   width: 100%;
   min-height: 300px;
-  border: 1.5px solid var(--c-border);
-  border-radius: 16px;
-  padding: 36px 32px;
-  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  background: var(--c-surface);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.2s var(--ease-apple), border-color 0.2s var(--ease-apple), background-color 0.2s var(--ease-apple), box-shadow 0.2s var(--ease-apple);
   box-shadow: var(--shadow-sm);
 }
 
@@ -311,6 +315,7 @@
 .flashcard:hover {
   border-color: var(--c-primary);
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .flashcard.flipped {
@@ -540,17 +545,23 @@
   align-items: center;
   justify-content: center;
   height: auto;
-  min-height: 56px;
+  min-height: 58px;
   gap: 4px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--c-border);
+  box-shadow: var(--shadow-sm);
   font-weight: 600;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .srs-rate-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(23 32 51 / 8%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.srs-rate-btn:active {
+  transform: scale(0.97);
 }
 
 .srs-rate-time {
@@ -565,25 +576,25 @@
 
 .srs-rate-btn.rate-again {
   background: var(--c-danger-soft);
-  border-color: #f3c5c0;
+  border-color: rgba(255, 59, 48, 0.25);
   color: var(--c-danger);
 }
 
 .srs-rate-btn.rate-hard {
   background: var(--c-warn-soft);
-  border-color: #f0d9a8;
+  border-color: rgba(255, 149, 0, 0.25);
   color: var(--c-warn);
 }
 
 .srs-rate-btn.rate-good {
   background: var(--c-ok-soft);
-  border-color: #b9e3c9;
+  border-color: rgba(52, 199, 89, 0.25);
   color: var(--c-ok);
 }
 
 .srs-rate-btn.rate-easy {
   background: var(--c-primary-soft);
-  border-color: #c3d0f7;
+  border-color: rgba(0, 113, 227, 0.25);
   color: var(--c-primary);
 }
 

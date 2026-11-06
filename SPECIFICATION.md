@@ -1642,7 +1642,7 @@ Cuối cùng liệt kê file đã tạo/sửa, cách chạy, và những gì ch�
 ```typescript
 // src/core/types/item.types.ts
 
-export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab';
+export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab' | 'translate';
 
 export interface BaseItem {
   id: string;
@@ -1702,13 +1702,24 @@ export interface VocabItem extends BaseItem {
   audio?: string;
 }
 
+export interface TranslateItem extends BaseItem {
+  type: 'translate';
+  vi: string;                         // Câu tiếng Việt (Source sentence)
+  keyword: string;                    // Từ gợi ý / mỏ neo (Anchor keyword)
+  pos?: string;                       // Từ loại: v, n, adj...
+  pattern?: string;                   // Cấu trúc ngữ pháp Regex (vd: prevent\\s+\\w+\\s+from\\s+\\w+ing)
+  answers: string[];                  // Danh sách các câu tiếng Anh chấp nhận được
+  acceptableForms?: string[];         // Biến thể hợp lệ của keyword
+}
+
 export type DeckItem =
   | SingleChoiceItem
   | MultiChoiceItem
   | FillItem
   | CommandItem
   | FlashcardItem
-  | VocabItem;
+  | VocabItem
+  | TranslateItem;
 ```
 
 ### 3.3 Định nghĩa kiểu thuật toán SRS (`src/core/types/srs.types.ts`)

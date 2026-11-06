@@ -7,7 +7,7 @@
 ### Ứng dụng học tập Offline-First bằng Flashcard, Trắc nghiệm & Lặp lại ngắt quãng (SRS)
 **Thế hệ mới tối ưu hoá bằng Tauri v2 & Rust — Siêu nhẹ, Khởi động tức thì, Tiết kiệm RAM**
 
-[![Version](https://img.shields.io/badge/Version-0.2.2-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
+[![Version](https://img.shields.io/badge/Version-0.2.3-teal?logo=git&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20(RPM%20%7C%20DEB%20%7C%20AppImage)%20%7C%20Windows-blue?logo=linux&logoColor=white)](https://github.com/viet15t12/TurtleDeck/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app/)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-DEA584?logo=rust&logoColor=white)](https://www.rust-lang.org/)
@@ -97,20 +97,20 @@ Tải phiên bản mới nhất từ [GitHub Releases](https://github.com/viet15
 
 #### 1. Cài đặt qua gói RPM (Khuyên dùng cho Fedora / RHEL)
 ```bash
-sudo dnf install ./turtle-deck-0.2.2-1.x86_64.rpm
+sudo dnf install ./turtle-deck-0.2.3-1.x86_64.rpm
 ```
 > [!NOTE]
 > Gói RPM tự động tích hợp biểu tượng desktop, phân loại vào menu **Education**, và đăng ký MIME type `application/x-studydeck` để bạn chỉ cần nhấp đúp vào bất kỳ file `.sdeck` nào là ứng dụng sẽ mở ngay lập tức.
 
 #### 2. Cài đặt qua gói DEB (Ubuntu / Debian / Linux Mint)
 ```bash
-sudo dpkg -i ./turtle-deck_0.2.2_amd64.deb
+sudo dpkg -i ./turtle-deck_0.2.3_amd64.deb
 ```
 
 #### 3. Chạy trực tiếp qua AppImage (Mọi bản phân phối Linux)
 ```bash
-chmod +x "turtle-deck_0.2.2_amd64.AppImage"
-./"turtle-deck_0.2.2_amd64.AppImage"
+chmod +x "turtle-deck_0.2.3_amd64.AppImage"
+./"turtle-deck_0.2.3_amd64.AppImage"
 ```
 
 ---
@@ -166,6 +166,67 @@ cd src-tauri && cargo clippy  # Kiểm tra chất lượng mã nguồn Rust
 - Tự động sinh câu hỏi phong phú từ thẻ từ vựng: Trắc nghiệm 4 đáp án, Gõ từ 2 chiều, Điền khuyết theo ngữ cảnh, Nghe chính tả (Listen & Write).
 - Phát âm chuẩn xác qua Web Speech API (TTS) với thuật toán tự động chọn giọng đọc chuẩn theo ngôn ngữ bộ thẻ.
 
+### 4. Dịch câu có từ gợi ý (Key Word Transformation) & Chấm điểm phân tầng
+- **Chống bắt lỗi cứng nhắc**: Thay vì so khớp chuỗi cố định gây ức chế, ứng dụng áp dụng quy trình **chấm điểm phân tầng (Layered Evaluator)**:
+  1. *Tầng 1 (Anchor):* Kiểm tra sự xuất hiện của từ gợi ý theo nguyên từ, tự động nhận diện biến thể hình thái học (`prevent`, `prevented`, `preventing`, `prevents`...).
+  2. *Tầng 2 (Pattern):* Kiểm tra cấu trúc ngữ pháp bắt buộc qua regex (ví dụ `prevent\s+\w+\s+from\s+\w+ing`).
+  3. *Tầng 3 (So khớp câu):* Chuẩn hóa chữ thường, dấu câu, mở rộng từ co rút (`I'm` $\leftrightarrow$ `I am`, `don't` $\leftrightarrow$ `do not`, `can't` $\leftrightarrow$ `cannot`...).
+  - *Fallback thông minh:* Nếu đúng từ gợi ý và đúng cấu trúc nhưng câu viết khác đáp án mẫu $\rightarrow$ Đánh dấu **"Cần xem lại" (Needs Review)** thay vì phạt sai.
+- **Xuất Markdown (.md) cho Người chấm / Giáo viên**: Xuất toàn bộ bài làm theo từng Heading, điền sẵn kết quả kiểm tra tự động và chừa ô `Điểm:` / `Nhận xét:`.
+
+---
+
+## 🤖 Cấu hình & Sử dụng API AI để Chấm bài (Bring Your Own AI)
+
+Turtle Deck cho phép bạn kết nối trực tiếp với **bất kỳ nhà cung cấp AI nào** (hoặc chạy AI cục bộ hoàn toàn miễn phí trên máy tính của bạn) theo chuẩn **OpenAI-Compatible Chat Completions API** để thẩm định ngữ pháp, ngữ cảnh và sắc thái câu dịch.
+
+```mermaid
+graph LR
+    UserAnswer["Bài làm của học viên"] --> AIClient["Turtle Deck AI Client"]
+    AIClient --> Provider{"Nhà cung cấp AI"}
+    Provider --> OpenAI["OpenAI / DeepSeek / Groq"]
+    Provider --> OpenRouter["OpenRouter (Claude, Gemini)"]
+    Provider --> Ollama["Ollama (Offline 100% trên máy)"]
+    Provider --> Feedback["Điểm số 10/10 + Nhận xét ngữ pháp + Câu gợi ý"]
+```
+
+### 1. Bảng thông số cấu hình các dịch vụ AI phổ biến
+
+Bạn có thể cấu hình trong màn hình **Cài đặt (Settings)** hoặc file `settings.json`:
+
+| Nhà cung cấp | Base URL | Model khuyến nghị | Đặc điểm & Chi phí |
+| :--- | :--- | :--- | :--- |
+| **DeepSeek** *(Khuyên dùng)* | `https://api.deepseek.com/v1` | `deepseek-chat` | Khả năng ngôn ngữ cực mạnh, chi phí siêu rẻ (~vài đồng/câu). |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` | Tốc độ phản hồi tức thì (< 0.5s), có gói miễn phí hàng ngày. |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` | Chuẩn mực, ổn định cao, chi phí rất rẻ. |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `anthropic/claude-3.5-sonnet` hoặc `google/gemini-flash-1.5` | Một API Key duy nhất để gọi mọi mô hình Claude, Gemini, GPT. |
+| **Ollama** *(Offline 100%)* | `http://localhost:11434/v1` | `llama3.2`, `qwen2.5` | **Chạy trực tiếp trên máy, 0 đồng, không cần internet, bảo mật tuyệt đối**. |
+
+---
+
+### 2. Hướng dẫn từng bước nhập API Key
+
+#### Bước 1: Lấy API Key từ nhà cung cấp bạn chọn
+* **DeepSeek:** Đăng ký tại [platform.deepseek.com](https://platform.deepseek.com/) $\rightarrow$ Chọn *API Keys* $\rightarrow$ Tạo khóa mới (`sk-...`).
+* **Groq:** Đăng ký miễn phí tại [console.groq.com](https://console.groq.com/) $\rightarrow$ Tạo API Key.
+* **OpenAI:** Tạo khóa tại [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+* **Ollama (Nếu muốn dùng Offline miễn phí):** Cài [Ollama](https://ollama.com/), mở terminal chạy `ollama run llama3.2` (không cần API Key).
+
+#### Bước 2: Nhập thông số vào Turtle Deck
+1. Nhấn phím tắt `Ctrl + ,` (hoặc biểu tượng bánh răng) để mở **Cài đặt**.
+2. Cuộn đến mục **Cấu hình AI Chấm bài (AI Grading)**:
+   - **Base URL:** Điền URL theo bảng trên (ví dụ: `https://api.deepseek.com/v1`).
+   - **API Key:** Dán mã khóa của bạn (được lưu an toàn cục bộ trên máy).
+   - **Model Name:** Điền mã mô hình (ví dụ: `deepseek-chat`).
+3. Bấm **Lưu cài đặt**.
+
+#### Bước 3: Trải nghiệm chấm bài thông minh
+Khi làm bài tập dịch câu, bấm nút **"Chấm bằng AI"**:
+* AI sẽ thẩm định xem bạn có dùng đúng từ gợi ý hay không.
+* Chấm điểm Ngữ pháp (Grammar Score) và Độ sát nghĩa (Meaning Score) theo thang điểm 10.
+* Đưa ra nhận xét cụ thể: phân tích thì, giới từ đi kèm và câu sửa hoàn chỉnh tối ưu.
+* Toàn bộ đánh giá của AI có thể tự động đính kèm khi bạn bấm **"Xuất bài làm ra Markdown (.md)"**.
+
 ---
 
 ## 🧠 Các chế độ học tập
@@ -206,6 +267,7 @@ Bạn có thể dễ dàng nạp dữ liệu từ Excel, Google Sheets, Obsidian
 > - 📝 [`templates/sample-quiz.md`](./templates/sample-quiz.md): Mẫu Markdown trắc nghiệm (`single`, `multi`, `fill`, `command`).
 > - 📖 [`templates/sample-vocab.md`](./templates/sample-vocab.md): Mẫu Markdown từ vựng chuyên sâu (`## term | ipa | pos`).
 > - 🧩 [`templates/sample.json`](./templates/sample.json): Mẫu `deck.json` chuẩn Turtle Deck đóng gói trực tiếp.
+> - 🌐 [`templates/sample-translate.json`](./templates/sample-translate.json): Mẫu bài tập Dịch câu có sử dụng từ gợi ý (`translate`).
 > - 📘 **Hướng dẫn quy tắc chi tiết:** [`templates/QUY_TAC_TAO_BO_THE.md`](./templates/QUY_TAC_TAO_BO_THE.md).
 
 #### Đóng gói trực tiếp thành `.sdeck` bằng dòng lệnh (CLI):

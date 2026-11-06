@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "id": "keyword-transformation-b2-c1",
+    "title": "Key Word Transformation: Luyện Dịch & Biến Đổi Câu (B2 - C1)",
+    "kind": "quiz",
+    "lang": "en",
+    "format": "studydeck",
+    "formatVersion": 1,
+    "description": "Bộ bài tập luyện dịch tiếng Việt sang tiếng Anh có sử dụng từ gợi ý bắt buộc (Key Word Transformation). Hỗ trợ chấm điểm 3 tầng, AI và xuất kết quả ra file Markdown."
+  },
+  "items": [
+    {
+      "id": "kwt-001",
+      "type": "translate",
+      "vi": "Tôi đã ngăn anh ấy bỏ cuộc.",
+      "keyword": "prevent",
+      "pos": "v",
+      "pattern": "prevent\\s+\\w+\\s+from\\s+\\w+ing",
+      "answers": [
+        "I prevented him from giving up.",
+        "I prevented him from quitting."
+      ],
+      "acceptableForms": ["prevent", "prevents", "prevented", "preventing"],
+      "explanation": "Cấu trúc: prevent someone from doing something. Thì quá khứ đơn (đã ngăn) chia 'prevented'.",
+      "topic": "Collocations",
+      "tags": ["grammar", "b2", "patterns"]
+    },
+    {
+      "id": "kwt-002",
+      "type": "translate",
+      "vi": "Tôi rất mong chờ được gặp lại bạn sớm.",
+      "keyword": "look forward to",
+      "pattern": "look\\w*\\s+forward\\s+to\\s+\\w+ing",
+      "answers": [
+        "I look forward to seeing you again soon.",
+        "I am looking forward to seeing you soon.",
+        "I look forward to meeting you again soon."
+      ],
+      "acceptableForms": ["look forward to", "looking forward to", "looked forward to", "looks forward to"],
+      "explanation": "Cấu trúc: look forward to + V-ing (mong chờ điều gì).",
+      "topic": "Phrasal Verbs",
+      "tags": ["writing", "patterns"]
+    },
+    {
+      "id": "kwt-003",
+      "type": "translate",
+      "vi": "Mặc dù trời mưa to, họ vẫn quyết định đi cắm trại.",
+      "keyword": "spite",
+      "pos": "n",
+      "pattern": "in\\s+spite\\s+of",
+      "answers": [
+        "In spite of the heavy rain, they decided to go camping.",
+        "They decided to go camping in spite of the heavy rain."
+      ],
+      "acceptableForms": ["in spite of", "spite"],
+      "explanation": "Cấu trúc: in spite of + Noun Phrase / V-ing (mặc dù).",
+      "topic": "Connectors",
+      "tags": ["writing", "ielts"]
+    },
+    {
+      "id": "kwt-004",
+      "type": "translate",
+      "vi": "Cảnh sát đã cáo buộc anh ta ăn cắp chiếc xe ô tô.",
+      "keyword": "accuse",
+      "pos": "v",
+      "pattern": "accuse\\w*\\s+\\w+\\s+of\\s+\\w+ing",
+      "answers": [
+        "The police accused him of stealing the car.",
+        "The police accused him of having stolen the car."
+      ],
+      "acceptableForms": ["accuse", "accused", "accuses", "accusing"],
+      "explanation": "Cấu trúc: accuse someone of doing something (buộc tội ai vì làm gì). Quá khứ đơn: accused.",
+      "topic": "Preposition Collocations",
+      "tags": ["collocations", "c1"]
+    },
+    {
+      "id": "kwt-005",
+      "type": "translate",
+      "vi": "Thật vô ích khi cố gắng thuyết phục anh ấy thay đổi ý định.",
+      "keyword": "use",
+      "pos": "n",
+      "pattern": "it\\s+is\\s+no\\s+use\\s+\\w+ing|there\\s+is\\s+no\\s+use\\s+\\w+ing",
+      "answers": [
+        "It is no use trying to persuade him to change his mind.",
+        "It's no use trying to convince him to change his mind.",
+        "There is no use trying to persuade him to change his mind."
+      ],
+      "acceptableForms": ["use"],
+      "explanation": "Cấu trúc: It is no use + V-ing (vô ích khi làm gì).",
+      "topic": "Idiomatic Structures",
+      "tags": ["structures", "b2_c1"]
+    },
+    {
+      "id": "kwt-006",
+      "type": "translate",
+      "vi": "Ngay khi vừa về đến nhà thì trời bắt đầu đổ mưa.",
+      "keyword": "sooner",
+      "pattern": "no\\s+sooner\\s+had\\s+\\w+\\s+\\w+\\s+than",
+      "answers": [
+        "No sooner had I arrived home than it started to rain.",
+        "No sooner had I got home than it started to rain.",
+        "No sooner had we arrived home than it started raining."
+      ],
+      "acceptableForms": ["no sooner", "sooner"],
+      "explanation": "Cấu trúc đảo ngữ: No sooner had + S + V3/ed + than + S + V2/ed (Vừa mới... thì...).",
+      "topic": "Inversion",
+      "tags": ["grammar", "advanced"]
+    },
+    {
+      "id": "kwt-007",
+      "type": "translate",
+      "vi": "Họ đã đổ lỗi cho anh ấy về sự thất bại của dự án.",
+      "keyword": "blame",
+      "pos": "v",
+      "pattern": "blame\\w*\\s+\\w+\\s+for",
+      "answers": [
+        "They blamed him for the failure of the project.",
+        "They blamed him for the project failure."
+      ],
+      "acceptableForms": ["blame", "blamed", "blames", "blaming"],
+      "explanation": "Cấu trúc: blame someone for something (đổ lỗi cho ai về việc gì).",
+      "topic": "Verb Patterns",
+      "tags": ["collocations", "b2"]
+    },
+    {
+      "id": "kwt-008",
+      "type": "translate",
+      "vi": "Bạn có phiền mở cửa sổ giúp tôi không?",
+      "keyword": "mind",
+      "pos": "v",
+      "pattern": "(?:would|do)\\s+you\\s+mind\\s+\\w+ing",
+      "answers": [
+        "Would you mind opening the window for me?",
+        "Do you mind opening the window for me?",
+        "Would you mind opening the window?"
+      ],
+      "acceptableForms": ["mind"],
+      "explanation": "Cấu trúc lịch sự: Would you mind / Do you mind + V-ing?",
+      "topic": "Polite Requests",
+      "tags": ["communication", "writing"]
+    }
+  ]
+}
+

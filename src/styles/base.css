@@ -1,4 +1,4 @@
-/* src/styles/base.css — Bố cục cơ sở, typography, header, notices, dialog và rich text */
+/* src/styles/base.css — Bố cục cơ sở, typography, header, notices, dialog và rich text theo Apple HIG */
 
 * {
   box-sizing: border-box;
@@ -11,6 +11,41 @@ body {
   font-family: var(--font-sans);
   color: var(--c-text);
   background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
+}
+
+/* Thanh cuộn phong cách macOS tinh tế */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .app {
@@ -23,19 +58,24 @@ body {
 .eyebrow {
   margin: 0 0 4px;
   color: var(--c-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 h1 {
   margin: 0 0 8px;
   font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
 }
 
 h2 {
   margin: 0 0 12px;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .muted { color: var(--c-text-muted); }
@@ -62,8 +102,15 @@ h2 {
 
 .back-btn {
   margin-bottom: 8px;
-  padding-left: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
   color: var(--c-primary);
+  font-weight: 500;
+  transition: background var(--transition-fast);
+}
+
+.back-btn:hover {
+  background: var(--c-primary-soft);
 }
 
 .menu-wrap { position: relative; }
@@ -71,40 +118,51 @@ h2 {
 .menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   z-index: 90;
-  min-width: 240px;
-  padding: 4px;
+  min-width: 220px;
+  padding: 6px;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface-translucent);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  box-shadow: var(--shadow-lg);
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 12px;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
   font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 450;
   text-align: left;
   cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.menu-item:hover { background: var(--c-surface-3); }
+.menu-item:hover { 
+  background: var(--c-primary); 
+  color: #ffffff;
+}
 
-/* ── Nhãn & Huy hiệu Dạng mục ─────────────────────────────── */
+/* ── Nhãn & Huy hiệu Dạng mục (Apple HIG Style Pills) ─────────────────────────── */
 
 .chip, .tag, .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 500;
+  letter-spacing: -0.006em;
   white-space: nowrap;
+  transition: background var(--transition-fast);
 }
 
 .chip { background: var(--c-primary-soft); color: var(--c-primary); }
@@ -118,49 +176,73 @@ h2 {
 .chip.type-single,
 .chip.type-multi {
   color: var(--c-type-tn);
-  background: color-mix(in srgb, var(--c-type-tn) 14%, transparent);
+  background: color-mix(in srgb, var(--c-type-tn) 12%, transparent);
 }
 .chip.type-fill {
   color: var(--c-type-dien);
-  background: color-mix(in srgb, var(--c-type-dien) 14%, transparent);
+  background: color-mix(in srgb, var(--c-type-dien) 12%, transparent);
 }
 .chip.type-command {
   color: var(--c-type-lenh);
-  background: color-mix(in srgb, var(--c-type-lenh) 14%, transparent);
+  background: color-mix(in srgb, var(--c-type-lenh) 12%, transparent);
 }
 .chip.type-card {
   color: var(--c-type-the);
-  background: color-mix(in srgb, var(--c-type-the) 14%, transparent);
+  background: color-mix(in srgb, var(--c-type-the) 12%, transparent);
 }
 
-/* ── Thông báo (Toast Notices) ─────────────────────────────── */
+/* ── Thông báo (Toast Notices phong cách Apple Dynamic Island / macOS Notification) ─────────────────────────── */
 
 .notices {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 20px;
+  bottom: 20px;
   z-index: 100;
   display: grid;
-  gap: 8px;
-  width: min(440px, calc(100% - 32px));
+  gap: 10px;
+  width: min(420px, calc(100% - 40px));
 }
 
 .notice {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: 1px solid var(--c-border);
-  border-radius: 10px;
-  background: var(--c-surface);
-  box-shadow: var(--shadow-md);
-  font-size: 0.9rem;
+  border-radius: var(--radius-lg);
+  background: var(--c-surface-translucent);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
   white-space: pre-line;
+  animation: noticeSlideIn 0.25s var(--ease-apple);
 }
 
-.notice.success { border-color: #b9e3c9; background: var(--c-ok-soft); }
-.notice.warn { border-color: #f0d9a8; background: var(--c-warn-soft); }
-.notice.error { border-color: #f3c5c0; background: var(--c-danger-soft); }
+@keyframes noticeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notice.success { 
+  border-color: rgba(52, 199, 89, 0.35); 
+  background: color-mix(in srgb, var(--c-surface) 85%, var(--c-ok-soft)); 
+}
+.notice.warn { 
+  border-color: rgba(255, 149, 0, 0.35); 
+  background: color-mix(in srgb, var(--c-surface) 85%, var(--c-warn-soft)); 
+}
+.notice.error { 
+  border-color: rgba(255, 59, 48, 0.35); 
+  background: color-mix(in srgb, var(--c-surface) 85%, var(--c-danger-soft)); 
+}
 .notice-text { flex: 1; }
 
 .notice-close {
@@ -168,32 +250,59 @@ h2 {
   background: none;
   color: var(--c-text-muted);
   cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition: opacity var(--transition-fast);
 }
 
-/* ── Hộp thoại cơ bản (Modal Base) ─────────────────────────── */
+.notice-close:hover { opacity: 0.7; }
+
+/* ── Hộp thoại phong cách Apple Modal Sheet ─────────────────────────── */
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 40%);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: modalFadeIn 0.2s var(--ease-apple);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-dialog {
-  background: var(--c-surface, #fff);
+  background: var(--c-surface);
   color: var(--c-text);
   border: 1px solid var(--c-border);
-  border-radius: 14px;
-  width: min(460px, calc(100% - 32px));
-  padding: 24px 28px;
-  box-shadow: 0 16px 36px rgb(23 32 51 / 18%);
+  border-radius: var(--radius-xl);
+  width: min(480px, calc(100% - 32px));
+  padding: 26px 30px;
+  box-shadow: var(--shadow-floating);
+  animation: modalPopIn 0.25s var(--ease-apple);
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-dialog h2 {
   margin: 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .form-group {
@@ -202,9 +311,10 @@ h2 {
 
 .form-group label {
   display: block;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 550;
+  font-size: var(--fs-sm);
   margin-bottom: 6px;
+  color: var(--c-text);
 }
 
 .radio-group {
@@ -215,23 +325,24 @@ h2 {
 .radio-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: var(--fs);
 }
 
-/* ── Rich Text: LaTeX, hình ảnh và Lightbox (GĐ2B) ────────── */
+/* ── Rich Text: LaTeX, hình ảnh và Lightbox ────────── */
 
 .rich-img {
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: zoom-in;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
 .rich-img:hover {
-  opacity: 0.92;
+  opacity: 0.95;
+  transform: scale(1.01);
 }
 
 .choice-img {
@@ -239,7 +350,7 @@ h2 {
   object-fit: contain;
   margin-right: 8px;
   border: 1px solid var(--c-border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .choice-content {
@@ -253,6 +364,7 @@ h2 {
   max-height: 180px;
   object-fit: contain;
   margin-top: 10px;
+  border-radius: var(--radius-sm);
 }
 
 .question-img-wrap, .answer-img-wrap {
@@ -262,12 +374,12 @@ h2 {
 
 .img-missing {
   display: inline-block;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: var(--c-danger-soft);
   border: 1px dashed var(--c-danger);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--c-danger);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-style: italic;
 }
 
@@ -280,7 +392,7 @@ h2 {
 .katex-display {
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 6px 0;
+  padding: 8px 0;
   max-width: 100%;
 }
 
@@ -289,22 +401,24 @@ h2 {
 }
 
 .katex-display::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
+  background: var(--c-border-strong);
+  border-radius: 999px;
 }
 
 /* Lightbox phóng to ảnh */
 .lightbox-backdrop {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 82%);
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   cursor: pointer;
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.2s var(--ease-apple);
 }
 
 @keyframes fadeIn {
@@ -325,15 +439,15 @@ h2 {
 .lightbox-img {
   max-width: 100%;
   max-height: 85vh;
-  border-radius: 8px;
-  box-shadow: 0 12px 36px rgb(0 0 0 / 60%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-floating);
   object-fit: contain;
-  background: #fff;
+  background: var(--c-surface);
 }
 
 .lightbox-close {
   position: absolute;
-  top: -40px;
+  top: -42px;
   right: 0;
   background: none;
   border: 0;
@@ -342,17 +456,16 @@ h2 {
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
+  transition: opacity var(--transition-fast);
 }
 
 .lightbox-close:hover {
-  color: #fca5a5;
+  opacity: 0.75;
 }
 
 .lightbox-caption {
-  color: #f1f5f9;
-  font-size: 0.95rem;
-  margin-top: 10px;
+  color: #f5f5f7;
+  font-size: var(--fs);
+  margin-top: 12px;
   text-align: center;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
 }
-

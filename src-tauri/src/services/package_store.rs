@@ -294,6 +294,8 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
 
     let mut issues = Vec::new();
     let mut deck_text: Option<String> = None;
+    let mut db_data: Option<Vec<u8>> = None;
+    let mut solutions_data: Option<Vec<u8>> = None;
     let mut assets = HashMap::new();
     let mut total_decompressed: u64 = 0;
 
@@ -313,12 +315,18 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
         }
 
         let is_deck = name == "deck.json";
-        if !is_deck && !is_image_entry(&name) {
+        let is_db = name == crate::services::sdeck_v2::DECK_DB_ENTRY;
+        let is_solutions = name == crate::services::sdeck_v2::SOLUTIONS_ENTRY;
+        let is_image = is_image_entry(&name);
+
+        if !is_deck && !is_db && !is_solutions && !is_image {
             issues.push(format!("Bỏ qua tập tin lạ trong gói: {name}"));
             continue;
         }
 
-        let max_size = if is_deck {
+        let max_size = if is_db {
+            crate::services::sdeck_v2::LIMITS_DB
+        } else if is_deck || is_solutions {
             LIMITS_DECK_JSON
         } else {
             LIMITS_IMAGE
@@ -345,6 +353,10 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
                 .map_err(|_| AppError::Custom("deck.json không phải UTF-8 hợp lệ.".into()))?;
             let clean_text = text.trim_start_matches('\u{feff}').to_string();
             deck_text = Some(clean_text);
+        } else if is_db {
+            db_data = Some(data);
+        } else if is_solutions {
+            solutions_data = Some(data);
         } else if detect_image_type(&data).is_some() {
             assets.insert(name, data);
         } else {
@@ -356,8 +368,29 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
         AppError::Custom("Gói không có deck.json — đây không phải bộ thẻ hợp lệ.".into())
     })?;
 
+    let parsed_val: Option<Value> = serde_json::from_str(&text).ok();
+    let is_v2 = parsed_val
+        .as_ref()
+        .map(crate::services::sdeck_v2::is_v2_deck)
+        .unwrap_or(false)
+        || db_data.is_some();
+
+    let final_deck_text = if let Some(db_bytes) = db_data {
+        let full_deck = crate::services::sdeck_v2::unpack_v2_package(
+            &text,
+            &db_bytes,
+            solutions_data.as_deref(),
+        )?;
+        serde_json::to_string_pretty(&full_deck)
+            .map_err(|e| AppError::Custom(format!("Lỗi chuyển đổi deck v2 sang JSON: {e}")))?
+    } else if is_v2 {
+        return Err(AppError::Custom("Gói Version 2 thiếu questions.db.".into()));
+    } else {
+        text
+    };
+
     Ok(ReadPackageResult {
-        deck_text: text,
+        deck_text: final_deck_text,
         assets,
         issues,
     })
@@ -536,9 +569,16 @@ pub fn write_package(
         ));
     }
 
+    let is_v2 = crate::services::sdeck_v2::is_v2_deck(&deck);
+
     if let Some(meta) = deck.get_mut("meta").and_then(|m| m.as_object_mut()) {
         meta.insert("format".into(), Value::String(FORMAT.into()));
-        meta.insert("formatVersion".into(), Value::from(FORMAT_VERSION));
+        if is_v2 {
+            meta.insert("version".into(), Value::from(2));
+            meta.insert("formatVersion".into(), Value::from(2));
+        } else {
+            meta.insert("formatVersion".into(), Value::from(FORMAT_VERSION));
+        }
     }
 
     let deck_bytes = serde_json::to_vec_pretty(&deck)
@@ -575,33 +615,59 @@ pub fn write_package(
         ));
     }
 
-    let mut buf = Vec::new();
-    {
-        let cursor = Cursor::new(&mut buf);
-        let mut zip = ZipWriter::new(cursor);
+    let buf = if is_v2 {
+        crate::services::sdeck_v2::build_v2_package(&deck, &kept_assets)?
+    } else {
+        let mut buf = Vec::new();
+        {
+            let cursor = Cursor::new(&mut buf);
+            let mut zip = ZipWriter::new(cursor);
 
-        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+            let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
-        zip.start_file("deck.json", options)
-            .map_err(|e| AppError::Custom(format!("Lỗi tạo entry deck.json: {e}")))?;
-        zip.write_all(&deck_bytes)
-            .map_err(|e| AppError::Custom(format!("Lỗi ghi deck.json: {e}")))?;
+            zip.start_file("deck.json", options)
+                .map_err(|e| AppError::Custom(format!("Lỗi tạo entry deck.json: {e}")))?;
+            zip.write_all(&deck_bytes)
+                .map_err(|e| AppError::Custom(format!("Lỗi ghi deck.json: {e}")))?;
 
-        for (name, data) in &kept_assets {
-            zip.start_file(name, options)
-                .map_err(|e| AppError::Custom(format!("Lỗi tạo entry {name}: {e}")))?;
-            zip.write_all(data)
-                .map_err(|e| AppError::Custom(format!("Lỗi ghi entry {name}: {e}")))?;
+            for (name, data) in &kept_assets {
+                zip.start_file(name, options)
+                    .map_err(|e| AppError::Custom(format!("Lỗi tạo entry {name}: {e}")))?;
+                zip.write_all(data)
+                    .map_err(|e| AppError::Custom(format!("Lỗi ghi entry {name}: {e}")))?;
+            }
+
+            zip.finish()
+                .map_err(|e| AppError::Custom(format!("Lỗi hoàn tất đóng gói zip: {e}")))?;
         }
-
-        zip.finish()
-            .map_err(|e| AppError::Custom(format!("Lỗi hoàn tất đóng gói zip: {e}")))?;
-    }
+        buf
+    };
 
     Ok(WritePackageResult {
         bytes: buf,
         kept_assets,
     })
+}
+
+// Đóng gói bộ thẻ theo chuẩn Version 2 (.sdeck v2)
+pub fn write_package_v2(
+    deck_text: &str,
+    assets: &HashMap<String, Vec<u8>>,
+    prune: bool,
+) -> AppResult<WritePackageResult> {
+    let mut deck: Value = serde_json::from_str(deck_text)
+        .map_err(|e| AppError::Custom(format!("deck.json không hợp lệ: {e}")))?;
+
+    if let Some(meta) = deck.get_mut("meta").and_then(|m| m.as_object_mut()) {
+        meta.insert("format".into(), Value::String(FORMAT.into()));
+        meta.insert("version".into(), Value::from(2));
+        meta.insert("formatVersion".into(), Value::from(2));
+    }
+
+    let modified_deck_text = serde_json::to_string(&deck)
+        .map_err(|e| AppError::Custom(format!("Lỗi serialize deck: {e}")))?;
+
+    write_package(&modified_deck_text, assets, prune)
 }
 
 // Chuyển chuỗi tiếng Việt có dấu thành slug an toàn cho tên file

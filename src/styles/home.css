@@ -1,83 +1,299 @@
-/* src/styles/home.css — Màn hình chính (GĐ3B §4): Dải Hôm nay, lọc/tìm/sắp xếp, lưới thẻ bộ thẻ, thanh tiến độ xếp chồng */
+/* src/styles/home.css — Màn hình chính phong cách Apple macOS HIG (Bento Dashboard & Finder Layout) */
+
+/* ── Tiêu đề đề mục & Header chính ─────────────────────────────────────────── */
 
 .section-label {
-  font-size: var(--fs-xs);
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--c-text-muted);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--c-border);
+  flex-wrap: wrap;
+}
+
+.home-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-brand-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.15));
+  transition: transform var(--transition-fast);
+}
+
+.home-brand-logo:hover {
+  transform: scale(1.06);
+}
+
+.home-brand-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  color: var(--c-text);
+  line-height: 1.2;
+}
+
+.home-brand-subtitle {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--c-text-muted);
+  font-weight: 450;
+}
+
+/* ── Dải Bento Hôm nay (Apple Fitness / Dashboard Widget) ───────────────────── */
 
 .today-section {
   margin-bottom: 22px;
 }
 
-.today-section {
-  margin-bottom: 14px;
-}
-
 .today-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
 }
 
-@media (max-width: 580px) {
+@media (max-width: 680px) {
   .today-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .today-card {
-    padding: 6px 8px !important;
-  }
-  .today-card-value {
-    font-size: 1.15rem !important;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 
 .today-card {
-  padding: 10px 14px;
+  position: relative;
+  padding: 16px 18px;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
   background: var(--c-surface);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.today-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--c-border-strong);
+}
+
+.today-card.is-due {
+  border-top: 2.5px solid var(--c-warn);
+}
+
+.today-card.is-new {
+  border-top: 2.5px solid var(--c-primary);
+}
+
+.today-card.is-reviewed {
+  border-top: 2.5px solid var(--c-ok);
+}
+
+.today-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.today-card-icon.icon-due {
+  background: rgba(255, 149, 0, 0.15);
+  color: var(--c-warn);
+}
+
+.today-card-icon.icon-new {
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+
+.today-card-icon.icon-ok {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
 }
 
 .today-card-label {
   font-size: var(--fs-xs);
   color: var(--c-text-muted);
-  font-weight: 500;
+  font-weight: 550;
+  letter-spacing: -0.005em;
 }
 
 .today-card-value {
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-size: 1.85rem;
+  font-weight: 750;
   line-height: 1.15;
   color: var(--c-text);
+  margin-top: 4px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .today-card-value.accent-due { color: var(--c-warn); }
 .today-card-value.accent-new { color: var(--c-primary); }
 .today-card-value.accent-ok  { color: var(--c-ok); }
 
-.home-filter-bar {
+.today-card-sub {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+/* ── Thanh điều hướng Finder (Breadcrumbs & History) ────────────────────────── */
+
+.nautilus-toolbar-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
-.home-filter-chips {
+.nautilus-nav-controls {
+  display: inline-flex;
+  align-items: center;
+  background: var(--c-surface-3);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  gap: 2px;
+}
+
+.nautilus-nav-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--c-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.nautilus-nav-btn:hover:not(:disabled) {
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.nautilus-nav-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.nautilus-path-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--c-surface-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  min-height: 32px;
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.nautilus-path-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.nautilus-path-pill:hover {
+  background: var(--c-surface-hover);
+}
+
+.nautilus-path-pill.active {
+  font-weight: 600;
+  color: var(--c-primary);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.nautilus-path-pill.drag-over {
+  border: 1px dashed var(--c-primary);
+  background: var(--c-primary-soft);
+}
+
+.nautilus-path-sep {
+  color: var(--c-text-muted);
+  font-size: 11px;
+  opacity: 0.6;
+  user-select: none;
+}
+
+/* ── Thanh lọc, tìm kiếm và sắp xếp ────────────────────────────────────────── */
+
+.home-filter-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
+}
+
+.home-kind-segmented {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  border-radius: 9px;
+}
+
+[data-theme="dark"] .home-kind-segmented {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.home-kind-segmented .ux-seg-btn {
+  height: 28px;
+  padding: 0 13px;
+  font-size: var(--fs-sm);
+  border-radius: 7px;
 }
 
 .home-filter-right {
@@ -88,224 +304,47 @@
 }
 
 .home-search-box {
-  width: 220px;
+  width: 240px;
 }
 
-.deck-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-}
-
-.deck-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px 16px 20px;
-  border: 1px solid var(--c-border);
-  border-left: 4px solid var(--kind-quiz);
-  border-radius: var(--radius-lg);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
-}
-
-.deck-card[data-kind="qa"]    { border-left-color: var(--kind-qa); }
-.deck-card[data-kind="quiz"]  { border-left-color: var(--kind-quiz); }
-.deck-card[data-kind="vocab"] { border-left-color: var(--kind-vocab); }
-
-.deck-card:hover,
-.deck-card:focus-visible {
-  border-color: var(--c-border-strong);
-  box-shadow: var(--shadow-md);
-  outline: none;
-}
-
-.deck-card[data-kind="qa"]:hover    { border-left-color: var(--kind-qa); }
-.deck-card[data-kind="quiz"]:hover  { border-left-color: var(--kind-quiz); }
-.deck-card[data-kind="vocab"]:hover { border-left-color: var(--kind-vocab); }
-
-.deck-card.bad {
-  border-left-color: var(--c-danger);
-  background: var(--c-danger-soft);
-}
-
-.deck-card.loading {
-  opacity: 0.65;
-}
-
-.deck-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.deck-card-badges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.deck-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.deck-card-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--c-text);
-}
-
-.deck-card-desc {
-  margin: 0;
+.home-search-box .ux-search-input {
+  height: 32px;
   font-size: var(--fs-sm);
-  color: var(--c-text-muted);
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  border-radius: var(--radius-sm);
 }
 
-.deck-card-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.home-sort-select {
+  height: 32px;
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-sm);
+  padding-left: 10px;
 }
 
-.deck-stacked-bar {
-  display: flex;
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--c-surface-3);
-  overflow: hidden;
-}
+/* ── Bố cục 2 cột kiểu macOS Navigation SplitView ──────────────────────────── */
 
-.deck-stacked-bar.empty-bar {
-  background: var(--c-surface-3);
-}
-
-.deck-stacked-bar .seg {
-  height: 100%;
-  transition: width 0.2s ease;
-}
-
-.deck-stacked-bar .seg-mastered { background: var(--c-ok); }
-.deck-stacked-bar .seg-due      { background: var(--c-warn); }
-.deck-stacked-bar .seg-learning { background: var(--c-primary); }
-.deck-stacked-bar .seg-new      { background: var(--c-border-strong); }
-
-.deck-stats-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  color: var(--c-text-muted);
-}
-
-.stat-dot.due.has-due {
-  color: var(--c-warn);
-  font-weight: 700;
-}
-
-.stat-sep {
-  opacity: 0.6;
-}
-
-.deck-card-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--c-border);
-  flex-wrap: wrap;
-}
-
-.deck-primary-btn {
-  flex: 1;
-  min-width: 130px;
-}
-
-.deck-done-btn {
-  flex: 1;
-  min-width: 130px;
-  color: var(--c-ok);
-  background: var(--c-ok-soft);
-  border-color: color-mix(in srgb, var(--c-ok) 30%, var(--c-border));
-  opacity: 0.85 !important;
-}
-
-.deck-mode-menu-item {
-  align-items: flex-start;
-  padding: 8px 10px;
-}
-
-.home-empty-state {
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.home-empty-intro h2 {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
-}
-
-.home-empty-intro p {
-  margin: 0;
-}
-
-.home-empty-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-top: 12px;
-  border-top: 1px solid var(--c-border);
-}
-
-.empty {
-  padding: 40px;
-  border: 1px dashed var(--c-border);
-  border-radius: var(--radius-lg);
-  background: var(--c-surface);
-  text-align: center;
-}
-
-/* Cấu trúc cây thư mục và Sidebar layout (0.1.3) */
 .home-layout {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   align-items: flex-start;
   position: relative;
-  min-height: 380px;
+  min-height: 480px;
 }
 
 .folder-sidebar {
-  width: 230px;
-  min-width: 190px;
-  max-width: 250px;
+  width: 240px;
+  min-width: 210px;
+  max-width: 260px;
   flex-shrink: 0;
-  background: var(--c-surface);
+  background: var(--c-surface-translucent);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 12px 10px;
+  border-radius: var(--radius-xl);
+  padding: 14px 10px;
   position: sticky;
-  top: 12px;
+  top: 14px;
   box-shadow: var(--shadow-sm);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
 .folder-sidebar.collapsed {
@@ -330,59 +369,37 @@
   min-width: 0;
 }
 
-.active-folder-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  background: var(--c-surface-hover);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  margin-bottom: 12px;
-  font-size: var(--fs-sm);
-  color: var(--c-text);
-  gap: 8px;
-}
-
-.active-folder-banner-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.folder-context-menu-floating {
-  position: fixed !important;
-  z-index: 10000 !important;
-  background: var(--c-surface) !important;
-  border: 1px solid var(--c-border) !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-lg) !important;
-  padding: 4px !important;
-  min-width: 175px !important;
-}
-
 .folder-tree-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
-  padding-bottom: 6px;
+  padding: 0 4px 6px;
   border-bottom: 1px solid var(--c-border);
 }
 
 .folder-tree-title {
-  font-size: var(--fs-xs);
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--c-text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.folder-bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .folder-tree-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: calc(100vh - 180px);
+  max-height: calc(100vh - 220px);
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 2px;
@@ -392,14 +409,15 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: var(--radius-md);
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   font-size: var(--fs-sm);
   color: var(--c-text);
-  transition: background 0.15s, border-color 0.15s;
+  font-weight: 450;
+  transition: all var(--transition-fast);
   border: 1px solid transparent;
 }
 
@@ -408,14 +426,21 @@
 }
 
 .folder-item.active {
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.1));
-  color: var(--c-primary);
+  background: var(--c-primary) !important;
+  color: #ffffff !important;
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 113, 227, 0.25);
+}
+
+.folder-item.active .folder-icon,
+.folder-item.active .folder-name,
+.folder-item.active .folder-toggle {
+  color: #ffffff !important;
 }
 
 .folder-item.drag-over {
   border: 1px dashed var(--c-primary);
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.15));
+  background: var(--c-primary-soft);
 }
 
 .folder-toggle {
@@ -455,9 +480,9 @@
   color: var(--c-text-muted);
   cursor: pointer;
   padding: 2px 4px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast);
 }
 
 .folder-item:hover .folder-menu-btn {
@@ -470,146 +495,33 @@
   gap: 2px;
 }
 
-.deck-card.is-dragging {
-  opacity: 0.5;
-  border-style: dashed;
-}
-
-.link-chip {
-  background: var(--c-ok-light, rgba(16, 185, 129, 0.1));
-  color: var(--c-ok);
-  font-size: 11px;
-}
-
-.folder-chip {
-  background: var(--c-surface-hover);
-  color: var(--c-text-muted);
-}
-
-/* ── Nautilus / File Manager UI Styling ── */
-
-.nautilus-toolbar-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.nautilus-nav-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.nautilus-nav-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--c-border);
-  background: var(--c-surface);
-  color: var(--c-text);
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.nautilus-nav-btn:hover:not(:disabled) {
-  background: var(--c-surface-hover);
-  border-color: var(--c-primary);
-}
-
-.nautilus-nav-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.nautilus-path-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 3px 8px;
-  min-height: 34px;
-  flex: 1;
-  min-width: 200px;
-  overflow-x: auto;
-  box-shadow: var(--shadow-sm);
-}
-
-.nautilus-path-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--c-text);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.nautilus-path-pill:hover {
-  background: var(--c-surface-hover);
-  border-color: var(--c-border);
-}
-
-.nautilus-path-pill.active {
-  font-weight: 700;
-  color: var(--c-primary);
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.1));
-}
-
-.nautilus-path-pill.drag-over {
-  border: 1px dashed var(--c-primary);
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.2));
-}
-
-.nautilus-path-sep {
-  color: var(--c-text-muted);
-  font-size: 11px;
-  user-select: none;
-}
-
-.nautilus-view-toggle {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.nautilus-view-btn {
-  padding: 5px 9px;
+.folder-unpin-btn,
+.folder-pin-quick-btn {
+  background: none;
   border: none;
-  background: var(--c-surface);
   color: var(--c-text-muted);
-  font-size: 14px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
 }
 
-.nautilus-view-btn.active {
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.15));
-  color: var(--c-primary);
-  font-weight: 700;
+.folder-item:hover .folder-unpin-btn,
+.folder-item:hover .folder-pin-quick-btn {
+  opacity: 1;
 }
 
-/* Thư mục con trên bàn làm việc */
+.folder-pin-quick-btn.pinned {
+  color: var(--c-warn);
+  opacity: 1;
+}
+
+/* ── Thư mục con (Subfolders Bento Cards) ──────────────────────────────────── */
+
 .nautilus-subfolders-section {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .nautilus-section-header {
@@ -621,7 +533,7 @@
 
 .nautilus-subfolders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
 }
 
@@ -631,14 +543,14 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 14px 10px 10px;
+  padding: 14px 10px 12px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   user-select: none;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .nautilus-folder-card * {
@@ -650,26 +562,6 @@
   pointer-events: auto;
 }
 
-.deck-drag-handle {
-  cursor: grab;
-  color: var(--c-text-muted);
-  font-size: 14px;
-  padding: 0 4px;
-  user-select: none;
-  opacity: 0.6;
-  transition: opacity 0.15s ease;
-}
-
-.deck-drag-handle:hover {
-  opacity: 1;
-  color: var(--c-primary);
-}
-
-.deck-card.is-dragging {
-  opacity: 0.45;
-  border-style: dashed;
-}
-
 .nautilus-folder-card:hover {
   transform: translateY(-2px);
   border-color: var(--c-primary);
@@ -677,8 +569,8 @@
 }
 
 .nautilus-folder-card.drag-over {
-  border: 2px dashed var(--c-primary);
-  background: var(--c-primary-light, rgba(59, 130, 246, 0.15));
+  border: 1.5px dashed var(--c-primary);
+  background: var(--c-primary-soft);
 }
 
 .nautilus-folder-card.is-dragging {
@@ -688,12 +580,12 @@
 
 .nautilus-folder-top-actions {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 5px;
+  right: 5px;
   display: flex;
   gap: 2px;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--transition-fast);
 }
 
 .nautilus-folder-card:hover .nautilus-folder-top-actions,
@@ -708,19 +600,19 @@
   color: var(--c-text-muted);
   cursor: pointer;
   padding: 2px 4px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  transition: color 0.15s;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  transition: color var(--transition-fast);
 }
 
 .nautilus-folder-pin-btn.pinned {
-  color: #f59e0b;
+  color: var(--c-warn);
   opacity: 1 !important;
 }
 
 .nautilus-folder-icon-wrap {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -728,9 +620,9 @@
 }
 
 .nautilus-folder-svg {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.12));
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
 }
 
 .nautilus-folder-name {
@@ -750,40 +642,232 @@
   margin-top: 3px;
 }
 
-/* Sidebar Bookmarks */
-.folder-bookmarks-list {
+/* ── Lưới Bộ thẻ (Deck Cards Bento Grid) ───────────────────────────────────── */
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+}
+
+.deck-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.folder-unpin-btn,
-.folder-pin-quick-btn {
-  background: none;
-  border: none;
-  color: var(--c-text-muted);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  padding: 1px 4px;
+  overflow: hidden;
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 180ms ease, border-color 180ms ease;
+}
+
+/* Vạch màu định danh loại bộ thẻ tinh tế ở đỉnh thẻ */
+.deck-card[data-kind="qa"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 2.5px;
+  background: var(--kind-qa);
+  border-radius: 0 0 3px 3px;
+}
+
+.deck-card[data-kind="quiz"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 2.5px;
+  background: var(--kind-quiz);
+  border-radius: 0 0 3px 3px;
+}
+
+.deck-card[data-kind="vocab"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 2.5px;
+  background: var(--kind-vocab);
+  border-radius: 0 0 3px 3px;
+}
+
+.deck-card:hover,
+.deck-card:focus-visible {
+  border-color: var(--c-border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  outline: none;
+}
+
+.deck-card.bad {
+  border-top: 2.5px solid var(--c-danger);
+  background: color-mix(in srgb, var(--c-surface) 92%, var(--c-danger-soft));
+}
+
+.deck-card.loading {
+  opacity: 0.65;
+}
+
+.deck-card.is-dragging {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.deck-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.deck-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.deck-drag-handle {
+  cursor: grab;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  padding: 0 2px;
+  user-select: none;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.deck-card:hover .deck-drag-handle {
+  opacity: 1;
+}
+
+.deck-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.deck-card-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  color: var(--c-text);
+}
+
+.deck-card-desc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deck-card-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deck-stacked-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--c-surface-3);
+  overflow: hidden;
+}
+
+.deck-stacked-bar.empty-bar {
+  background: var(--c-surface-3);
+}
+
+.deck-stacked-bar .seg {
+  height: 100%;
+  transition: width 0.25s var(--ease-apple);
+}
+
+.deck-stacked-bar .seg-mastered { background: var(--c-ok); }
+.deck-stacked-bar .seg-due      { background: var(--c-warn); }
+.deck-stacked-bar .seg-learning { background: var(--c-primary); }
+.deck-stacked-bar .seg-new      { background: var(--c-border-strong); }
+
+.deck-stats-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+
+.stat-dot.due.has-due {
+  color: var(--c-warn);
+  font-weight: 700;
+}
+
+.stat-sep {
+  opacity: 0.4;
+}
+
+.deck-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-border);
+  flex-wrap: wrap;
+}
+
+.deck-primary-btn {
+  flex: 1;
+  min-width: 120px;
+  height: 32px !important;
+  font-size: var(--fs-sm) !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.deck-done-btn {
+  flex: 1;
+  min-width: 120px;
+  height: 32px !important;
+  font-size: var(--fs-sm) !important;
+  color: var(--c-ok);
+  background: var(--c-ok-soft);
+  border-color: color-mix(in srgb, var(--c-ok) 25%, var(--c-border));
+  opacity: 0.9 !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.deck-card-footer .ux-btn {
+  height: 32px;
+  font-size: var(--fs-sm);
+  padding: 0 10px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
 }
 
-.folder-item:hover .folder-unpin-btn,
-.folder-item:hover .folder-pin-quick-btn {
-  opacity: 1;
+.deck-mode-menu-item {
+  align-items: flex-start;
+  padding: 8px 12px;
 }
 
-.folder-pin-quick-btn.pinned {
-  color: #f59e0b;
-  opacity: 1;
-}
+/* ── Chế độ xem danh sách (List View) ─────────────────────────────────────── */
 
-/* List view mode */
 .nautilus-subfolders-grid.list-view {
   display: flex;
   flex-direction: column;
@@ -794,7 +878,7 @@
   flex-direction: row;
   align-items: center;
   text-align: left;
-  padding: 8px 12px;
+  padding: 8px 14px;
   transform: none !important;
 }
 
@@ -823,5 +907,87 @@
   opacity: 1;
 }
 
+.deck-grid.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
+.deck-grid.list-view .deck-card {
+  flex-direction: row;
+  align-items: center;
+  padding: 12px 18px;
+}
 
+/* ── Nút xem & thanh điều hướng Nautilus ───────────────────────────────────── */
+
+.nautilus-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--c-surface-3);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  gap: 1px;
+}
+
+.nautilus-view-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.nautilus-view-btn:hover {
+  color: var(--c-text);
+}
+
+.nautilus-view-btn.active {
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Trạng thái rỗng (Empty State) ─────────────────────────────────────────── */
+
+.home-empty-state {
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.home-empty-intro h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.home-empty-intro p {
+  margin: 0;
+  color: var(--c-text-muted);
+}
+
+.home-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.empty {
+  padding: 44px;
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius-xl);
+  background: var(--c-surface);
+  text-align: center;
+}
