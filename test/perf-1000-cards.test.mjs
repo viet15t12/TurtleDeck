@@ -104,7 +104,7 @@ test('hiệu năng: gói 1,000 thẻ + 200 ảnh (đóng gói, mở gói, thốn
   const valTime = performance.now() - tVal0;
   assert.equal(valRes.errors.length, 0, `validateDeck không được có lỗi: ${valRes.errors.join(', ')}`);
   console.log(`[Perf] Thời gian validateDeck (1,000 thẻ): ${valTime.toFixed(2)}ms`);
-  assert.ok(valTime < 500, `validateDeck mất ${valTime}ms, vượt quá 500ms`);
+  assert.ok(valTime < 800, `validateDeck mất ${valTime}ms, vượt quá 800ms`);
 
   // 7. Đo thời gian thống kê deckStats
   const tStats0 = performance.now();

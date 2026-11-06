@@ -1,7 +1,7 @@
 // src/core/srs.ts — Thuật toán lặp lại ngắt quãng SM-2 + learning steps (hàm thuần, ES module).
 // Theo study-app.md mục 4.1, 7.5, 8.
 
-import { SrsCard, SrsRating, SrsDirection, LegacyProgressData, LegacyReviewLog } from './types/srs.types.js';
+import type { SrsCard, SrsRating, SrsDirection, LegacyProgressData, LegacyReviewLog } from './types/srs.types.js';
 
 export const DAY = 86400000;
 export const MINUTE = 60000;

@@ -1,4 +1,4 @@
-import { SrsRating, SrsDirection } from './srs.types.js';
+import type { SrsRating, SrsDirection } from './srs.types.js';
 
 export interface DailyReviewStat {
   date: string;          // YYYY-MM-DD

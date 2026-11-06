@@ -4,7 +4,7 @@
 import { imageRefs } from './deckmodel.js';
 import { kindOf, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
 import { normalizeTerm } from './hash.js';
-import { ValidationIssue } from './types/deck.types.js';
+import type { ValidationIssue } from './types/deck.types.js';
 
 export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card', 'translate'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];

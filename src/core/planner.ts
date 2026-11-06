@@ -4,9 +4,9 @@
 import { validateItem, hasError } from './validate.js';
 import { buildQuestion } from './builder.js';
 import { cardKey, newCard } from './srs.js';
-import { DeckItem } from './types/item.types.js';
-import { DeckKind, DeckData } from './types/deck.types.js';
-import { SrsCard, SrsDirection, LegacyProgressData, LegacyReviewLog } from './types/srs.types.js';
+import type { DeckItem } from './types/item.types.js';
+import type { DeckKind, DeckData } from './types/deck.types.js';
+import type { SrsCard, SrsDirection, LegacyProgressData, LegacyReviewLog } from './types/srs.types.js';
 
 export const DEFAULT_NEW_CARDS_PER_DAY = 20;
 

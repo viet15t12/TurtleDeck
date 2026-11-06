@@ -1,7 +1,7 @@
-import { DeckItem } from './item.types.js';
-import { SrsCard, SrsDeckSummary, SrsRating, SrsDirection, ItemMetaRecord } from './srs.types.js';
-import { DeckStatsReport, OverallStreak } from './stats.types.js';
-import { Folder, DeckLocation } from './folder.types.js';
+import type { DeckItem } from './item.types.js';
+import type { SrsCard, SrsDeckSummary, SrsRating, SrsDirection, ItemMetaRecord } from './srs.types.js';
+import type { DeckStatsReport, OverallStreak } from './stats.types.js';
+import type { Folder, DeckLocation } from './folder.types.js';
 
 export interface IpcContracts {
   // Gói thẻ .sdeck

@@ -1,4 +1,4 @@
-import { DeckItem } from './item.types.js';
+import type { DeckItem } from './item.types.js';
 
 export type DeckKind = 'qa' | 'quiz' | 'vocab';
 

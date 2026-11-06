@@ -2,7 +2,7 @@
 // chế độ học theo loại, suy diễn loại bộ thẻ và phát hiện mục lệch loại (study-app-phase3b.md mục 2).
 // Hàm thuần, ES module, không phụ thuộc Electron/DOM, test bằng `node --test`.
 
-import { DeckKind } from './types/deck.types.js';
+import type { DeckKind } from './types/deck.types.js';
 
 export interface ModeInfo {
   id: string;
