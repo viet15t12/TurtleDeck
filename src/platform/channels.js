@@ -24,6 +24,7 @@ export const CHANNEL_TO_COMMAND = {
   'deck:save': 'deck_save',
   'deck:importSdeck': 'deck_import_sdeck',
   'deck:close': 'deck_close',
+  'deck:delete': 'deck_delete',
   'deck:duplicate': 'deck_duplicate',
   'deck:exportCopy': 'deck_export_copy',
   'deck:showInFolder': 'deck_show_in_folder',

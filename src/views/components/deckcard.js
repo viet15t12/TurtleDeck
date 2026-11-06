@@ -13,10 +13,10 @@ function closeAllDropdowns(except) {
 }
 
 export function renderDeckCard(entry, st, actions, options = {}) {
-  const removeBtn = entry.inLibrary ? null : h('button', {
+  const removeBtn = h('button', {
     type: 'button',
     class: 'ux-btn sm ghost danger-hover',
-    title: 'Gỡ khỏi danh sách (không xoá file)',
+    title: 'Gỡ khỏi danh sách',
     onclick: ev => { ev.stopPropagation(); actions.remove(entry); },
   }, 'Gỡ');
 
@@ -126,8 +126,8 @@ export function renderDeckCard(entry, st, actions, options = {}) {
       class: 'ux-popover-item',
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.saveAs(entry); },
     }, '💾 Lưu thành .sdeck…'),
-    entry.inLibrary ? null : h('div', { class: 'ux-popover-sep' }),
-    entry.inLibrary ? null : h('button', {
+    h('div', { class: 'ux-popover-sep' }),
+    h('button', {
       type: 'button',
       class: 'ux-popover-item danger',
       onclick: ev => { ev.stopPropagation(); moreMenu.hidden = true; actions.remove(entry); },

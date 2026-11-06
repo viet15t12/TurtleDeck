@@ -1,6 +1,7 @@
 // src/app/actions/deck.js — Các action thao tác với tệp bộ thẻ (mở, lưu, nhân đôi, xoá, nạp lại)
 
 import { newDeckId } from '../../core/deckmodel.js';
+import { clearProgress } from '../../core/srs.js';
 import { fileName } from '../../views/dom.js';
 import { notify } from '../../views/notify.js';
 import { applyResult } from '../entries.js';
@@ -87,19 +88,59 @@ export function deckActions({ state, actions }) {
     },
 
     async remove(entry) {
-      if (
-        !entry.path &&
-        entry.status === 'ok' &&
-        !window.confirm(
-          `Bộ thẻ "${entry.deck.meta.title}" chưa được lưu thành .sdeck. Gỡ khỏi danh sách và bỏ dữ liệu đã nhập?`
-        )
-      ) {
+      const title = entry.deck?.meta?.title || fileName(entry.path) || 'Bộ thẻ';
+      const promptMsg = entry.path
+        ? `Bạn có chắc muốn gỡ bộ thẻ "${title}" khỏi hệ thống?\nToàn bộ tiến trình học của bộ thẻ này cũng sẽ bị xoá.`
+        : `Bộ thẻ "${title}" chưa được lưu thành .sdeck. Gỡ khỏi danh sách và bỏ dữ liệu đã nhập?`;
+
+      if (!window.confirm(promptMsg)) {
         return;
       }
+
+      const deckId = entry.deck?.meta?.id;
+
+      // 1. Xoá tiến trình học (SRS cards, review logs, meta)
+      if (deckId) {
+        state.progress = clearProgress(state.progress, deckId);
+        const rProg = await api.saveProgress(state.progress);
+        if (rProg && rProg.ok === false) {
+          console.warn('Không thể lưu trạng thái tiến trình sau khi gỡ:', rProg.error);
+        }
+      }
+
+      // 2. Gỡ khỏi backend (CSDL, cache, draft, file nếu trong library)
+      try {
+        await api.deleteDeck?.({
+          deckKey: entry.deckKey,
+          deckId,
+          filePath: entry.path,
+          deleteFile: !!entry.inLibrary,
+        });
+      } catch (err) {
+        console.warn('Lỗi khi gọi api.deleteDeck:', err);
+      }
+
+      // 3. Đóng package nếu còn mở
       if (entry.deckKey) await api.closeDeck(entry.deckKey);
-      state.entries.splice(state.entries.indexOf(entry), 1);
-      if (state.route.uid === entry.uid) state.route = { name: 'home' };
+
+      // 4. Xoá khỏi mảng entries
+      const idx = state.entries.indexOf(entry);
+      if (idx !== -1) {
+        state.entries.splice(idx, 1);
+      }
+
+      // 5. Cập nhật đường dẫn còn lại vào settings
       await persistDeckPaths();
+
+      // 6. Điều hướng về home nếu đang mở bộ thẻ này
+      if (state.route.uid === entry.uid) state.route = { name: 'home' };
+
+      // 7. Quét lại thư viện & cây thư mục
+      if (actions.scanLibrary) {
+        await actions.scanLibrary();
+      }
+
+      notify(`Đã gỡ bộ thẻ "${title}" và toàn bộ tiến trình học khỏi hệ thống.`, 'success');
       render();
     },
 

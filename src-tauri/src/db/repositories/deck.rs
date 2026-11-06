@@ -418,4 +418,18 @@ impl DeckRepository {
 
         Ok(QueryItemsResult { items, total })
     }
+
+    pub fn delete_deck(conn: &mut Connection, deck_id: &str) -> AppResult<()> {
+        let tx = conn.transaction()?;
+        tx.execute("DELETE FROM decks WHERE id = ?1", params![deck_id])?;
+        tx.execute("DELETE FROM items WHERE deck_id = ?1", params![deck_id])?;
+        let _ = tx.execute("DELETE FROM items_fts WHERE deck_id = ?1", params![deck_id]);
+        tx.execute("DELETE FROM deck_locations WHERE deck_id = ?1", params![deck_id])?;
+        tx.execute("DELETE FROM srs_cards WHERE deck_id = ?1", params![deck_id])?;
+        tx.execute("DELETE FROM review_logs WHERE deck_id = ?1", params![deck_id])?;
+        tx.execute("DELETE FROM item_meta WHERE deck_id = ?1", params![deck_id])?;
+        tx.execute("DELETE FROM match_records WHERE deck_id = ?1", params![deck_id])?;
+        tx.commit()?;
+        Ok(())
+    }
 }

@@ -180,6 +180,23 @@ pub async fn deck_close(state: State<'_, AppState>, deck_key: String) -> AppResu
 }
 
 #[tauri::command]
+pub async fn deck_delete(
+    state: State<'_, AppState>,
+    deck_key: Option<String>,
+    deck_id: Option<String>,
+    file_path: Option<String>,
+    delete_file: Option<bool>,
+) -> AppResult<Value> {
+    crate::services::deck_service::delete_deck(
+        &state,
+        deck_key.as_deref(),
+        deck_id.as_deref(),
+        file_path.as_deref(),
+        delete_file.unwrap_or(false),
+    )
+}
+
+#[tauri::command]
 pub async fn deck_duplicate(state: State<'_, AppState>, old_deck_key: String) -> AppResult<Value> {
     let old_pkg = state.package_store.get(&old_deck_key);
     let new_deck_key = state.package_store.new_key();

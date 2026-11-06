@@ -178,3 +178,51 @@ fn test_match_repository() {
         .unwrap();
     assert_eq!(rec3.best_time_ms, 12000);
 }
+
+#[test]
+fn test_deck_repository_delete_deck_cascades_and_clears_progress() {
+    let mut conn = open_in_memory().expect("Khởi tạo database in-memory");
+
+    let sample_deck = json!({
+        "id": "deck-del-1",
+        "meta": {
+            "id": "deck-del-1",
+            "title": "Bộ thẻ cần xoá",
+            "kind": "vocab"
+        },
+        "items": [
+            { "id": "item-1", "type": "vocab", "term": "hello", "definition": "xin chào" }
+        ]
+    });
+
+    DeckRepository::sync_deck(&mut conn, &sample_deck, Some("/path/deck-del-1.sdeck")).unwrap();
+
+    let now = 1_700_000_000_000i64;
+    let card = SrsCard {
+        deck_id: Some("deck-del-1".to_string()),
+        item_id: Some("item-1".to_string()),
+        direction: Some("fwd".to_string()),
+        state: "review".to_string(),
+        step: 0,
+        ease: 2.5,
+        interval: 1,
+        due: now + 86_400_000,
+        reps: 1,
+        lapses: 0,
+        updated_at: Some(now),
+    };
+    SrsRepository::record_review(&mut conn, &card, 3, now, 1000, false).unwrap();
+
+    assert!(DeckRepository::get_deck(&conn, "deck-del-1").unwrap().is_some());
+    assert_eq!(DeckRepository::get_items(&conn, "deck-del-1").unwrap().len(), 1);
+    assert!(SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd").unwrap().is_some());
+
+    // Xoá bộ thẻ
+    DeckRepository::delete_deck(&mut conn, "deck-del-1").unwrap();
+
+    // Xác nhận đã xoá sạch bộ thẻ và tiến trình
+    assert!(DeckRepository::get_deck(&conn, "deck-del-1").unwrap().is_none());
+    assert_eq!(DeckRepository::get_items(&conn, "deck-del-1").unwrap().len(), 0);
+    assert!(SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd").unwrap().is_none());
+}
+

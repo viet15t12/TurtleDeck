@@ -361,3 +361,54 @@ pub fn import_sdeck(
         "decks": imported,
     }))
 }
+
+pub fn delete_deck(
+    state: &AppState,
+    deck_key: Option<&str>,
+    deck_id: Option<&str>,
+    file_path: Option<&str>,
+    delete_file: bool,
+) -> AppResult<Value> {
+    if let Some(key) = deck_key {
+        state.package_store.delete(key);
+    }
+
+    if let Some(did) = deck_id {
+        let _ = state.with_db_mut(|conn| {
+            crate::db::repositories::deck::DeckRepository::delete_deck(conn, did)
+        });
+
+        let safe_id = slugify(did);
+        let draft_sdeck = state.paths.drafts_dir.join(format!("{safe_id}.sdeck"));
+        let draft_json = state.paths.drafts_dir.join(format!("{safe_id}.json"));
+        let _ = fs::remove_file(draft_sdeck);
+        let _ = fs::remove_file(draft_json);
+    }
+
+    if let Some(fp) = file_path {
+        if !fp.trim().is_empty() {
+            let path = PathBuf::from(fp);
+            let resolved = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+            let lib_dir = state.get_active_library_dir();
+            let norm_lib = fs::canonicalize(&lib_dir).unwrap_or_else(|_| lib_dir.clone());
+            let in_library = resolved.starts_with(&norm_lib);
+
+            if in_library || delete_file {
+                if resolved.exists() || resolved.is_symlink() {
+                    let _ = fs::remove_file(&resolved);
+                }
+                let bak = resolved.with_extension("sdeck.bak");
+                if bak.exists() {
+                    let _ = fs::remove_file(bak);
+                }
+            }
+
+            if let Ok(mut cache) = state.library_cache.write() {
+                cache.remove(&resolved);
+            }
+        }
+    }
+
+    Ok(json!({ "ok": true }))
+}
+

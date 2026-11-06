@@ -138,6 +138,7 @@ export const api = {
   saveDeck: (deckKey, deckText, opts) =>
     invokeTyped('deck:save', { deckKey, deckText, ...opts }),
   closeDeck: (deckKey) => invokeTyped('deck:close', { deckKey }),
+  deleteDeck: (opts) => invokeTyped('deck:delete', opts),
   showInFolder: (filePath) => invokeTyped('deck:showInFolder', { filePath }),
   exportCopy: (filePath) => invokeTyped('deck:exportCopy', { filePath }),
 

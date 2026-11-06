@@ -108,6 +108,7 @@ pub fn run() {
             commands::deck::deck_save,
             commands::deck::deck_import_sdeck,
             commands::deck::deck_close,
+            commands::deck::deck_delete,
             commands::deck::deck_duplicate,
             commands::deck::deck_export_copy,
             commands::deck::deck_show_in_folder,
