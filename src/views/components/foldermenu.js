@@ -161,7 +161,7 @@ export function openFolderModal({ type, folder, folders = [], onConfirm, onClose
         inputEl.focus();
         return;
       }
-    } else if (type === 'move') {
+    } else if (type === 'move' || type === 'link') {
       value = selectEl.value || null;
     }
     confirmBtn.disabled = true;
@@ -206,26 +206,43 @@ export function openFolderModal({ type, folder, folders = [], onConfirm, onClose
       h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Tên mới:'),
       inputEl
     );
-  } else if (type === 'move') {
-    title = `Di chuyển thư mục "${folder.name}"`;
-    confirmLabel = 'Di chuyển';
+  } else if (type === 'move' || type === 'link') {
+    const isLinkModal = type === 'link';
+    title = isLinkModal
+      ? `Tạo liên kết cho "${folder.name}"`
+      : `Di chuyển "${folder.name}"`;
+    confirmLabel = isLinkModal ? 'Tạo liên kết' : 'Di chuyển';
 
-    const validTargets = folders.filter(f => {
-      if (f.id === folder.id) return false;
-      if (f.path.startsWith(`${folder.path}/`)) return false;
-      return true;
-    });
+    const byId = new Map(folders.map(f => [f.id, f]));
+    const isDescendant = candidate => {
+      if (!folder.id) return false;
+      if (candidate.id === folder.id) return true;
+      let cur = candidate;
+      const visited = new Set();
+      while (cur && cur.parentId && !visited.has(cur.id)) {
+        visited.add(cur.id);
+        if (cur.parentId === folder.id) return true;
+        cur = byId.get(cur.parentId);
+      }
+      if (folder.path && candidate.path && candidate.path.startsWith(`${folder.path}/`)) {
+        return true;
+      }
+      return false;
+    };
+
+    const validTargets = folders.filter(f => !isDescendant(f));
 
     selectEl = h('select', { class: 'ux-select', style: 'width: 100%;' },
-      h('option', { value: '' }, '📁 (Thư mục gốc - Root)'),
+      isLinkModal ? null : h('option', { value: '' }, '📁 (Thư mục gốc - Root)'),
       ...validTargets.map(f => h('option', {
         value: f.id,
         selected: f.id === folder.parentId,
-      }, `${'—'.repeat(f.depth)} 📁 ${f.name} (${f.path})`))
+      }, `${'—'.repeat(f.depth || 0)} 📁 ${f.name} (${f.path || f.name})`))
     );
 
     bodyContent = h('div', { class: 'form-group', style: 'margin-bottom: 16px;' },
-      h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' }, 'Chọn thư mục cha mới:'),
+      h('label', { style: 'display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;' },
+        isLinkModal ? 'Chọn thư mục đích để gắn liên kết:' : 'Chọn thư mục đích:'),
       selectEl
     );
   } else if (type === 'delete') {

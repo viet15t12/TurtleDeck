@@ -20,6 +20,9 @@ import { attachHomeKeyboard, detachHomeKeyboard } from './keyboard.js';
 
 export { detachHomeKeyboard };
 
+// Singleton cấp module theo Mục 6.1: ổn định giữa các lần gọi renderHome()
+export const folderStore = createFolderStore();
+
 export function renderHome(root, { entries, busy, progress, settings }, actions) {
   const now = Date.now();
   const statsByUid = new Map();
@@ -36,7 +39,6 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
   }
   const reviewedToday = countReviewedToday(progress, now);
 
-  const folderStore = createFolderStore();
   const sidebarHost = h('aside', { class: `folder-sidebar ${homeUiState.sidebarOpen ? '' : 'collapsed'}` });
   const bannerHost = h('div', { class: 'home-banner-host' });
   const listHost = h('div', { class: 'home-list-host' });
@@ -125,8 +127,16 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     listHost.replaceChildren(navRow, filterBar, workspace.mainContainer);
   }
 
-  async function refreshFolders() {
-    await folderStore.refreshFolders();
+  async function refreshFolders(force = true) {
+    await folderStore.refreshFolders(force);
+    if (
+      homeUiState.selectedFolderId !== 'all' &&
+      homeUiState.selectedFolderId !== null &&
+      !folderStore.findFolder(homeUiState.selectedFolderId)
+    ) {
+      homeUiState.selectedFolderId = 'all';
+      savePref('homeUi.selectedFolderId', 'all');
+    }
     breadcrumb.renderBreadcrumbBar();
     renderSidebar();
     workspace.renderCardsOnly();
@@ -140,7 +150,7 @@ export function renderHome(root, { entries, busy, progress, settings }, actions)
     deckSection: renderDeckSection,
   });
 
-  refreshFolders();
+  refreshFolders(!folderStore.isLoaded);
   renderSidebar();
   renderDeckSection();
 

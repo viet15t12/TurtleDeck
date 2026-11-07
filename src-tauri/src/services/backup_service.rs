@@ -271,29 +271,30 @@ fn dump_database(conn: &Connection) -> AppResult<(Value, usize)> {
     let mut dump = serde_json::Map::new();
 
     // 1. folders
-    let mut stmt = conn.prepare(
-        "SELECT id, name, parent_id, path, depth, created_at, updated_at FROM folders ORDER BY depth ASC, name COLLATE NOCASE ASC"
-    )?;
-    let folders: Vec<Value> = stmt
-        .query_map([], |row| {
-            Ok(json!({
-                "id": row.get::<_, String>(0)?,
-                "name": row.get::<_, String>(1)?,
-                "parent_id": row.get::<_, Option<String>>(2)?,
-                "path": row.get::<_, String>(3)?,
-                "depth": row.get::<_, i32>(4)?,
-                "created_at": row.get::<_, i64>(5)?,
-                "updated_at": row.get::<_, i64>(6)?,
-            }))
-        })?
-        .flatten()
+    let all_folders = crate::db::repositories::folder::FolderRepository::get_all_folders(conn)?;
+    let folders_count = all_folders.len();
+    let folders: Vec<Value> = all_folders
+        .into_iter()
+        .map(|f| {
+            json!({
+                "id": f.id,
+                "name": f.name,
+                "parent_id": f.parent_id,
+                "sort_order": f.sort_order,
+                "path": f.path,
+                "depth": f.depth,
+                "created_at": f.created_at,
+                "updated_at": f.updated_at,
+            })
+        })
         .collect();
-    let folders_count = folders.len();
     dump.insert("folders".into(), json!(folders));
 
     // 2. deck_locations
     let mut stmt = conn.prepare(
-        "SELECT id, deck_id, folder_id, file_path, is_link, link_target, created_at FROM deck_locations"
+        "SELECT l.id, l.deck_id, l.folder_id, COALESCE(d.file_path, ''), l.is_link, l.created_at
+         FROM deck_locations l
+         LEFT JOIN decks d ON d.id = l.deck_id",
     )?;
     let deck_locations: Vec<Value> = stmt
         .query_map([], |row| {
@@ -303,8 +304,7 @@ fn dump_database(conn: &Connection) -> AppResult<(Value, usize)> {
                 "folder_id": row.get::<_, Option<String>>(2)?,
                 "file_path": row.get::<_, String>(3)?,
                 "is_link": row.get::<_, i32>(4)?,
-                "link_target": row.get::<_, Option<String>>(5)?,
-                "created_at": row.get::<_, i64>(6)?,
+                "created_at": row.get::<_, i64>(5)?,
             }))
         })?
         .flatten()
@@ -460,16 +460,19 @@ fn restore_database(
         let mut sorted = folders.clone();
         sorted.sort_by_key(|f| f.get("depth").and_then(|v| v.as_i64()).unwrap_or(0));
         let mut ins = tx.prepare(
-            "INSERT INTO folders (id, name, parent_id, path, depth, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO folders (id, parent_id, name, sort_order, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )?;
-        for f in sorted {
+        for (idx, f) in sorted.into_iter().enumerate() {
+            let sort_order = f
+                .get("sort_order")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(idx as i64);
             ins.execute(rusqlite::params![
                 f.get("id").and_then(|v| v.as_str()),
-                f.get("name").and_then(|v| v.as_str()),
                 f.get("parent_id").and_then(|v| v.as_str()),
-                f.get("path").and_then(|v| v.as_str()),
-                f.get("depth").and_then(|v| v.as_i64()),
+                f.get("name").and_then(|v| v.as_str()),
+                sort_order,
                 f.get("created_at").and_then(|v| v.as_i64()),
                 f.get("updated_at").and_then(|v| v.as_i64()),
             ])?;
@@ -506,40 +509,20 @@ fn restore_database(
     // Deck locations
     if let Some(locs) = db_dump.get("deck_locations").and_then(|v| v.as_array()) {
         let mut ins = tx.prepare(
-            "INSERT OR REPLACE INTO deck_locations (id, deck_id, folder_id, file_path, is_link, link_target, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT OR REPLACE INTO deck_locations (id, deck_id, folder_id, is_link, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
         )?;
         for l in locs {
             let folder_id = l.get("folder_id").and_then(|v| v.as_str());
-            let file_name = l
-                .get("file_path")
-                .and_then(|v| v.as_str())
-                .map(|fp| Path::new(fp).file_name().unwrap_or_default())
-                .unwrap_or_default();
-            let mut target_dir = library_dir.to_path_buf();
-            if let Some(fid) = folder_id {
-                if let Some(folders) = db_dump.get("folders").and_then(|v| v.as_array()) {
-                    if let Some(f) = folders
-                        .iter()
-                        .find(|fo| fo.get("id").and_then(|v| v.as_str()) == Some(fid))
-                    {
-                        if let Some(fpath) = f.get("path").and_then(|v| v.as_str()) {
-                            for part in fpath.split('/') {
-                                target_dir.push(part);
-                            }
-                        }
-                    }
-                }
+            let is_link = l.get("is_link").and_then(|v| v.as_i64()).unwrap_or(0);
+            if is_link != 0 && folder_id.is_none() {
+                continue;
             }
-            let new_path = target_dir.join(file_name).to_string_lossy().to_string();
-
             ins.execute(rusqlite::params![
                 l.get("id").and_then(|v| v.as_str()),
                 l.get("deck_id").and_then(|v| v.as_str()),
                 folder_id,
-                new_path,
-                l.get("is_link").and_then(|v| v.as_i64()),
-                l.get("link_target").and_then(|v| v.as_str()),
+                if is_link != 0 { 1 } else { 0 },
                 l.get("created_at").and_then(|v| v.as_i64()),
             ])?;
         }

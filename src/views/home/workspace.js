@@ -5,7 +5,7 @@ import { stripAccents } from '../../core/deckmodel.js';
 import { kindOf } from '../../core/deckkinds.js';
 import { renderFolderCard } from '../components/foldercard.js';
 import { renderDeckCard } from '../components/deckcard.js';
-import { selectSubfolders, selectDecks } from './query.js';
+import { selectSubfolders, selectDecks, countFolderDecks } from './query.js';
 import { renderEmptyFolder } from './empty-state.js';
 
 export function createWorkspace(ctx) {
@@ -15,10 +15,13 @@ export function createWorkspace(ctx) {
     const { ui, folderStore, data, nav, folderAction, togglePin, dnd, deckCardActions } = ctx;
     const qNorm = stripAccents(ui.searchQuery.trim());
 
-    const directSubfolders = selectSubfolders({
+    const queryInput = {
       entries: data.entries,
       flatFolders: folderStore.flatFolders,
       locationsByDeckId: folderStore.locationsByDeckId,
+      deckIdsByFolderId: folderStore.deckIdsByFolderId,
+      linksByFolderId: folderStore.linksByFolderId,
+      primaryLocationByDeckId: folderStore.primaryLocationByDeckId,
       selectedFolderId: ui.selectedFolderId,
       filterKind: ui.filterKind,
       searchQuery: ui.searchQuery,
@@ -27,21 +30,10 @@ export function createWorkspace(ctx) {
       stripAccents,
       kindOf,
       findFolder: folderStore.findFolder,
-    });
+    };
 
-    const filteredDecks = selectDecks({
-      entries: data.entries,
-      flatFolders: folderStore.flatFolders,
-      locationsByDeckId: folderStore.locationsByDeckId,
-      selectedFolderId: ui.selectedFolderId,
-      filterKind: ui.filterKind,
-      searchQuery: ui.searchQuery,
-      sortBy: ui.sortBy,
-      statsByUid: data.statsByUid,
-      stripAccents,
-      kindOf,
-      findFolder: folderStore.findFolder,
-    });
+    const directSubfolders = selectSubfolders(queryInput);
+    const filteredDecks = selectDecks(queryInput);
 
     const contentElements = [];
 
@@ -58,16 +50,19 @@ export function createWorkspace(ctx) {
         { class: `nautilus-subfolders-grid ${ui.viewMode === 'list' ? 'list-view' : ''}` },
         ...directSubfolders.map(f => {
           const childFolders = folderStore.flatFolders.filter(cf => cf.parentId === f.id);
-          const childDecks = data.entries.filter(e => {
-            if (e.group === f.path) return true;
-            if (e.relPath && (e.relPath === f.path || e.relPath.startsWith(`${f.path}/`))) return true;
-            return false;
+          const deckCount = countFolderDecks(f.id, {
+            flatFolders: folderStore.flatFolders,
+            deckIdsByFolderId: folderStore.deckIdsByFolderId,
+            locationsByDeckId: folderStore.locationsByDeckId,
+            linksByFolderId: folderStore.linksByFolderId,
+            entries: data.entries,
+            recursive: true,
           });
           const isPinned = ui.pinnedFolderIds.includes(f.id);
 
           return renderFolderCard({
             folder: f,
-            deckCount: childDecks.length,
+            deckCount,
             subfolderCount: childFolders.length,
             isPinned,
             onOpen: targetId => nav.navigateToFolder(targetId),
@@ -125,4 +120,3 @@ export function createWorkspace(ctx) {
     renderCardsOnly,
   };
 }
-

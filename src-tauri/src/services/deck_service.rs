@@ -261,26 +261,10 @@ pub fn import_sdeck(
     file_paths: &[String],
     target_folder_id: Option<String>,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    let mut target_dir = lib_dir.clone();
-
-    if let Some(ref folder_id) = target_folder_id {
-        let _ = state.with_db(|conn| {
-            if let Ok(Some(f)) =
-                crate::db::repositories::folder::FolderRepository::get_folder_by_id(conn, folder_id)
-            {
-                let parts: Vec<&str> = f.path.split('/').filter(|p| !p.is_empty()).collect();
-                let mut dir = lib_dir.clone();
-                for p in parts {
-                    dir.push(p);
-                }
-                target_dir = dir;
-            }
-            Ok(())
-        });
-    }
-
+    let target_dir = state.get_active_library_dir();
     let _ = fs::create_dir_all(&target_dir);
+    let norm_folder =
+        crate::db::repositories::folder::normalize_folder_id(target_folder_id.as_deref());
 
     let mut imported = Vec::new();
 
@@ -335,15 +319,14 @@ pub fn import_sdeck(
                     &deck,
                     Some(&dest_str),
                 );
-                let _ =
-                    crate::db::repositories::deck_location::DeckLocationRepository::add_location(
-                        conn,
-                        &deck_id,
-                        target_folder_id.as_deref(),
-                        &dest_str,
-                        false,
-                        None,
-                    );
+                if norm_folder.is_some() {
+                    let _ =
+                        crate::db::repositories::deck_location::DeckLocationRepository::move_deck(
+                            conn,
+                            &deck_id,
+                            norm_folder.as_deref(),
+                        );
+                }
                 Ok(())
             });
 

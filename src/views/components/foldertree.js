@@ -2,8 +2,26 @@
 import { h } from '../dom.js';
 import { showFolderContextMenu } from './foldermenu.js';
 
-// Lưu trạng thái mở/đóng của các nhánh thư mục
-const expandedFolderIds = new Set();
+// Lưu trạng thái mở/đóng của các nhánh thư mục (khởi tạo từ localStorage: homeUi.expandedFolderIds)
+const expandedFolderIds = new Set(
+  (() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('homeUi.expandedFolderIds') : null;
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })()
+);
+
+function persistExpandedFolders() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('homeUi.expandedFolderIds', JSON.stringify([...expandedFolderIds]));
+    }
+  } catch {}
+}
 
 export function flattenFolders(nodes = []) {
   const result = [];
@@ -191,6 +209,7 @@ export function renderFolderTree({
             e.stopPropagation();
             if (isExpanded) expandedFolderIds.delete(node.id);
             else expandedFolderIds.add(node.id);
+            persistExpandedFolders();
             // Re-render
             const parent = container.parentElement;
             if (parent) {

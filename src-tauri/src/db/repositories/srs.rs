@@ -23,6 +23,9 @@ pub struct SrsCard {
     pub reps: i64,
     pub lapses: i64,
     pub updated_at: Option<i64>,
+    pub stability: Option<f64>,
+    pub difficulty: Option<f64>,
+    pub last_review: Option<i64>,
 }
 
 impl Default for SrsCard {
@@ -39,6 +42,9 @@ impl Default for SrsCard {
             reps: 0,
             lapses: 0,
             updated_at: None,
+            stability: None,
+            difficulty: None,
+            last_review: None,
         }
     }
 }
@@ -76,95 +82,6 @@ pub struct ReviewLogRecord {
     pub is_new: bool,
 }
 
-// SM-2 scheduling algorithm tương thích 100% src/core/srs.ts
-pub fn schedule_card(
-    card: &SrsCard,
-    rating: i64,
-    now: i64,
-    learn_steps: Option<&[i64]>,
-) -> SrsCard {
-    let steps = learn_steps.unwrap_or(&DEFAULT_LEARN_STEPS);
-    let mut c = card.clone();
-    let was_relearning = c.state == "relearning";
-
-    if c.state == "new" || c.state == "learning" || c.state == "relearning" {
-        if rating == 1 {
-            c.state = if was_relearning {
-                "relearning".to_string()
-            } else {
-                "learning".to_string()
-            };
-            c.step = 0;
-        } else if rating == 4 {
-            c.step = steps.len() as i64;
-        } else if rating == 3 {
-            c.step += 1;
-        } else if rating == 2 {
-            let max_step = if steps.is_empty() {
-                0
-            } else {
-                (steps.len() - 1) as i64
-            };
-            c.step = c.step.min(max_step).max(0);
-        }
-
-        if c.step >= steps.len() as i64 {
-            c.state = "review".to_string();
-            if was_relearning {
-                let reduced = (c.interval as f64).round().max(1.0) as i64;
-                c.interval = if rating == 4 {
-                    ((reduced as f64) * 1.3).round().max(reduced as f64) as i64
-                } else {
-                    reduced
-                };
-            } else {
-                c.interval = if rating == 4 { 4 } else { 1 };
-            }
-            c.due = now + c.interval * DAY_MS;
-        } else {
-            c.state = if was_relearning {
-                "relearning".to_string()
-            } else {
-                "learning".to_string()
-            };
-            let step_idx = (c.step as usize).min(steps.len() - 1);
-            c.due = now + steps[step_idx] * MINUTE_MS;
-        }
-        return c;
-    }
-
-    // state == "review"
-    if rating == 1 {
-        c.state = "relearning".to_string();
-        c.step = 0;
-        c.lapses += 1;
-        c.ease = (c.ease - 0.2).max(1.3);
-        c.interval = ((c.interval as f64) * 0.5).round().max(1.0) as i64;
-        c.due = now + steps[0] * MINUTE_MS;
-    } else {
-        let mult = if rating == 2 {
-            1.2
-        } else if rating == 4 {
-            c.ease * 1.3
-        } else {
-            c.ease
-        };
-        c.interval = ((c.interval as f64) * mult)
-            .round()
-            .max((c.interval + 1) as f64) as i64;
-        if rating == 2 {
-            c.ease = (c.ease - 0.15).max(1.3);
-        }
-        if rating == 4 {
-            c.ease += 0.15;
-        }
-        c.reps += 1;
-        c.due = now + c.interval * DAY_MS;
-    }
-
-    c
-}
-
 pub struct SrsRepository;
 
 impl SrsRepository {
@@ -175,7 +92,7 @@ impl SrsRepository {
         direction: &str,
     ) -> AppResult<Option<SrsCard>> {
         let mut stmt = conn.prepare(
-            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at
+            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review
              FROM srs_cards
              WHERE deck_id = ?1 AND item_id = ?2 AND direction = ?3",
         )?;
@@ -194,6 +111,9 @@ impl SrsRepository {
                 reps: row.get(8)?,
                 lapses: row.get(9)?,
                 updated_at: Some(row.get(10)?),
+                stability: row.get(11)?,
+                difficulty: row.get(12)?,
+                last_review: row.get(13)?,
             }))
         } else {
             Ok(None)
@@ -214,10 +134,13 @@ impl SrsRepository {
         let item_id = card.item_id.as_deref().unwrap_or("");
         let direction = card.direction.as_deref().unwrap_or("fwd");
         let updated_at = card.updated_at.unwrap_or(review_time);
+        let stability = card.stability.unwrap_or(0.0);
+        let difficulty = card.difficulty.unwrap_or(5.0);
+        let last_review = card.last_review.unwrap_or(review_time);
 
         tx.execute(
-            "INSERT INTO srs_cards (deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            "INSERT INTO srs_cards (deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
              ON CONFLICT(deck_id, item_id, direction) DO UPDATE SET
                state = excluded.state,
                step = excluded.step,
@@ -226,7 +149,10 @@ impl SrsRepository {
                due = excluded.due,
                reps = excluded.reps,
                lapses = excluded.lapses,
-               updated_at = excluded.updated_at",
+               updated_at = excluded.updated_at,
+               stability = excluded.stability,
+               difficulty = excluded.difficulty,
+               last_review = excluded.last_review",
             params![
                 deck_id,
                 item_id,
@@ -239,6 +165,9 @@ impl SrsRepository {
                 card.reps,
                 card.lapses,
                 updated_at,
+                stability,
+                difficulty,
+                last_review,
             ],
         )?;
 
@@ -267,7 +196,7 @@ impl SrsRepository {
         limit: u32,
     ) -> AppResult<Vec<SrsCard>> {
         let mut stmt = conn.prepare(
-            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at
+            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review
              FROM srs_cards
              WHERE deck_id = ?1 AND (state IN ('learning', 'relearning') OR (state = 'review' AND due <= ?2))
              ORDER BY due ASC
@@ -287,6 +216,42 @@ impl SrsRepository {
                 reps: row.get(8)?,
                 lapses: row.get(9)?,
                 updated_at: Some(row.get(10)?),
+                stability: row.get(11)?,
+                difficulty: row.get(12)?,
+                last_review: row.get(13)?,
+            })
+        })?;
+
+        let mut result = Vec::new();
+        for r in rows {
+            result.push(r?);
+        }
+        Ok(result)
+    }
+
+    pub fn get_deck_cards(conn: &Connection, deck_id: &str) -> AppResult<Vec<SrsCard>> {
+        let mut stmt = conn.prepare(
+            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review
+             FROM srs_cards
+             WHERE deck_id = ?1",
+        )?;
+
+        let rows = stmt.query_map(params![deck_id], |row| {
+            Ok(SrsCard {
+                deck_id: Some(row.get(0)?),
+                item_id: Some(row.get(1)?),
+                direction: Some(row.get(2)?),
+                state: row.get(3)?,
+                step: row.get(4)?,
+                ease: row.get(5)?,
+                interval: row.get(6)?,
+                due: row.get(7)?,
+                reps: row.get(8)?,
+                lapses: row.get(9)?,
+                updated_at: Some(row.get(10)?),
+                stability: row.get(11)?,
+                difficulty: row.get(12)?,
+                last_review: row.get(13)?,
             })
         })?;
 
@@ -491,7 +456,7 @@ impl SrsRepository {
     pub fn export_progress_data(conn: &Connection) -> AppResult<Value> {
         let mut cards_map = serde_json::Map::new();
         let mut stmt = conn.prepare(
-            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at
+            "SELECT deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review
              FROM srs_cards",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -499,7 +464,7 @@ impl SrsRepository {
             let item_id: String = row.get(1)?;
             let direction: String = row.get(2)?;
             let key = format!("{deck_id}:{item_id}:{direction}");
-            let card_obj = serde_json::json!({
+            let mut card_obj = serde_json::json!({
                 "state": row.get::<_, String>(3)?,
                 "step": row.get::<_, i64>(4)?,
                 "ease": row.get::<_, f64>(5)?,
@@ -509,6 +474,15 @@ impl SrsRepository {
                 "lapses": row.get::<_, i64>(9)?,
                 "updatedAt": row.get::<_, i64>(10)?,
             });
+            if let Ok(Some(s)) = row.get::<_, Option<f64>>(11) {
+                card_obj["stability"] = serde_json::json!(s);
+            }
+            if let Ok(Some(d)) = row.get::<_, Option<f64>>(12) {
+                card_obj["difficulty"] = serde_json::json!(d);
+            }
+            if let Ok(Some(lr)) = row.get::<_, Option<i64>>(13) {
+                card_obj["lastReview"] = serde_json::json!(lr);
+            }
             Ok((key, card_obj))
         })?;
 
@@ -591,8 +565,8 @@ impl SrsRepository {
 
         if let Some(cards) = data.get("cards").and_then(|c| c.as_object()) {
             let mut stmt = tx.prepare(
-                "INSERT INTO srs_cards (deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                "INSERT INTO srs_cards (deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses, updated_at, stability, difficulty, last_review)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
                  ON CONFLICT(deck_id, item_id, direction) DO UPDATE SET
                    state = excluded.state,
                    step = excluded.step,
@@ -601,7 +575,10 @@ impl SrsRepository {
                    due = excluded.due,
                    reps = excluded.reps,
                    lapses = excluded.lapses,
-                   updated_at = excluded.updated_at",
+                   updated_at = excluded.updated_at,
+                   stability = excluded.stability,
+                   difficulty = excluded.difficulty,
+                   last_review = excluded.last_review",
             )?;
 
             for (key, card) in cards {
@@ -627,10 +604,23 @@ impl SrsRepository {
                     .or_else(|| card.get("lastReviewed"))
                     .and_then(|u| u.as_i64())
                     .unwrap_or(now);
+                let stability = card
+                    .get("stability")
+                    .and_then(|s| s.as_f64())
+                    .unwrap_or(0.0);
+                let difficulty = card
+                    .get("difficulty")
+                    .and_then(|d| d.as_f64())
+                    .unwrap_or(5.0);
+                let last_review = card
+                    .get("lastReview")
+                    .or_else(|| card.get("last_review"))
+                    .and_then(|lr| lr.as_i64())
+                    .unwrap_or(0);
 
                 stmt.execute(params![
                     deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses,
-                    updated_at
+                    updated_at, stability, difficulty, last_review
                 ])?;
                 cards_count += 1;
             }

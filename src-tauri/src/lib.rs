@@ -4,6 +4,7 @@ pub mod db;
 pub mod error;
 pub mod paths;
 pub mod services;
+pub mod srs;
 pub mod state;
 
 use paths::AppPaths;
@@ -28,9 +29,11 @@ pub fn run() {
         Ok(mut conn) => {
             // Chạy migration tự động nếu có progress.json cũ từ Electron
             let _ = db::migration::migrate_legacy_progress(&mut conn, &paths.user_data_dir);
-            // Chạy migration cây thư mục
-            let _ =
-                db::migration_folders::migrate_to_folders(&mut conn, &paths.default_library_dir);
+            // Chạy migration cây thư mục vật lý cũ một lần duy nhất
+            let _ = db::migration_folders::migrate_to_folders_once(
+                &mut conn,
+                &paths.default_library_dir,
+            );
             AppState {
                 paths,
                 db: std::sync::Mutex::new(Some(conn)),
@@ -154,12 +157,15 @@ pub fn run() {
             commands::folder::folder_rename,
             commands::folder::folder_move,
             commands::folder::folder_delete,
+            commands::folder::folder_reorder,
             commands::folder::folder_get_tree,
             commands::folder::deck_move,
             commands::folder::deck_link,
             commands::folder::deck_unlink,
             commands::folder::deck_get_locations,
             // SRS commands
+            commands::srs::srs_plan_session,
+            commands::srs::srs_grade_answer,
             commands::srs::srs_get_deck_summary,
             commands::srs::srs_get_due_items,
             commands::srs::srs_record_review,

@@ -10,6 +10,7 @@ export const ARRAY_CHANNELS = new Set([
   'draft:list',
   'backup:list',
   'srs:getDueItems',
+  'srs:planSession',
   'folder:getTree',
   'deck:getLocations',
 ]);
@@ -76,6 +77,7 @@ export const CHANNEL_TO_COMMAND = {
   'folder:rename': 'folder_rename',
   'folder:move': 'folder_move',
   'folder:delete': 'folder_delete',
+  'folder:reorder': 'folder_reorder',
   'folder:getTree': 'folder_get_tree',
   'deck:move': 'deck_move',
   'deck:link': 'deck_link',
@@ -83,6 +85,8 @@ export const CHANNEL_TO_COMMAND = {
   'deck:getLocations': 'deck_get_locations',
 
   // SRS
+  'srs:planSession': 'srs_plan_session',
+  'srs:gradeAnswer': 'srs_grade_answer',
   'srs:getDeckSummary': 'srs_get_deck_summary',
   'srs:getDueItems': 'srs_get_due_items',
   'srs:recordReview': 'srs_record_review',

@@ -1,6 +1,6 @@
 [package]
 name = "turtle-deck"
-version = "0.2.4"
+version = "0.3.0"
 description = "Ứng dụng học tập offline bằng flashcard và trắc nghiệm"
 authors = ["Viet15t12 <quocviet15t12@gmail.com>"]
 license = "MIT"
@@ -32,6 +32,7 @@ dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 tokio = { version = "1", features = ["full"] }
 log = "0.4"
+regex = "1"
 
 [profile.release]
 opt-level = "s"

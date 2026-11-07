@@ -197,7 +197,14 @@ impl DeckRepository {
             })
             .unwrap_or(0);
 
-        let tx = conn.transaction()?;
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+
+        if let Some(fp) = file_path {
+            tx.execute(
+                "UPDATE decks SET file_path = NULL WHERE file_path = ?1 AND id <> ?2",
+                params![fp, deck_id],
+            )?;
+        }
 
         tx.execute(
             "INSERT INTO decks (id, file_path, title, kind, lang, description, version, deck_hash, created_at, updated_at)
@@ -223,6 +230,15 @@ impl DeckRepository {
                 created_at,
                 updated_at,
             ],
+        )?;
+
+        // Bất biến 1: Mỗi bộ thẻ trong decks có đúng một hàng vị trí chính (is_link = 0), tạo trong cùng transaction
+        let loc_id = uuid::Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO deck_locations (id, deck_id, folder_id, is_link, created_at)
+             VALUES (?1, ?2, NULL, 0, ?3)
+             ON CONFLICT(deck_id) WHERE is_link = 0 DO NOTHING",
+            params![loc_id, deck_id, now],
         )?;
 
         if !changed {
@@ -420,7 +436,7 @@ impl DeckRepository {
     }
 
     pub fn delete_deck(conn: &mut Connection, deck_id: &str) -> AppResult<()> {
-        let tx = conn.transaction()?;
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         tx.execute("DELETE FROM decks WHERE id = ?1", params![deck_id])?;
         tx.execute("DELETE FROM items WHERE deck_id = ?1", params![deck_id])?;
         let _ = tx.execute("DELETE FROM items_fts WHERE deck_id = ?1", params![deck_id]);
@@ -431,5 +447,26 @@ impl DeckRepository {
         tx.execute("DELETE FROM match_records WHERE deck_id = ?1", params![deck_id])?;
         tx.commit()?;
         Ok(())
+    }
+
+    /// Khi file .sdeck bị xóa khỏi đĩa: xóa hẳn hàng `decks` -> `deck_locations` và `items` bị cascade xóa theo.
+    pub fn remove_deck_by_file_path(
+        conn: &mut Connection,
+        file_path: &str,
+    ) -> AppResult<Option<String>> {
+        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        let deck_id: Option<String> = tx
+            .query_row(
+                "SELECT id FROM decks WHERE file_path = ?1 LIMIT 1",
+                params![file_path],
+                |row| row.get(0),
+            )
+            .ok();
+
+        if let Some(ref did) = deck_id {
+            tx.execute("DELETE FROM decks WHERE id = ?1", params![did])?;
+        }
+        tx.commit()?;
+        Ok(deck_id)
     }
 }

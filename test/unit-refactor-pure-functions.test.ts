@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 
 import { selectSubfolders, selectDecks } from '../src/views/home/query.js';
 import { canMoveFolderInto } from '../src/views/home/dnd.js';
+// @ts-ignore
+import { createFolderStore, formatFolderError } from '../src/views/home/folder-store.js';
 import { gradeAnswer } from '../src/views/session/submit.js';
 import { validateSettingsForm } from '../src/views/settings/form-state.js';
 import { planApplyResult } from '../src/app/entries.js';
@@ -208,3 +210,75 @@ test('entries: planApplyResult phát hiện trùng meta.id và lập kế hoạc
   assert.equal(updatePlan.targetEntry?.uid, 1);
   assert.ok(updatePlan.toClose.includes('key-1'));
 });
+
+test('folderStore & query: đồng bộ deckIdsByFolderId cho cả vị trí chính và liên kết (is_link)', async () => {
+  const f1: Folder = { id: 'f1', name: 'Toán', parentId: null, path: 'Toán', depth: 0, createdAt: 0, updatedAt: 0 };
+  const f2: Folder = { id: 'f2', name: 'Vật lý', parentId: null, path: 'Vật lý', depth: 0, createdAt: 0, updatedAt: 0 };
+
+  const store = createFolderStore();
+  store.setStateForTest({
+    folders: [f1, f2],
+    locations: [
+      { id: 'loc-1', deckId: 'd1', folderId: 'f1', isLink: false, createdAt: 1 },
+      { id: 'loc-2', deckId: 'd1', folderId: 'f2', isLink: true, createdAt: 2 },
+      { id: 'loc-3', deckId: 'd2', folderId: null, isLink: false, createdAt: 3 },
+    ],
+  });
+
+  assert.equal(store.locationsByDeckId.get('d1'), 'f1');
+  assert.equal(store.locationsByDeckId.get('d2'), null);
+  assert.equal(store.primaryLocationByDeckId.get('d1')?.folderId, 'f1');
+  assert.equal(store.primaryLocationByDeckId.get('d2')?.folderId, null);
+  assert.equal(store.deckIdsByFolderId.get('f1')?.has('d1'), true);
+  assert.equal(store.deckIdsByFolderId.get('f2')?.has('d1'), true);
+  assert.equal(store.deckIdsByFolderId.get(null)?.has('d2'), true);
+
+  const entry1: Entry = {
+    uid: 1,
+    path: '/path/d1.sdeck',
+    status: 'ok',
+    deck: { meta: { id: 'd1', title: 'Giải tích' }, items: [] },
+    issues: [],
+  };
+  const entry2: Entry = {
+    uid: 2,
+    path: '/path/d2.sdeck',
+    status: 'ok',
+    deck: { meta: { id: 'd2', title: 'Cơ bản' }, items: [] },
+    issues: [],
+  };
+
+  // Kiểm tra selectDecks tại f2 bao gồm cả bộ thẻ liên kết d1
+  const decksInF2 = selectDecks({
+    entries: [entry1, entry2],
+    flatFolders: store.flatFolders,
+    locationsByDeckId: store.locationsByDeckId,
+    deckIdsByFolderId: store.deckIdsByFolderId,
+    selectedFolderId: 'f2',
+    filterKind: 'all',
+    searchQuery: '',
+    sortBy: 'title',
+    statsByUid: new Map(),
+    stripAccents,
+    kindOf,
+    findFolder: id => store.findFolder(id),
+  });
+  assert.equal(decksInF2.length, 1);
+  assert.equal(decksInF2[0].deck?.meta.id, 'd1');
+
+  // Khi move d1 sang f2, liên kết cũ ở f2 bị gộp thành 1 dòng chính duy nhất
+  store.applyDeckMoved('d1', 'f2', { id: 'loc-1', deckId: 'd1', folderId: 'f2', isLink: false, createdAt: 1 });
+  assert.equal(store.deckLocations.filter((l: any) => l.deckId === 'd1').length, 1);
+  assert.equal(store.locationsByDeckId.get('d1'), 'f2');
+  assert.equal(store.deckIdsByFolderId.get('f1')?.has('d1') ?? false, false);
+  assert.equal(store.deckIdsByFolderId.get('f2')?.has('d1'), true);
+
+  // Khi xóa f2, d1 (vị trí chính) tự động về gốc (null)
+  store.applyFolderDeleted('f2', ['d1']);
+  assert.equal(store.locationsByDeckId.get('d1'), null);
+  assert.equal(store.deckIdsByFolderId.get(null)?.has('d1'), true);
+
+  // Kiểm tra thông báo lỗi chuẩn hóa theo mã lỗi
+  assert.ok(formatFolderError({ code: 'AlreadyInFolder' }).includes('đã có mặt'));
+});
+

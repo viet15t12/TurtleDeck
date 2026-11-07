@@ -1,9 +1,9 @@
-// src-tauri/src/commands/folder.rs — Quản lý thư mục cây phân cấp và vị trí bộ thẻ
+// src-tauri/src/commands/folder.rs — Quản lý thư mục cây phân cấp ảo và vị trí bộ thẻ
 use crate::error::AppResult;
 use crate::services::{deck_location_service, folder_service};
 use crate::state::AppState;
 use serde_json::Value;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 #[tauri::command]
 pub async fn folder_create(
@@ -11,9 +11,8 @@ pub async fn folder_create(
     name: String,
     parent_id: Option<String>,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
     let folder = state.with_db(|conn| {
-        folder_service::create_folder(conn, Some(&lib_dir), &name, parent_id.as_deref())
+        folder_service::create_folder(conn, None, &name, parent_id.as_deref())
     })?;
     Ok(serde_json::json!({ "ok": true, "folder": folder }))
 }
@@ -24,10 +23,9 @@ pub async fn folder_rename(
     id: String,
     new_name: String,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    state
-        .with_db_mut(|conn| folder_service::rename_folder(conn, Some(&lib_dir), &id, &new_name))?;
-    Ok(serde_json::json!({ "ok": true }))
+    let folder =
+        state.with_db_mut(|conn| folder_service::rename_folder(conn, None, &id, &new_name))?;
+    Ok(serde_json::json!({ "ok": true, "folder": folder }))
 }
 
 #[tauri::command]
@@ -36,17 +34,32 @@ pub async fn folder_move(
     id: String,
     new_parent_id: Option<String>,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    state.with_db_mut(|conn| {
-        folder_service::move_folder(conn, Some(&lib_dir), &id, new_parent_id.as_deref())
+    let folder = state.with_db_mut(|conn| {
+        folder_service::move_folder(conn, None, &id, new_parent_id.as_deref())
     })?;
-    Ok(serde_json::json!({ "ok": true }))
+    Ok(serde_json::json!({ "ok": true, "folder": folder }))
 }
 
 #[tauri::command]
 pub async fn folder_delete(state: State<'_, AppState>, id: String) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    state.with_db_mut(|conn| folder_service::delete_folder(conn, Some(&lib_dir), &id))?;
+    let affected_deck_ids =
+        state.with_db_mut(|conn| folder_service::delete_folder(conn, None, &id))?;
+    Ok(serde_json::json!({
+        "ok": true,
+        "deletedFolderId": id,
+        "affectedDeckIds": affected_deck_ids,
+    }))
+}
+
+#[tauri::command]
+pub async fn folder_reorder(
+    state: State<'_, AppState>,
+    parent_id: Option<String>,
+    ordered_ids: Vec<String>,
+) -> AppResult<Value> {
+    state.with_db_mut(|conn| {
+        folder_service::reorder_folders(conn, parent_id.as_deref(), &ordered_ids)
+    })?;
     Ok(serde_json::json!({ "ok": true }))
 }
 
@@ -62,37 +75,49 @@ pub async fn folder_get_tree(state: State<'_, AppState>) -> AppResult<Vec<Value>
 
 #[tauri::command]
 pub async fn deck_move(
+    app: AppHandle,
     state: State<'_, AppState>,
     deck_id: String,
     new_folder_id: Option<String>,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    state.with_db(|conn| {
-        deck_location_service::move_deck(conn, Some(&lib_dir), &deck_id, new_folder_id.as_deref())
+    let location = state.with_db(|conn| {
+        deck_location_service::move_deck(conn, None, &deck_id, new_folder_id.as_deref())
     })?;
-    Ok(serde_json::json!({ "ok": true }))
+    let _ = app.emit(
+        "deck:moved",
+        serde_json::json!({
+            "deckId": deck_id,
+            "newFolderId": location.folder_id,
+            "location": location,
+        }),
+    );
+    Ok(serde_json::json!({ "ok": true, "location": location }))
 }
 
 #[tauri::command]
 pub async fn deck_link(
+    app: AppHandle,
     state: State<'_, AppState>,
     deck_id: String,
     target_folder_id: Option<String>,
 ) -> AppResult<Value> {
-    let lib_dir = state.get_active_library_dir();
-    state.with_db(|conn| {
-        deck_location_service::link_deck(
-            conn,
-            Some(&lib_dir),
-            &deck_id,
-            target_folder_id.as_deref(),
-        )
+    let location = state.with_db(|conn| {
+        deck_location_service::link_deck(conn, None, &deck_id, target_folder_id.as_deref())
     })?;
-    Ok(serde_json::json!({ "ok": true }))
+    let _ = app.emit(
+        "deck:linked",
+        serde_json::json!({
+            "deckId": deck_id,
+            "targetFolderId": location.folder_id,
+            "location": location,
+        }),
+    );
+    Ok(serde_json::json!({ "ok": true, "location": location }))
 }
 
 #[tauri::command]
 pub async fn deck_unlink(
+    app: AppHandle,
     state: State<'_, AppState>,
     location_id: String,
     delete_file: Option<bool>,
@@ -100,7 +125,13 @@ pub async fn deck_unlink(
     state.with_db(|conn| {
         deck_location_service::unlink_deck(conn, &location_id, delete_file.unwrap_or(false))
     })?;
-    Ok(serde_json::json!({ "ok": true }))
+    let _ = app.emit(
+        "deck:unlinked",
+        serde_json::json!({
+            "locationId": location_id,
+        }),
+    );
+    Ok(serde_json::json!({ "ok": true, "locationId": location_id }))
 }
 
 #[tauri::command]

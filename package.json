@@ -2,7 +2,7 @@
   "name": "turtle-deck",
   "productName": "Turtle Deck",
   "desktopName": "turtle-deck.desktop",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
   "scripts": {
     "test": "node --import ./tools/register-test-hooks.mjs --test",

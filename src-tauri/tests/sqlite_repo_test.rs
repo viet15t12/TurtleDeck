@@ -12,7 +12,11 @@ fn test_database_init_pragma_and_schema() {
     let user_version: i32 = conn
         .pragma_query_value(None, "user_version", |row| row.get(0))
         .expect("Lấy user_version");
-    assert_eq!(user_version, 1, "user_version phải là 1");
+    assert_eq!(
+        user_version,
+        turtle_deck_lib::db::schema::CURRENT_SCHEMA_VERSION,
+        "user_version phải khớp CURRENT_SCHEMA_VERSION"
+    );
 
     let mut stmt = conn
         .prepare("SELECT name FROM sqlite_master WHERE type='table'")
@@ -106,6 +110,9 @@ fn test_deck_repository_sync_hash_fts_query_and_item_removal() {
         reps: 1,
         lapses: 0,
         updated_at: Some(now),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
 
     SrsRepository::record_review(&mut conn, &card, 3, now, 1200, false).unwrap();
@@ -210,6 +217,9 @@ fn test_deck_repository_delete_deck_cascades_and_clears_progress() {
         reps: 1,
         lapses: 0,
         updated_at: Some(now),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
     SrsRepository::record_review(&mut conn, &card, 3, now, 1000, false).unwrap();
 

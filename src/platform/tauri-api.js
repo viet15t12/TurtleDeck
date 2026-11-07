@@ -61,14 +61,15 @@ export async function invokeTyped(channel, data) {
   try {
     return await rawInvoke(command, args);
   } catch (err) {
-    const errorMsg = err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
-    console.warn(`[Tauri IPC] ${channel} -> ${command} error:`, errorMsg);
+    const errorCode = err?.code || null;
+    const errorMsg = err?.error || err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+    console.warn(`[Tauri IPC] ${channel} -> ${command} error:`, errorCode, errorMsg);
 
     // Kênh mảng trả [] thay vì ném lỗi để tránh crash renderer (theo Issue 12)
     if (ARRAY_CHANNELS.has(channel)) {
       return [];
     }
-    return { ok: false, error: errorMsg };
+    return { ok: false, code: errorCode, error: errorMsg };
   }
 }
 
@@ -114,6 +115,8 @@ export const api = {
   queryItems: (params) => invokeTyped('deck:queryItems', params),
 
   // SRS Typed
+  planSession: (params) => invokeTyped('srs:planSession', params),
+  gradeAnswer: (params) => invokeTyped('srs:gradeAnswer', params),
   getDeckSummary: (deckId, now) => invokeTyped('srs:getDeckSummary', { deckId, now }),
   getDueItems: (deckId, limit, now) => invokeTyped('srs:getDueItems', { deckId, limit, now }),
   recordReview: (params) => invokeTyped('srs:recordReview', params),
@@ -188,6 +191,7 @@ export const api = {
   renameFolder: (id, newName) => invokeTyped('folder:rename', { id, newName }),
   moveFolder: (id, newParentId = null) => invokeTyped('folder:move', { id, newParentId }),
   deleteFolder: (id) => invokeTyped('folder:delete', { id }),
+  reorderFolders: (parentId, orderedIds) => invokeTyped('folder:reorder', { parentId, orderedIds }),
   getFolderTree: () => invokeTyped('folder:getTree', undefined),
   moveDeck: (deckId, newFolderId = null) => invokeTyped('deck:move', { deckId, newFolderId }),
   linkDeck: (deckId, targetFolderId = null) => invokeTyped('deck:link', { deckId, targetFolderId }),

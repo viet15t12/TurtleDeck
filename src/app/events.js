@@ -72,10 +72,13 @@ export function registerEvents(actions) {
     }
   });
 
-  api.onFileRemoved?.(({ path: filePath }) => {
-    const entry = state.entries.find(e => samePath(e.path, filePath));
-    if (entry) {
-      entry.status = 'missing';
+  api.onFileRemoved?.(async ({ path: filePath, deckId }) => {
+    const idx = state.entries.findIndex(
+      e => (deckId && e.deck?.meta?.id === deckId) || samePath(e.path, filePath)
+    );
+    if (idx !== -1) {
+      state.entries.splice(idx, 1);
+      await persistDeckPaths();
       render();
     }
   });
@@ -84,25 +87,16 @@ export function registerEvents(actions) {
     render();
   });
 
-  api.onDeckMoved?.(async data => {
-    if (data?.deckId && data?.filePath) {
-      const entry = state.entries.find(
-        e => (e.deck?.meta?.id && e.deck.meta.id === data.deckId) || samePath(e.path, data.filePath)
-      );
-      if (entry) {
-        entry.path = data.filePath;
-        entry.status = 'ok';
-      }
-    }
-    await actions.scanLibrary();
+  api.onDeckMoved?.(() => {
+    render();
   });
 
   api.onDeckLinked?.(() => {
-    actions.scanLibrary();
+    render();
   });
 
   api.onDeckUnlinked?.(() => {
-    actions.scanLibrary();
+    render();
   });
 }
 

@@ -1,8 +1,10 @@
 // src-tauri/src/commands/srs.rs — Các thao tác thuật toán lặp lại ngắt quãng (SRS) và đánh dấu thẻ
 use crate::db::migration::rating_to_number;
 use crate::db::repositories::deck::DeckRepository;
-use crate::db::repositories::srs::{schedule_card, SrsCard, SrsRepository};
+use crate::db::repositories::srs::{SrsCard, SrsRepository};
 use crate::error::AppResult;
+use crate::srs::adaptive_planner::{plan_adaptive_session, PlannedCardItem, PlannerConfig};
+use crate::srs::fsrs::schedule_fsrs;
 use crate::state::AppState;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -66,6 +68,32 @@ pub async fn srs_get_due_items(
 }
 
 #[tauri::command]
+pub async fn srs_plan_session(
+    state: State<'_, AppState>,
+    deck_id: String,
+    config: Option<PlannerConfig>,
+    items: Option<Vec<Value>>,
+    now: Option<i64>,
+) -> AppResult<Vec<PlannedCardItem>> {
+    let now_ts = now.unwrap_or_else(current_time_ms);
+    let mut cfg = config.unwrap_or_default();
+    if cfg.deck_id.is_none() {
+        cfg.deck_id = Some(deck_id.clone());
+    }
+
+    let planned = state.with_db(|conn| {
+        let deck_items = match items {
+            Some(its) if !its.is_empty() => its,
+            _ => DeckRepository::get_items(conn, &deck_id)?,
+        };
+        let cards = SrsRepository::get_deck_cards(conn, &deck_id)?;
+        Ok(plan_adaptive_session(&deck_items, &cards, &cfg, now_ts))
+    })?;
+
+    Ok(planned)
+}
+
+#[tauri::command]
 pub async fn srs_record_review(
     state: State<'_, AppState>,
     deck_id: String,
@@ -77,7 +105,7 @@ pub async fn srs_record_review(
     let now = current_time_ms();
     let rating_num = rating_to_number(&rating);
 
-    let next_card = state.with_db_mut(|conn| {
+    let (next_card, previews) = state.with_db_mut(|conn| {
         let existing = SrsRepository::get_card(conn, &deck_id, &item_id, &direction)?
             .unwrap_or_else(|| SrsCard {
                 deck_id: Some(deck_id.clone()),
@@ -91,20 +119,86 @@ pub async fn srs_record_review(
                 reps: 0,
                 lapses: 0,
                 updated_at: Some(now),
+                stability: None,
+                difficulty: None,
+                last_review: None,
             });
 
         let is_new = existing.state == "new";
-        let mut next = schedule_card(&existing, rating_num, now, None);
+        let mut next = schedule_fsrs(&existing, rating_num, now, 0.9, true);
         next.updated_at = Some(now);
         next.deck_id = Some(deck_id.clone());
         next.item_id = Some(item_id.clone());
         next.direction = Some(direction.clone());
 
         SrsRepository::record_review(conn, &next, rating_num, now, elapsed_ms as i64, is_new)?;
-        Ok(next)
+
+        let preview_intervals = serde_json::json!({
+            "1": schedule_fsrs(&existing, 1, now, 0.9, false).interval,
+            "2": schedule_fsrs(&existing, 2, now, 0.9, false).interval,
+            "3": schedule_fsrs(&existing, 3, now, 0.9, false).interval,
+            "4": schedule_fsrs(&existing, 4, now, 0.9, false).interval,
+        });
+
+        Ok((next, preview_intervals))
     })?;
 
-    Ok(serde_json::json!({ "ok": true, "card": next_card }))
+    Ok(serde_json::json!({
+        "ok": true,
+        "card": next_card,
+        "previews": previews,
+    }))
+}
+
+#[tauri::command]
+pub async fn srs_grade_answer(
+    input: Value,
+    answers: Value,
+    mode: Option<String>,
+    tolerance: Option<f64>,
+) -> AppResult<Value> {
+    let mode_str = mode.unwrap_or_else(|| "normalized".to_string());
+
+    if mode_str == "choice" || mode_str == "choices" || mode_str == "single" || mode_str == "multi" {
+        let selected: Vec<i64> = if let Some(arr) = input.as_array() {
+            arr.iter().filter_map(|v| v.as_i64()).collect()
+        } else if let Some(n) = input.as_i64() {
+            vec![n]
+        } else {
+            Vec::new()
+        };
+        let correct: Vec<i64> = if let Some(arr) = answers.as_array() {
+            arr.iter()
+                .filter_map(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+                .collect()
+        } else if let Some(n) = answers.as_i64() {
+            vec![n]
+        } else {
+            Vec::new()
+        };
+        let res = crate::srs::grader::grade_choices(&selected, &correct);
+        return Ok(serde_json::to_value(res)?);
+    }
+
+    let input_str = if let Some(s) = input.as_str() {
+        s.to_string()
+    } else {
+        input.to_string().trim_matches('"').to_string()
+    };
+
+    let ans_vec: Vec<String> = if let Some(arr) = answers.as_array() {
+        arr.iter()
+            .map(|v| v.as_str().unwrap_or(&v.to_string()).to_string())
+            .collect()
+    } else if let Some(s) = answers.as_str() {
+        vec![s.to_string()]
+    } else {
+        vec![answers.to_string()]
+    };
+    let ans_refs: Vec<&str> = ans_vec.iter().map(|s| s.as_str()).collect();
+
+    let res = crate::srs::grader::grade_text(&input_str, &ans_refs, &mode_str, tolerance);
+    Ok(serde_json::to_value(res)?)
 }
 
 #[tauri::command]

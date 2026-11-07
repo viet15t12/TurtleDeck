@@ -1,6 +1,7 @@
 // src/views/home/navigation.js — Điều hướng lịch sử Back/Forward kiểu Nautilus và các nút bấm
 
 import { h } from '../dom.js';
+import { savePref } from './ui-state.js';
 
 export function createNavigation(ctx) {
   const { ui, refresh } = ctx;
@@ -19,6 +20,7 @@ export function createNavigation(ctx) {
       }
     }
     ui.selectedFolderId = folderId;
+    savePref('homeUi.selectedFolderId', folderId === null ? 'root' : folderId);
     updateNavButtons();
     refresh.breadcrumb();
     refresh.sidebar();

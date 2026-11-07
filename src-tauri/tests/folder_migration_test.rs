@@ -55,6 +55,19 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
     create_mock_sdeck(&lpic_file, &lpic_deck);
     create_mock_sdeck(&jap_file, &jap_deck);
 
+    #[cfg(unix)]
+    {
+        // Valid symlink inside Languages/Japanese pointing to lpic101.sdeck
+        std::os::unix::fs::symlink(&lpic_file, lib_dir.join("Languages/Japanese/lpic-link.sdeck"))
+            .unwrap();
+        // Broken symlink inside LPIC
+        std::os::unix::fs::symlink(
+            lib_dir.join("non-existent.sdeck"),
+            lib_dir.join("LPIC/broken-link.sdeck"),
+        )
+        .unwrap();
+    }
+
     let mut conn = open_in_memory().unwrap();
 
     // 1. Đồng bộ decks
@@ -76,6 +89,9 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
         reps: 1,
         lapses: 0,
         updated_at: Some(now),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
     SrsRepository::record_review(&mut conn, &card_lpic, 3, now, 2500, true).unwrap();
 
@@ -83,7 +99,7 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
     let res = migrate_to_folders(&mut conn, &lib_dir);
     assert!(res.ok);
     assert!(res.folders_created >= 3); // LPIC, 101, Languages, Japanese
-    assert_eq!(res.locations_created, 3); // 3 bộ thẻ
+    assert!(res.locations_created >= 3); // 3 bộ thẻ + symlink
 
     // 4. Kiểm tra cấu trúc folders trong DB
     let f_lpic = FolderRepository::get_folder_by_path(&conn, "LPIC")
@@ -97,10 +113,25 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
     assert_eq!(f_101.depth, 1);
     assert_eq!(f_101.parent_id.as_deref(), Some(&f_lpic.id[..]));
 
+    let f_jap = FolderRepository::get_folder_by_path(&conn, "Languages/Japanese")
+        .unwrap()
+        .unwrap();
+
     // 5. Kiểm tra vị trí deck_locations
     let loc_lpic = DeckLocationRepository::get_locations_by_deck(&conn, "deck-lpic").unwrap();
-    assert_eq!(loc_lpic.len(), 1);
-    assert_eq!(loc_lpic[0].folder_id.as_deref(), Some(&f_101.id[..]));
+    #[cfg(unix)]
+    {
+        assert_eq!(loc_lpic.len(), 2);
+        let primary = loc_lpic.iter().find(|l| !l.is_link).unwrap();
+        assert_eq!(primary.folder_id.as_deref(), Some(&f_101.id[..]));
+        let link = loc_lpic.iter().find(|l| l.is_link).unwrap();
+        assert_eq!(link.folder_id.as_deref(), Some(&f_jap.id[..]));
+    }
+    #[cfg(not(unix))]
+    {
+        assert_eq!(loc_lpic.len(), 1);
+        assert_eq!(loc_lpic[0].folder_id.as_deref(), Some(&f_101.id[..]));
+    }
 
     let loc_root = DeckLocationRepository::get_locations_by_deck(&conn, "deck-root").unwrap();
     assert_eq!(loc_root.len(), 1);

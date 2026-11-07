@@ -7,6 +7,7 @@ export interface HomeUiState {
   searchQuery: string;
   sortBy: 'due' | 'recent' | 'title';
   selectedFolderId: 'all' | string | null;
+  expandedFolderIds: string[];
   viewMode: 'grid' | 'list';
   sidebarOpen: boolean;
   pinnedFolderIds: string[];
@@ -18,6 +19,8 @@ export function loadHomeUiState(): HomeUiState {
   let viewMode: 'grid' | 'list' = 'grid';
   let sidebarOpen = true;
   let pinnedFolderIds: string[] = [];
+  let selectedFolderId: 'all' | string | null = 'all';
+  let expandedFolderIds: string[] = [];
 
   if (typeof localStorage !== 'undefined') {
     try {
@@ -32,17 +35,31 @@ export function loadHomeUiState(): HomeUiState {
       const pinned = localStorage.getItem('turtle_pinned_folders');
       if (pinned) pinnedFolderIds = JSON.parse(pinned);
     } catch {}
+    try {
+      const sel = localStorage.getItem('homeUi.selectedFolderId');
+      if (sel !== null) {
+        selectedFolderId = sel === 'root' || sel === '' ? null : sel;
+      }
+    } catch {}
+    try {
+      const exp = localStorage.getItem('homeUi.expandedFolderIds');
+      if (exp) {
+        const parsed = JSON.parse(exp);
+        if (Array.isArray(parsed)) expandedFolderIds = parsed;
+      }
+    } catch {}
   }
 
   return {
     filterKind: 'all',
     searchQuery: '',
     sortBy: 'due',
-    selectedFolderId: 'all',
+    selectedFolderId,
+    expandedFolderIds,
     viewMode,
     sidebarOpen,
     pinnedFolderIds,
-    history: ['all'],
+    history: [selectedFolderId],
     historyIndex: 0,
   };
 }
@@ -56,4 +73,3 @@ export function savePref(key: string, value: string): void {
     } catch {}
   }
 }
-

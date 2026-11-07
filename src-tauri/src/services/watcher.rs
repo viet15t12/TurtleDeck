@@ -1,13 +1,37 @@
 // src-tauri/src/services/watcher.rs — Theo dõi thay đổi của các file .sdeck trong thư viện bằng notify
+use crate::db::repositories::deck::DeckRepository;
+use crate::error::AppResult;
 use crate::services::package_store::{read_package, PackageStore};
+use crate::state::AppState;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use serde_json::json;
+use rusqlite::Connection;
+use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+
+/// Đồng bộ DB khi Watcher phát hiện file .sdeck bị xóa khỏi đĩa:
+/// Xóa hẳn hàng `decks` -> `deck_locations` và `items` bị cascade xóa theo (không còn hàng mồ côi).
+pub fn handle_watcher_file_removed(conn: &mut Connection, path: &Path) -> AppResult<Option<String>> {
+    let path_str = path.to_string_lossy().to_string();
+    DeckRepository::remove_deck_by_file_path(conn, &path_str)
+}
+
+/// Đồng bộ DB khi Watcher phát hiện file .sdeck mới hoặc xuất hiện lại cùng `meta.id`:
+/// - Bộ thẻ mới: tạo hàng `decks` và hàng vị trí chính (`folder_id = NULL`) trong cùng transaction.
+/// - Bộ thẻ đã có cùng `meta.id`: cập nhật đường dẫn `file_path` của hàng `decks`, giữ nguyên `deck_locations`.
+pub fn handle_watcher_file_added_or_changed(
+    conn: &mut Connection,
+    path: &Path,
+    deck: &Value,
+) -> AppResult<()> {
+    let path_str = path.to_string_lossy().to_string();
+    DeckRepository::sync_deck(conn, deck, Some(&path_str))?;
+    Ok(())
+}
 
 pub struct AppWatcher {
     app: AppHandle,
@@ -73,15 +97,6 @@ impl AppWatcher {
                 None => continue,
             };
 
-            // Nếu là thư mục mới
-            if path.is_dir() && !filename.starts_with('.') {
-                let _ = self.app.emit(
-                    "folder:changed",
-                    json!({ "action": "sync", "path": path.to_string_lossy() }),
-                );
-                continue;
-            }
-
             if !filename.to_lowercase().ends_with(".sdeck")
                 || filename.ends_with(".tmp")
                 || filename.ends_with(".bak")
@@ -113,9 +128,20 @@ impl AppWatcher {
                 tokio::time::sleep(Duration::from_millis(300)).await;
 
                 if matches!(kind, EventKind::Remove(_)) || !target_path.exists() {
+                    let mut removed_deck_id = None;
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        if let Ok(did) = state.with_db_mut(|conn| {
+                            handle_watcher_file_removed(conn, &target_path)
+                        }) {
+                            removed_deck_id = did;
+                        }
+                    }
                     let _ = app_handle.emit(
                         "deck:fileRemoved",
-                        json!({ "path": target_path.to_string_lossy() }),
+                        json!({
+                            "path": target_path.to_string_lossy(),
+                            "deckId": removed_deck_id,
+                        }),
                     );
                     return;
                 }
@@ -162,6 +188,12 @@ impl AppWatcher {
                         return;
                     }
                 };
+
+                if let Some(state) = app_handle.try_state::<AppState>() {
+                    let _ = state.with_db_mut(|conn| {
+                        handle_watcher_file_added_or_changed(conn, &target_path, &deck)
+                    });
+                }
 
                 let total = deck
                     .get("items")

@@ -1,8 +1,8 @@
-// src-tauri/src/db/repositories/folder.rs — Quản lý cấu trúc cây thư mục trong SQLite
+// src-tauri/src/db/repositories/folder.rs — Quản lý cấu trúc cây thư mục ảo trong SQLite
 use crate::error::{AppError, AppResult};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +11,7 @@ pub struct Folder {
     pub id: String,
     pub name: String,
     pub parent_id: Option<String>,
+    pub sort_order: i64,
     pub path: String,
     pub depth: i64,
     pub created_at: i64,
@@ -19,26 +20,147 @@ pub struct Folder {
     pub children: Option<Vec<Folder>>,
 }
 
+/// Chuẩn hóa định danh thư mục: `""`, `"all"`, `"root"` (và `None`) -> `None` (Thư mục gốc).
+pub fn normalize_folder_id(s: Option<&str>) -> Option<String> {
+    match s {
+        None => None,
+        Some(raw) => {
+            let trimmed = raw.trim();
+            if trimmed.is_empty()
+                || trimmed.eq_ignore_ascii_case("all")
+                || trimmed.eq_ignore_ascii_case("root")
+            {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }
+    }
+}
+
+/// Thực thi closure trong một transaction `BEGIN IMMEDIATE` (hoặc `SAVEPOINT` nếu đã ở trong transaction).
+pub fn with_immediate_tx<T, F>(conn: &Connection, f: F) -> AppResult<T>
+where
+    F: FnOnce() -> AppResult<T>,
+{
+    if conn.is_autocommit() {
+        conn.execute_batch("BEGIN IMMEDIATE;")?;
+        match f() {
+            Ok(val) => {
+                conn.execute_batch("COMMIT;")?;
+                Ok(val)
+            }
+            Err(err) => {
+                let _ = conn.execute_batch("ROLLBACK;");
+                Err(err)
+            }
+        }
+    } else {
+        conn.execute_batch("SAVEPOINT sp_virtual_folder;")?;
+        match f() {
+            Ok(val) => {
+                conn.execute_batch("RELEASE SAVEPOINT sp_virtual_folder;")?;
+                Ok(val)
+            }
+            Err(err) => {
+                let _ = conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT sp_virtual_folder; RELEASE SAVEPOINT sp_virtual_folder;",
+                );
+                Err(err)
+            }
+        }
+    }
+}
+
+fn now_millis() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64
+}
+
 pub struct FolderRepository;
 
 impl FolderRepository {
+    pub fn exists(conn: &Connection, id: &str) -> AppResult<bool> {
+        let found: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM folders WHERE id = ?1)",
+                params![id],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+        Ok(found)
+    }
+
+    /// Truy vấn dùng chung để lấy cây con (kể cả chính nó).
+    pub fn get_subtree_ids(conn: &Connection, id: &str) -> AppResult<Vec<String>> {
+        let mut stmt = conn.prepare(
+            "WITH RECURSIVE subtree(id) AS (
+               SELECT id FROM folders WHERE id = ?1
+               UNION ALL
+               SELECT f.id FROM folders f JOIN subtree s ON f.parent_id = s.id
+             )
+             SELECT id FROM subtree",
+        )?;
+        let rows = stmt.query_map(params![id], |row| row.get::<_, String>(0))?;
+        let mut ids = Vec::new();
+        for r in rows {
+            ids.push(r?);
+        }
+        Ok(ids)
+    }
+
+    fn compute_path_and_depth(conn: &Connection, id: &str) -> AppResult<(String, i64)> {
+        let mut stmt = conn.prepare(
+            "WITH RECURSIVE ancestors(id, parent_id, name, lvl) AS (
+               SELECT id, parent_id, name, 0 FROM folders WHERE id = ?1
+               UNION ALL
+               SELECT f.id, f.parent_id, f.name, a.lvl + 1
+               FROM folders f JOIN ancestors a ON f.id = a.parent_id
+             )
+             SELECT name FROM ancestors ORDER BY lvl DESC",
+        )?;
+        let names: Vec<String> = stmt
+            .query_map(params![id], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        if names.is_empty() {
+            Ok((String::new(), 0))
+        } else {
+            let depth = (names.len() - 1) as i64;
+            let path = names.join("/");
+            Ok((path, depth))
+        }
+    }
+
     pub fn get_folder_by_id(conn: &Connection, id: &str) -> AppResult<Option<Folder>> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, parent_id, path, depth, created_at, updated_at
+            "SELECT id, name, parent_id, sort_order, created_at, updated_at
              FROM folders
              WHERE id = ?1",
         )?;
 
         let mut rows = stmt.query(params![id])?;
         if let Some(row) = rows.next()? {
+            let folder_id: String = row.get(0)?;
+            let name: String = row.get(1)?;
+            let parent_id: Option<String> = row.get(2)?;
+            let sort_order: i64 = row.get(3)?;
+            let created_at: i64 = row.get(4)?;
+            let updated_at: i64 = row.get(5)?;
+            drop(rows);
+            drop(stmt);
+
+            let (path, depth) = Self::compute_path_and_depth(conn, &folder_id)?;
             Ok(Some(Folder {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                parent_id: row.get(2)?,
-                path: row.get(3)?,
-                depth: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                id: folder_id,
+                name,
+                parent_id,
+                sort_order,
+                path,
+                depth,
+                created_at,
+                updated_at,
                 children: None,
             }))
         } else {
@@ -47,90 +169,84 @@ impl FolderRepository {
     }
 
     pub fn get_folder_by_path(conn: &Connection, path: &str) -> AppResult<Option<Folder>> {
-        let mut stmt = conn.prepare(
-            "SELECT id, name, parent_id, path, depth, created_at, updated_at
-             FROM folders
-             WHERE path = ?1",
-        )?;
+        let segments: Vec<&str> = path
+            .split('/')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if segments.is_empty() {
+            return Ok(None);
+        }
 
-        let mut rows = stmt.query(params![path])?;
-        if let Some(row) = rows.next()? {
-            Ok(Some(Folder {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                parent_id: row.get(2)?,
-                path: row.get(3)?,
-                depth: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                children: None,
-            }))
+        let mut current_parent: Option<String> = None;
+        let mut current_id: Option<String> = None;
+
+        for seg in segments {
+            let next_id: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM folders
+                     WHERE COALESCE(parent_id, '') = COALESCE(?1, '')
+                       AND name = ?2 COLLATE NOCASE
+                     LIMIT 1",
+                    params![current_parent, seg],
+                    |row| row.get(0),
+                )
+                .ok();
+            match next_id {
+                Some(id) => {
+                    current_parent = Some(id.clone());
+                    current_id = Some(id);
+                }
+                None => return Ok(None),
+            }
+        }
+
+        if let Some(id) = current_id {
+            Self::get_folder_by_id(conn, &id)
         } else {
             Ok(None)
         }
     }
 
     pub fn get_children(conn: &Connection, parent_id: Option<&str>) -> AppResult<Vec<Folder>> {
-        let mut result = Vec::new();
-        if let Some(pid) = parent_id {
-            let mut stmt = conn.prepare(
-                "SELECT id, name, parent_id, path, depth, created_at, updated_at
-                 FROM folders
-                 WHERE parent_id = ?1
-                 ORDER BY name COLLATE NOCASE ASC",
-            )?;
-            let rows = stmt.query_map(params![pid], |row| {
-                Ok(Folder {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    parent_id: row.get(2)?,
-                    path: row.get(3)?,
-                    depth: row.get(4)?,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                    children: None,
-                })
-            })?;
-            for r in rows {
-                result.push(r?);
-            }
-        } else {
-            let mut stmt = conn.prepare(
-                "SELECT id, name, parent_id, path, depth, created_at, updated_at
-                 FROM folders
-                 WHERE parent_id IS NULL
-                 ORDER BY name COLLATE NOCASE ASC",
-            )?;
-            let rows = stmt.query_map([], |row| {
-                Ok(Folder {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    parent_id: row.get(2)?,
-                    path: row.get(3)?,
-                    depth: row.get(4)?,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                    children: None,
-                })
-            })?;
-            for r in rows {
-                result.push(r?);
-            }
+        let norm_parent = normalize_folder_id(parent_id);
+        let mut stmt = conn.prepare(
+            "SELECT id, name, parent_id, sort_order, created_at, updated_at
+             FROM folders
+             WHERE COALESCE(parent_id, '') = COALESCE(?1, '')
+             ORDER BY sort_order ASC, name COLLATE NOCASE ASC",
+        )?;
+
+        let raw_rows: Vec<(String, String, Option<String>, i64, i64, i64)> = stmt
+            .query_map(params![norm_parent], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        drop(stmt);
+
+        let mut result = Vec::with_capacity(raw_rows.len());
+        for (id, name, pid, sort_order, created_at, updated_at) in raw_rows {
+            let (path, depth) = Self::compute_path_and_depth(conn, &id)?;
+            result.push(Folder {
+                id,
+                name,
+                parent_id: pid,
+                sort_order,
+                path,
+                depth,
+                created_at,
+                updated_at,
+                children: None,
+            });
         }
         Ok(result)
-    }
-
-    pub fn validate_depth(conn: &Connection, parent_id: Option<&str>) -> AppResult<bool> {
-        if let Some(pid) = parent_id {
-            let parent = Self::get_folder_by_id(conn, pid)?;
-            if let Some(p) = parent {
-                Ok(p.depth < 9)
-            } else {
-                Ok(false)
-            }
-        } else {
-            Ok(true)
-        }
     }
 
     pub fn create_folder(
@@ -143,307 +259,361 @@ impl FolderRepository {
             return Err(AppError::Custom("Tên thư mục không được để trống.".into()));
         }
 
-        let mut depth = 0;
-        let mut folder_path = clean_name.to_string();
+        let norm_parent = normalize_folder_id(parent_id);
 
-        if let Some(pid) = parent_id {
-            let parent = Self::get_folder_by_id(conn, pid)?.ok_or_else(|| {
-                AppError::Custom(format!("Thư mục cha có id \"{pid}\" không tồn tại."))
-            })?;
-
-            if parent.depth >= 9 {
-                return Err(AppError::Custom(
-                    "Đã đạt giới hạn tối đa 10 cấp thư mục.".into(),
-                ));
+        with_immediate_tx(conn, || {
+            if let Some(ref pid) = norm_parent {
+                if !Self::exists(conn, pid)? {
+                    return Err(AppError::FolderNotFound(pid.clone()));
+                }
             }
 
-            depth = parent.depth + 1;
-            folder_path = format!("{}/{clean_name}", parent.path);
-        }
+            let conflict: bool = conn
+                .query_row(
+                    "SELECT EXISTS(
+                       SELECT 1 FROM folders
+                       WHERE COALESCE(parent_id, '') = COALESCE(?1, '')
+                         AND name = ?2 COLLATE NOCASE
+                     )",
+                    params![norm_parent, clean_name],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+            if conflict {
+                return Err(AppError::FolderNameConflict(clean_name.to_string()));
+            }
 
-        if Self::get_folder_by_path(conn, &folder_path)?.is_some() {
-            return Err(AppError::Custom(format!(
-                "Thư mục với đường dẫn \"{folder_path}\" đã tồn tại."
-            )));
-        }
+            let sort_order: i64 = conn
+                .query_row(
+                    "SELECT COALESCE(MAX(sort_order), -1) + 1
+                     FROM folders
+                     WHERE COALESCE(parent_id, '') = COALESCE(?1, '')",
+                    params![norm_parent],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
 
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
-        let id = Uuid::new_v4().to_string();
+            let now = now_millis();
+            let id = Uuid::new_v4().to_string();
 
-        conn.execute(
-            "INSERT INTO folders (id, name, parent_id, path, depth, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![id, clean_name, parent_id, folder_path, depth, now, now],
-        )?;
+            conn.execute(
+                "INSERT INTO folders (id, parent_id, name, sort_order, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, norm_parent, clean_name, sort_order, now, now],
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::SqliteFailure(err, _)
+                    if err.code == rusqlite::ErrorCode::ConstraintViolation =>
+                {
+                    AppError::FolderNameConflict(clean_name.to_string())
+                }
+                other => AppError::Database(other),
+            })?;
 
-        Ok(Folder {
-            id,
-            name: clean_name.to_string(),
-            parent_id: parent_id.map(|s| s.to_string()),
-            path: folder_path,
-            depth,
-            created_at: now,
-            updated_at: now,
-            children: None,
+            let (path, depth) = Self::compute_path_and_depth(conn, &id)?;
+
+            Ok(Folder {
+                id,
+                name: clean_name.to_string(),
+                parent_id: norm_parent,
+                sort_order,
+                path,
+                depth,
+                created_at: now,
+                updated_at: now,
+                children: None,
+            })
         })
     }
 
-    pub fn rename_folder(conn: &mut Connection, id: &str, new_name: &str) -> AppResult<()> {
+    pub fn rename_folder(conn: &Connection, id: &str, new_name: &str) -> AppResult<Folder> {
         let clean_name = new_name.trim();
         if clean_name.is_empty() {
             return Err(AppError::Custom("Tên thư mục không được để trống.".into()));
         }
 
-        let folder = Self::get_folder_by_id(conn, id)?
-            .ok_or_else(|| AppError::Custom(format!("Thư mục có id \"{id}\" không tồn tại.")))?;
+        with_immediate_tx(conn, || {
+            let folder = Self::get_folder_by_id(conn, id)?
+                .ok_or_else(|| AppError::FolderNotFound(id.to_string()))?;
 
-        if folder.name == clean_name {
-            return Ok(());
-        }
-
-        let mut new_path = clean_name.to_string();
-        if let Some(ref pid) = folder.parent_id {
-            if let Some(parent) = Self::get_folder_by_id(conn, pid)? {
-                new_path = format!("{}/{clean_name}", parent.path);
+            let conflict: bool = conn
+                .query_row(
+                    "SELECT EXISTS(
+                       SELECT 1 FROM folders
+                       WHERE COALESCE(parent_id, '') = COALESCE(?1, '')
+                         AND name = ?2 COLLATE NOCASE
+                         AND id <> ?3
+                     )",
+                    params![folder.parent_id, clean_name, id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+            if conflict {
+                return Err(AppError::FolderNameConflict(clean_name.to_string()));
             }
-        }
 
-        if let Some(existing) = Self::get_folder_by_path(conn, &new_path)? {
-            if existing.id != id {
-                return Err(AppError::Custom(format!(
-                    "Thư mục với đường dẫn \"{new_path}\" đã tồn tại."
-                )));
-            }
-        }
+            let now = now_millis();
+            conn.execute(
+                "UPDATE folders SET name = ?1, updated_at = ?2 WHERE id = ?3",
+                params![clean_name, now, id],
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::SqliteFailure(err, _)
+                    if err.code == rusqlite::ErrorCode::ConstraintViolation =>
+                {
+                    AppError::FolderNameConflict(clean_name.to_string())
+                }
+                other => AppError::Database(other),
+            })?;
 
-        let old_path = folder.path;
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
-
-        let tx = conn.transaction()?;
-
-        tx.execute(
-            "UPDATE folders SET name = ?1, path = ?2, updated_at = ?3 WHERE id = ?4",
-            params![clean_name, new_path, now, id],
-        )?;
-
-        let old_prefix = format!("{old_path}/");
-        let new_prefix = format!("{new_path}/");
-
-        let mut stmt = tx.prepare("SELECT id, path FROM folders WHERE path LIKE ?1")?;
-        let descendants: Vec<(String, String)> = stmt
-            .query_map(params![format!("{old_prefix}%")], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let mut update_desc =
-            tx.prepare("UPDATE folders SET path = ?1, updated_at = ?2 WHERE id = ?3")?;
-        for (desc_id, desc_path) in descendants {
-            let updated_desc_path = format!("{new_prefix}{}", &desc_path[old_prefix.len()..]);
-            update_desc.execute(params![updated_desc_path, now, desc_id])?;
-        }
-
-        drop(update_desc);
-        drop(stmt);
-        tx.commit()?;
-        Ok(())
+            Self::get_folder_by_id(conn, id)?
+                .ok_or_else(|| AppError::FolderNotFound(id.to_string()))
+        })
     }
 
     pub fn move_folder(
-        conn: &mut Connection,
+        conn: &Connection,
         id: &str,
         new_parent_id: Option<&str>,
-    ) -> AppResult<()> {
-        let folder = Self::get_folder_by_id(conn, id)?
-            .ok_or_else(|| AppError::Custom(format!("Thư mục có id \"{id}\" không tồn tại.")))?;
+    ) -> AppResult<Folder> {
+        let norm_parent = normalize_folder_id(new_parent_id);
 
-        if folder.parent_id.as_deref() == new_parent_id {
-            return Ok(());
-        }
+        with_immediate_tx(conn, || {
+            let folder = Self::get_folder_by_id(conn, id)?
+                .ok_or_else(|| AppError::FolderNotFound(id.to_string()))?;
 
-        if let Some(pid) = new_parent_id {
-            if pid == id {
-                return Err(AppError::Custom(
-                    "Không thể di chuyển thư mục vào chính nó.".into(),
-                ));
+            if let Some(ref pid) = norm_parent {
+                if pid == id {
+                    return Err(AppError::FolderCycle(id.to_string()));
+                }
+                if !Self::exists(conn, pid)? {
+                    return Err(AppError::FolderNotFound(pid.clone()));
+                }
+                // Chống chu trình: new_parent_id không được nằm trong subtree(id)
+                let in_subtree: bool = conn
+                    .query_row(
+                        "WITH RECURSIVE subtree(id) AS (
+                           SELECT id FROM folders WHERE id = ?1
+                           UNION ALL
+                           SELECT f.id FROM folders f JOIN subtree s ON f.parent_id = s.id
+                         )
+                         SELECT EXISTS(SELECT 1 FROM subtree WHERE id = ?2)",
+                        params![id, pid],
+                        |row| row.get(0),
+                    )
+                    .unwrap_or(false);
+                if in_subtree {
+                    return Err(AppError::FolderCycle(id.to_string()));
+                }
             }
-        }
 
-        let (new_depth, new_path) = if let Some(pid) = new_parent_id {
-            let new_parent = Self::get_folder_by_id(conn, pid)?.ok_or_else(|| {
-                AppError::Custom(format!("Thư mục cha đích có id \"{pid}\" không tồn tại."))
+            // Nếu new_parent_id bằng cha hiện tại -> no-op
+            if folder.parent_id == norm_parent {
+                return Ok(folder);
+            }
+
+            // Kiểm tra trùng tên trong cha mới
+            let conflict: bool = conn
+                .query_row(
+                    "SELECT EXISTS(
+                       SELECT 1 FROM folders
+                       WHERE COALESCE(parent_id, '') = COALESCE(?1, '')
+                         AND name = ?2 COLLATE NOCASE
+                         AND id <> ?3
+                     )",
+                    params![norm_parent, folder.name, id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+            if conflict {
+                return Err(AppError::FolderNameConflict(folder.name));
+            }
+
+            let sort_order: i64 = conn
+                .query_row(
+                    "SELECT COALESCE(MAX(sort_order), -1) + 1
+                     FROM folders
+                     WHERE COALESCE(parent_id, '') = COALESCE(?1, '')",
+                    params![norm_parent],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            let now = now_millis();
+            conn.execute(
+                "UPDATE folders SET parent_id = ?1, sort_order = ?2, updated_at = ?3 WHERE id = ?4",
+                params![norm_parent, sort_order, now, id],
+            )
+            .map_err(|e| match e {
+                rusqlite::Error::SqliteFailure(err, _)
+                    if err.code == rusqlite::ErrorCode::ConstraintViolation =>
+                {
+                    AppError::FolderNameConflict(folder.name)
+                }
+                other => AppError::Database(other),
             })?;
 
-            let old_prefix = format!("{}/", folder.path);
-            if new_parent.path == folder.path || new_parent.path.starts_with(&old_prefix) {
+            Self::get_folder_by_id(conn, id)?
+                .ok_or_else(|| AppError::FolderNotFound(id.to_string()))
+        })
+    }
+
+    /// Xóa thư mục và cây con trong 1 transaction theo đúng thứ tự:
+    /// 1. Lấy `subtree(id)`.
+    /// 2. Đưa vị trí chính (`is_link = 0`) trong subtree về gốc (`folder_id = NULL`).
+    /// 3. Xóa các liên kết (`is_link = 1`) trong subtree.
+    /// 4. Xóa `folders WHERE id = ?` (cascade xóa các thư mục con).
+    /// Trả về danh sách `deck_id` bị ảnh hưởng.
+    pub fn delete_folder(conn: &Connection, id: &str) -> AppResult<Vec<String>> {
+        with_immediate_tx(conn, || {
+            if !Self::exists(conn, id)? {
+                return Err(AppError::FolderNotFound(id.to_string()));
+            }
+
+            // 1. Lấy danh sách deck_id bị ảnh hưởng trong subtree(id)
+            let affected_deck_ids: Vec<String> = {
+                let mut stmt = conn.prepare(
+                    "WITH RECURSIVE subtree(id) AS (
+                       SELECT id FROM folders WHERE id = ?1
+                       UNION ALL
+                       SELECT f.id FROM folders f JOIN subtree s ON f.parent_id = s.id
+                     )
+                     SELECT DISTINCT deck_id
+                     FROM deck_locations
+                     WHERE folder_id IN (SELECT id FROM subtree)
+                     ORDER BY deck_id ASC",
+                )?;
+                let rows = stmt.query_map(params![id], |row| row.get::<_, String>(0))?;
+                rows.collect::<Result<Vec<_>, _>>()?
+            };
+
+            // 2. Đưa vị trí chính trong nhánh bị xóa về gốc (phải làm trước bước 4)
+            conn.execute(
+                "WITH RECURSIVE subtree(id) AS (
+                   SELECT id FROM folders WHERE id = ?1
+                   UNION ALL
+                   SELECT f.id FROM folders f JOIN subtree s ON f.parent_id = s.id
+                 )
+                 UPDATE deck_locations
+                 SET folder_id = NULL
+                 WHERE is_link = 0 AND folder_id IN (SELECT id FROM subtree)",
+                params![id],
+            )?;
+
+            // 3. Xóa các liên kết trong nhánh bị xóa
+            conn.execute(
+                "WITH RECURSIVE subtree(id) AS (
+                   SELECT id FROM folders WHERE id = ?1
+                   UNION ALL
+                   SELECT f.id FROM folders f JOIN subtree s ON f.parent_id = s.id
+                 )
+                 DELETE FROM deck_locations
+                 WHERE is_link = 1 AND folder_id IN (SELECT id FROM subtree)",
+                params![id],
+            )?;
+
+            // 4. Xóa thư mục từ lá lên gốc để tránh giới hạn SQLITE_MAX_TRIGGER_DEPTH (1000)
+            // của ON DELETE CASCADE khi cây sâu hàng nghìn cấp
+            let subtree_ids = Self::get_subtree_ids(conn, id)?;
+            {
+                let mut del_stmt = conn.prepare("DELETE FROM folders WHERE id = ?1")?;
+                for sub_id in subtree_ids.iter().rev() {
+                    del_stmt.execute(params![sub_id])?;
+                }
+            }
+
+            Ok(affected_deck_ids)
+        })
+    }
+
+    /// Cập nhật `sort_order` cho các thư mục cùng cha; `ordered_ids` phải đúng bằng tập con trực tiếp hiện có.
+    pub fn reorder_folders(
+        conn: &Connection,
+        parent_id: Option<&str>,
+        ordered_ids: &[String],
+    ) -> AppResult<()> {
+        let norm_parent = normalize_folder_id(parent_id);
+
+        with_immediate_tx(conn, || {
+            if let Some(ref pid) = norm_parent {
+                if !Self::exists(conn, pid)? {
+                    return Err(AppError::FolderNotFound(pid.clone()));
+                }
+            }
+
+            let existing_ids: Vec<String> = {
+                let mut stmt = conn.prepare(
+                    "SELECT id FROM folders WHERE COALESCE(parent_id, '') = COALESCE(?1, '')",
+                )?;
+                let rows = stmt.query_map(params![norm_parent], |row| row.get::<_, String>(0))?;
+                rows.collect::<Result<Vec<_>, _>>()?
+            };
+
+            if ordered_ids.len() != existing_ids.len() {
                 return Err(AppError::Custom(
-                    "Không thể di chuyển thư mục vào bên trong thư mục con cháu của nó.".into(),
+                    "Danh sách thư mục sắp xếp không khớp số lượng tập con trực tiếp.".into(),
                 ));
             }
 
-            (
-                new_parent.depth + 1,
-                format!("{}/{}", new_parent.path, folder.name),
-            )
-        } else {
-            (0, folder.name.clone())
-        };
+            let existing_set: HashSet<&str> = existing_ids.iter().map(|s| s.as_str()).collect();
+            let ordered_set: HashSet<&str> = ordered_ids.iter().map(|s| s.as_str()).collect();
+            if existing_set != ordered_set || ordered_set.len() != ordered_ids.len() {
+                return Err(AppError::Custom(
+                    "Danh sách thư mục sắp xếp phải đúng bằng tập con trực tiếp hiện có.".into(),
+                ));
+            }
 
-        // Kiểm tra độ sâu tối đa <= 9 cho toàn bộ cây con cháu
-        let old_prefix = format!("{}/", folder.path);
-        let descendants: Vec<(String, String, i64)> = {
+            let now = now_millis();
             let mut stmt =
-                conn.prepare("SELECT id, path, depth FROM folders WHERE path LIKE ?1")?;
-            let rows = stmt
-                .query_map(params![format!("{old_prefix}%")], |row| {
-                    Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-                })?
-                .collect::<Result<Vec<_>, _>>()?;
-            rows
-        };
-
-        let mut max_subtree_depth = folder.depth;
-        for (_, _, d) in &descendants {
-            if *d > max_subtree_depth {
-                max_subtree_depth = *d;
+                conn.prepare("UPDATE folders SET sort_order = ?1, updated_at = ?2 WHERE id = ?3")?;
+            for (idx, fid) in ordered_ids.iter().enumerate() {
+                stmt.execute(params![idx as i64, now, fid])?;
             }
-        }
 
-        let subtree_height = max_subtree_depth - folder.depth;
-        if new_depth + subtree_height > 9 {
-            return Err(AppError::Custom(
-                "Không thể di chuyển vì sẽ vượt quá giới hạn tối đa 10 cấp thư mục.".into(),
-            ));
-        }
-
-        if let Some(existing) = Self::get_folder_by_path(conn, &new_path)? {
-            if existing.id != id {
-                return Err(AppError::Custom(format!(
-                    "Thư mục với đường dẫn \"{new_path}\" đã tồn tại ở vị trí đích."
-                )));
-            }
-        }
-
-        let depth_diff = new_depth - folder.depth;
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as i64;
-
-        let tx = conn.transaction()?;
-
-        tx.execute(
-            "UPDATE folders SET parent_id = ?1, depth = ?2, path = ?3, updated_at = ?4 WHERE id = ?5",
-            params![new_parent_id, new_depth, new_path, now, id],
-        )?;
-
-        let new_prefix = format!("{new_path}/");
-        let mut update_desc = tx.prepare(
-            "UPDATE folders SET path = ?1, depth = depth + ?2, updated_at = ?3 WHERE id = ?4",
-        )?;
-
-        for (desc_id, desc_path, _) in descendants {
-            let updated_desc_path = format!("{new_prefix}{}", &desc_path[old_prefix.len()..]);
-            update_desc.execute(params![updated_desc_path, depth_diff, now, desc_id])?;
-        }
-
-        drop(update_desc);
-        tx.commit()?;
-        Ok(())
-    }
-
-    pub fn delete_folder(conn: &mut Connection, id: &str) -> AppResult<()> {
-        let folder = match Self::get_folder_by_id(conn, id)? {
-            Some(f) => f,
-            None => return Ok(()),
-        };
-
-        let old_prefix = format!("{}/", folder.path);
-        let desc_ids: Vec<String> = {
-            let mut stmt = conn.prepare("SELECT id FROM folders WHERE path LIKE ?1")?;
-            let ids = stmt
-                .query_map(params![format!("{old_prefix}%")], |row| row.get(0))?
-                .collect::<Result<Vec<_>, _>>()?;
-            ids
-        };
-
-        let mut folder_ids_to_delete = vec![id.to_string()];
-        folder_ids_to_delete.extend(desc_ids);
-
-        let tx = conn.transaction()?;
-
-        for f_id in folder_ids_to_delete {
-            tx.execute(
-                "DELETE FROM deck_locations WHERE folder_id = ?1",
-                params![f_id],
-            )?;
-        }
-
-        tx.execute("DELETE FROM folders WHERE id = ?1", params![id])?;
-
-        tx.commit()?;
-        Ok(())
+            Ok(())
+        })
     }
 
     pub fn get_folder_tree(conn: &Connection) -> AppResult<Vec<Folder>> {
         let all = Self::get_all_folders(conn)?;
-        let mut map: HashMap<String, Folder> = HashMap::new();
+        let mut children_map: HashMap<String, Vec<Folder>> = HashMap::new();
         let mut roots: Vec<Folder> = Vec::new();
 
-        for mut f in all {
-            f.children = Some(Vec::new());
-            map.insert(f.id.clone(), f);
-        }
-
-        let mut parent_to_children: HashMap<String, Vec<Folder>> = HashMap::new();
-        let mut root_ids = Vec::new();
-
-        for f in map.values() {
-            if let Some(ref pid) = f.parent_id {
-                parent_to_children
-                    .entry(pid.clone())
-                    .or_default()
-                    .push(f.clone());
-            } else {
-                root_ids.push(f.id.clone());
-            }
-        }
-
-        fn assemble_tree(folder: &mut Folder, parent_to_children: &HashMap<String, Vec<Folder>>) {
-            if let Some(children) = parent_to_children.get(&folder.id) {
-                let mut sorted_children = children.clone();
-                sorted_children.sort_by_key(|a| a.name.to_lowercase());
-                for child in &mut sorted_children {
-                    assemble_tree(child, parent_to_children);
-                }
-                folder.children = Some(sorted_children);
+        // Duyệt ngược từ độ sâu lớn nhất về 0 để lắp ráp cây không đệ quy call stack (hỗ trợ hàng nghìn cấp)
+        for mut folder in all.into_iter().rev() {
+            if let Some(mut ch) = children_map.remove(&folder.id) {
+                ch.reverse();
+                folder.children = Some(ch);
             } else {
                 folder.children = Some(Vec::new());
             }
-        }
 
-        for rid in root_ids {
-            if let Some(mut root_f) = map.remove(&rid) {
-                assemble_tree(&mut root_f, &parent_to_children);
-                roots.push(root_f);
+            if let Some(ref pid) = folder.parent_id {
+                children_map.entry(pid.clone()).or_default().push(folder);
+            } else {
+                roots.push(folder);
             }
         }
 
-        roots.sort_by_key(|a| a.name.to_lowercase());
+        roots.reverse();
         Ok(roots)
     }
 
     pub fn get_all_folders(conn: &Connection) -> AppResult<Vec<Folder>> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, parent_id, path, depth, created_at, updated_at
-             FROM folders
-             ORDER BY depth ASC, name COLLATE NOCASE ASC",
+            "WITH RECURSIVE folder_tree(id, name, parent_id, sort_order, created_at, updated_at, path, depth) AS (
+               SELECT id, name, parent_id, sort_order, created_at, updated_at, name AS path, 0 AS depth
+               FROM folders
+               WHERE parent_id IS NULL
+               UNION ALL
+               SELECT f.id, f.name, f.parent_id, f.sort_order, f.created_at, f.updated_at,
+                      ft.path || '/' || f.name AS path, ft.depth + 1 AS depth
+               FROM folders f
+               JOIN folder_tree ft ON f.parent_id = ft.id
+             )
+             SELECT id, name, parent_id, sort_order, path, depth, created_at, updated_at
+             FROM folder_tree
+             ORDER BY depth ASC, sort_order ASC, name COLLATE NOCASE ASC",
         )?;
 
         let rows = stmt.query_map([], |row| {
@@ -451,10 +621,11 @@ impl FolderRepository {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 parent_id: row.get(2)?,
-                path: row.get(3)?,
-                depth: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                sort_order: row.get(3)?,
+                path: row.get(4)?,
+                depth: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
                 children: None,
             })
         })?;

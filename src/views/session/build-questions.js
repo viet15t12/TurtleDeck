@@ -4,6 +4,13 @@ import { planSession } from '../../core/planner.js';
 import { buildSessionQuestions } from '../../core/builder.js';
 
 export function createQuestions({ entry, config, progress, settings }) {
+  if (Array.isArray(config?.plannedQuestions) && config.plannedQuestions.length > 0) {
+    return config.plannedQuestions;
+  }
+  if (Array.isArray(config?.questions) && config.questions.length > 0) {
+    return config.questions;
+  }
+
   const isSrsMode = config.mode === 'srs';
   const deckKind = entry.deck.meta?.kind;
   const learnSteps = settings?.learnSteps;

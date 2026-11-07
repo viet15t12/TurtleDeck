@@ -25,6 +25,9 @@ fn test_stats_overall_streak_across_midnight_in_asia_saigon() {
         reps: 1,
         lapses: 0,
         updated_at: Some(day1_ts),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
 
     SrsRepository::record_review(&mut conn, &card, 3, day1_ts, 1200, false).unwrap();
@@ -67,6 +70,9 @@ fn test_stats_daily_activity_retention_and_leeches() {
         reps: 10,
         lapses: 9, // Leech!
         updated_at: Some(now),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
 
     let card2 = SrsCard {
@@ -81,6 +87,9 @@ fn test_stats_daily_activity_retention_and_leeches() {
         reps: 5,
         lapses: 2, // Not a leech (threshold 8)
         updated_at: Some(now),
+        stability: None,
+        difficulty: None,
+        last_review: None,
     };
 
     SrsRepository::record_review(&mut conn, &card1, 1, now - 86_400_000, 2000, false).unwrap(); // Again

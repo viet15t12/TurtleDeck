@@ -1,6 +1,7 @@
-// src/views/home/folder-actions.js — Xử lý các tác vụ thư mục (Tạo, Đổi tên, Di chuyển, Xoá)
+// src/views/home/folder-actions.js — Xử lý các tác vụ thư mục ảo (Tạo, Đổi tên, Di chuyển, Xoá)
 
 import { openFolderModal } from '../components/foldermenu.js';
+import { formatFolderError } from './folder-store.js';
 
 export function createFolderActionHandler(ctx) {
   const { folderStore, refresh, nav, ui } = ctx;
@@ -12,8 +13,15 @@ export function createFolderActionHandler(ctx) {
         folder,
         onConfirm: async name => {
           const res = await window.api?.createFolder(name, folder?.id || null);
-          if (res && !res.ok) throw new Error(res.error);
-          await refresh.folders();
+          if (res && !res.ok) throw new Error(formatFolderError(res));
+          if (res?.folder) {
+            folderStore.applyFolderCreated(res.folder);
+            refresh.breadcrumb?.();
+            refresh.sidebar?.();
+            refresh.cards?.();
+          } else {
+            await refresh.folders();
+          }
         },
       });
     } else if (actionType === 'rename') {
@@ -22,8 +30,11 @@ export function createFolderActionHandler(ctx) {
         folder,
         onConfirm: async newName => {
           const res = await window.api?.renameFolder(folder.id, newName);
-          if (res && !res.ok) throw new Error(res.error);
-          await refresh.folders();
+          if (res && !res.ok) throw new Error(formatFolderError(res));
+          folderStore.applyFolderRenamed(folder.id, newName, res?.folder);
+          refresh.breadcrumb?.();
+          refresh.sidebar?.();
+          refresh.cards?.();
         },
       });
     } else if (actionType === 'move') {
@@ -33,8 +44,11 @@ export function createFolderActionHandler(ctx) {
         folders: folderStore.flatFolders,
         onConfirm: async newParentId => {
           const res = await window.api?.moveFolder(folder.id, newParentId);
-          if (res && !res.ok) throw new Error(res.error);
-          await refresh.folders();
+          if (res && !res.ok) throw new Error(formatFolderError(res));
+          folderStore.applyFolderMoved(folder.id, newParentId, res?.folder);
+          refresh.breadcrumb?.();
+          refresh.sidebar?.();
+          refresh.cards?.();
         },
       });
     } else if (actionType === 'delete') {
@@ -42,16 +56,19 @@ export function createFolderActionHandler(ctx) {
         type: 'delete',
         folder,
         onConfirm: async () => {
+          const wasSelectedInSubtree = folderStore.isDescendantOrSelf(ui.selectedFolderId, folder.id);
           const res = await window.api?.deleteFolder(folder.id);
-          if (res && !res.ok) throw new Error(res.error);
-          if (ui.selectedFolderId === folder.id) {
-            nav.navigateToFolder(folder.parentId || null);
+          if (res && !res.ok) throw new Error(formatFolderError(res));
+          folderStore.applyFolderDeleted(folder.id, res?.affectedDeckIds || []);
+          if (wasSelectedInSubtree) {
+            nav.navigateToFolder('all');
           } else {
-            await refresh.folders();
+            refresh.breadcrumb?.();
+            refresh.sidebar?.();
+            refresh.cards?.();
           }
         },
       });
     }
   };
 }
-
