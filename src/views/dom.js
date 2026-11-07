@@ -9,7 +9,9 @@ export function h(tag, attrs, ...children) {
     if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
     else if (k === 'class') el.className = v;
     else if (v === true) el.setAttribute(k, '');
-    else el.setAttribute(k, String(v));
+    else if (k === 'value' && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || 'value' in el)) {
+      el.value = String(v);
+    } else el.setAttribute(k, String(v));
   }
   append(el, children);
   return el;
