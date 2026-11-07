@@ -27,8 +27,15 @@ async function planSessionWithRust(entry, config, settings) {
       return planned
         .map(p => {
           if (p.question) {
+            const kind = p.question.kind;
+            const answers = Array.isArray(p.question.answers)
+              ? (kind === 'single' || kind === 'multi'
+                  ? p.question.answers.map(a => Number(a))
+                  : p.question.answers)
+              : p.question.answers;
             return {
               ...p.question,
+              answers,
               item: p.item,
               itemId: p.itemId || p.item_id,
               deckId: entry.deck?.meta?.id || 'deck',

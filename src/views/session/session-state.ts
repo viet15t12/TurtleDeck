@@ -47,6 +47,14 @@ export interface SessionReviewResult {
   key: string;
 }
 
+export interface TranslationState {
+  visible: boolean;
+  loading: boolean;
+  text: string;
+  error: string | null;
+  forIndex: number;
+}
+
 export interface SessionState {
   index: number;
   questions: Question[];
@@ -59,6 +67,7 @@ export interface SessionState {
   history: SessionHistoryItem[];
   slotResults: Map<number, boolean>;
   currentReviewResult?: SessionReviewResult;
+  translation: TranslationState;
 }
 
 export function createSessionState(questions: Question[]): SessionState {
@@ -73,6 +82,13 @@ export function createSessionState(questions: Question[]): SessionState {
     questionStartedAt: Date.now(),
     history: [],
     slotResults: new Map(),
+    translation: {
+      visible: false,
+      loading: false,
+      text: '',
+      error: null,
+      forIndex: -1,
+    },
   };
 }
 
@@ -82,6 +98,13 @@ export function resetForQuestion(session: SessionState, q: Question): void {
   session.nextIntervalText = '';
   session.cardFlipped = false;
   session.questionStartedAt = Date.now();
+  session.translation = {
+    visible: false,
+    loading: false,
+    text: '',
+    error: null,
+    forIndex: -1,
+  };
   if (q.kind === 'multi') {
     session.userAnswer = [];
   } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {

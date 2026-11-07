@@ -42,6 +42,7 @@ pub fn run() {
                 watcher: std::sync::Mutex::new(None),
                 renderer_ready: std::sync::atomic::AtomicBool::new(false),
                 pending_external_files: std::sync::Mutex::new(Vec::new()),
+                remote_service: tokio::sync::Mutex::new(services::remote_server::RemoteService::new()),
             }
         }
         Err(e) => {
@@ -176,6 +177,12 @@ pub fn run() {
             // Stats commands
             commands::stats::stats_get_deck_report,
             commands::stats::stats_get_overall_streak,
+            // Remote Controller commands
+            commands::remote::remote_start,
+            commands::remote::remote_stop,
+            commands::remote::remote_status,
+            commands::remote::remote_broadcast_state,
+            commands::remote::remote_set_pin,
             // Lifecycle commands
             commands::lifecycle::app_ready,
         ]);

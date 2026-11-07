@@ -11,6 +11,7 @@ function getNoticesContainer() {
 }
 
 export function notify(text, level = 'info', timeout = level === 'error' ? 0 : 6000) {
+  if (typeof document === 'undefined') return null;
   const container = getNoticesContainer();
   const box = h('div', { class: `notice ${level}`, role: level === 'error' ? 'alert' : 'status' },
     h('span', { class: 'notice-text' }, text),

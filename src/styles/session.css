@@ -102,6 +102,103 @@
   margin-bottom: 16px;
 }
 
+.translate-toggle-btn {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 7px);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition-fast, 150ms ease);
+}
+
+.translate-toggle-btn:hover {
+  background: var(--c-surface-hover);
+  color: var(--c-text);
+  border-color: var(--c-primary);
+}
+
+.translate-toggle-btn.active {
+  background: var(--c-primary-soft, rgba(0, 113, 227, 0.1));
+  color: var(--c-primary, #0071e3);
+  border-color: var(--c-primary, #0071e3);
+  font-weight: 500;
+}
+
+.question-translation-box {
+  margin: -10px 0 20px 0;
+  padding: 12px 16px;
+  border-radius: var(--radius, 10px);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--c-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.question-translation-box.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-text-muted);
+  font-size: 0.875rem;
+  padding: 10px 14px;
+}
+
+.question-translation-box.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--c-danger-soft, rgba(255, 59, 48, 0.1));
+  border-color: rgba(255, 59, 48, 0.25);
+  color: var(--c-danger, #ff3b30);
+  font-size: 0.875rem;
+  padding: 10px 14px;
+}
+
+.translate-retry-btn {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+
+.translation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-primary, #0071e3);
+}
+
+.translation-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs, 4px);
+  line-height: 1;
+}
+
+.translation-close-btn:hover {
+  background: var(--c-surface-hover);
+  color: var(--c-text);
+}
+
+.translation-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .question-prompt {
   font-size: 1.25rem;
   line-height: 1.55;

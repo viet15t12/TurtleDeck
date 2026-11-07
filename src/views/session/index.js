@@ -20,6 +20,7 @@ import { renderSegmentedProgressBar } from './progress-bar.js';
 import { renderQuestionBody } from './question/index.js';
 import { renderFeedback } from './feedback/index.js';
 import { renderActionsRow } from './actions-row.js';
+import { translateText } from '../../core/translate/quick-translate.js';
 
 let activeCleanup = null;
 
@@ -146,6 +147,116 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     }
   }
 
+  async function toggleTranslate() {
+    const q = currentQ();
+    if (!q) return;
+
+    if (session.translation?.visible) {
+      session.translation.visible = false;
+      render();
+      return;
+    }
+
+    const currentIndex = session.index;
+    session.translation.visible = true;
+
+    if (session.translation.forIndex === currentIndex && session.translation.text) {
+      render();
+      return;
+    }
+
+    session.translation.loading = true;
+    session.translation.error = null;
+    session.translation.forIndex = currentIndex;
+    render();
+
+    try {
+      const textToTranslate = q.kind === 'card'
+        ? (session.cardFlipped ? `${q.front || ''}\n---\n${q.back || ''}` : (q.front || ''))
+        : (q.prompt || '');
+
+      const translated = await translateText(textToTranslate, { from: 'auto', to: 'vi' });
+
+      if (session.index === currentIndex) {
+        session.translation.loading = false;
+        session.translation.text = translated;
+        session.translation.error = null;
+        render();
+      }
+    } catch (_err) {
+      if (session.index === currentIndex) {
+        session.translation.loading = false;
+        session.translation.error = 'Không thể kết nối máy chủ dịch. Vui lòng kiểm tra kết nối mạng.';
+        render();
+      }
+    }
+  }
+
+  function renderTranslationBox() {
+    if (!session.translation?.visible) return null;
+
+    const tr = session.translation;
+
+    if (tr.loading) {
+      return h(
+        'div',
+        { class: 'question-translation-box loading' },
+        h('span', { class: 'translate-spinner' }, '⏳'),
+        h('span', { class: 'translate-loading-text' }, 'Đang dịch câu hỏi sang tiếng Việt...')
+      );
+    }
+
+    if (tr.error) {
+      return h(
+        'div',
+        { class: 'question-translation-box error' },
+        h('span', { class: 'translate-error-icon' }, '⚠️'),
+        h('span', { class: 'translate-error-text' }, tr.error),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'ux-btn xs ghost translate-retry-btn',
+            onclick: () => {
+              session.translation.forIndex = -1;
+              session.translation.visible = false;
+              toggleTranslate();
+            },
+          },
+          'Thử lại'
+        )
+      );
+    }
+
+    if (tr.text) {
+      return h(
+        'div',
+        { class: 'question-translation-box' },
+        h(
+          'div',
+          { class: 'translation-header' },
+          h('span', { class: 'translation-label' }, '🌐 Bản dịch (Google)'),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'translation-close-btn',
+              title: 'Ẩn bản dịch (Alt+T)',
+              onclick: () => {
+                session.translation.visible = false;
+                render();
+              },
+            },
+            '✕'
+          )
+        ),
+        h('div', { class: 'translation-content' }, tr.text)
+      );
+    }
+
+    return null;
+  }
+
   // Tạo Context dùng chung cho mọi module con
   const ctx = {
     session,
@@ -165,6 +276,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
     nextQuestion,
     requestExit,
     actions,
+    toggleTranslate,
     getAutoPlayAudio: () => autoPlayAudio,
     setAutoPlayAudio: v => {
       autoPlayAudio = v;
@@ -243,9 +355,20 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             q.category ? h('span', { class: `badge srs-cat-${q.category}` }, catLabels[q.category] || q.category) : null,
             q.retry ? h('span', { class: 'badge warn' }, '↻ Ôn lại câu sai') : null,
             q.topic ? h('span', { class: 'chip' }, q.topic) : null,
-            (q.tags || []).map(t => h('span', { class: 'tag' }, t))
+            (q.tags || []).map(t => h('span', { class: 'tag' }, t)),
+            h(
+              'button',
+              {
+                type: 'button',
+                class: `ux-btn xs ghost translate-toggle-btn ${session.translation?.visible ? 'active' : ''}`,
+                title: 'Dịch câu hỏi sang tiếng Việt (Alt+T hoặc phím T)',
+                onclick: toggleTranslate,
+              },
+              session.translation?.visible ? '🌐 Ẩn dịch (Alt+T)' : '🌐 Dịch (Alt+T)'
+            )
           ),
           q.kind !== 'card' ? richEl('div', { class: 'question-prompt' }, rich.html(q.prompt)) : null,
+          renderTranslationBox(),
           q.kind !== 'card' && questionImgUrl
             ? h('div', { class: 'question-img-wrap' }, h('img', { class: 'rich-img', src: questionImgUrl, alt: 'Hình ảnh câu hỏi' }))
             : null,

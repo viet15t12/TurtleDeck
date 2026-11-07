@@ -6,18 +6,20 @@ import { state } from './state.js';
 import { applyResult, samePath } from './entries.js';
 import { render } from './runtime.js';
 
-const api = window.api;
+const getApi = () => (typeof window !== 'undefined' ? window.api : undefined);
 
 export async function persistDeckPaths() {
   const decks = [...new Set(state.entries.map(e => e.path).filter(Boolean))];
   state.settings.decks = decks;
-  const r = await api.saveSettings({ decks });
+  const api = getApi();
+  const r = await api?.saveSettings?.({ decks });
   if (r && r.ok === false) notify('Không lưu được cài đặt: ' + r.error, 'error');
   else if (r?.settings) state.settings = r.settings;
 }
 
 export async function scanLibrary(actions) {
-  const r = await api.scanLibrary();
+  const api = getApi();
+  const r = await api?.scanLibrary?.();
   if (!r) return;
   const libFiles = Array.isArray(r) ? r : (r.files || []);
   let updated = false;

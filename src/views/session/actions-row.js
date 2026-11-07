@@ -29,7 +29,7 @@ export function renderActionsRow(ctx, q) {
             'Hiện đáp án (Space)'
           )
         );
-        shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: Space / Enter để hiện đáp án · Esc để thoát');
+        shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: Space / Enter để hiện đáp án · T dịch · Esc để thoát');
       } else {
         const cardState = currentCardState(q);
         const now = Date.now();
@@ -55,7 +55,7 @@ export function renderActionsRow(ctx, q) {
           makeRateBtn(RATING.GOOD, '3', 'Tốt', 'rate-good'),
           makeRateBtn(RATING.EASY, '4', 'Dễ', 'rate-easy')
         );
-        shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: 1 Quên · 2 Khó · 3 Tốt (hoặc Space) · 4 Dễ · Esc Thoát');
+        shortcutFooter = h('div', { class: 'session-key-hints' }, 'Phím tắt: 1 Quên · 2 Khó · 3 Tốt (hoặc Space) · 4 Dễ · T dịch · Esc Thoát');
       }
     } else {
       const canSubmit =
@@ -83,8 +83,8 @@ export function renderActionsRow(ctx, q) {
         'div',
         { class: 'session-key-hints' },
         q.kind === 'single' || q.kind === 'multi'
-          ? 'Phím tắt: 1–9 chọn đáp án · Enter nộp bài · Esc thoát'
-          : 'Phím tắt: Enter nộp bài · Esc thoát'
+          ? 'Phím tắt: 1–9 chọn đáp án · T dịch · Enter nộp bài · Esc thoát'
+          : 'Phím tắt: Alt+T dịch · Enter nộp bài · Esc thoát'
       );
     }
   } else {

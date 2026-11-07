@@ -108,7 +108,7 @@ export function createPreviewPane({ container, deckKey, rich, getAssets, onToggl
               const isSelected = isMulti
                 ? (userAnswer || []).includes(i)
                 : userAnswer === i;
-              const isCorrect = (q.answers || []).includes(i);
+              const isCorrect = (q.answers || []).some(ans => Number(ans) === i);
 
               let stateClass = isEmptyChoice ? 'preview-empty-choice' : '';
               if (showAnswerState) {

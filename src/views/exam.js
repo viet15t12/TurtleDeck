@@ -99,7 +99,10 @@ export function renderExam(root, { entry, config = {}, progress = {}, onSaveProg
 
   function formatCorrectAnswer(q) {
     if (Array.isArray(q.answers)) {
-      return q.answers.map(i => typeof i === 'number' ? (q.choices?.[i] || i) : i).join(' | ');
+      return q.answers.map(i => {
+        const n = Number(i);
+        return (!Number.isNaN(n) && q.choices?.[n]) ? (q.choices[n]?.text || q.choices[n]) : i;
+      }).join(' | ');
     }
     return String(q.answerDisplay || q.answers || '');
   }

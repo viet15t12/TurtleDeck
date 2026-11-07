@@ -19,6 +19,7 @@ pub struct AppState {
     pub watcher: Mutex<Option<Arc<AppWatcher>>>,
     pub renderer_ready: AtomicBool,
     pub pending_external_files: Mutex<Vec<PathBuf>>,
+    pub remote_service: tokio::sync::Mutex<crate::services::remote_server::RemoteService>,
 }
 
 impl AppState {
@@ -31,6 +32,7 @@ impl AppState {
             watcher: Mutex::new(None),
             renderer_ready: AtomicBool::new(false),
             pending_external_files: Mutex::new(Vec::new()),
+            remote_service: tokio::sync::Mutex::new(crate::services::remote_server::RemoteService::new()),
         }
     }
 

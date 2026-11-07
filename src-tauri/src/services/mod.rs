@@ -14,3 +14,4 @@ pub mod progress_service;
 pub mod sdeck_v2;
 pub mod settings_service;
 pub mod watcher;
+pub mod remote_server;

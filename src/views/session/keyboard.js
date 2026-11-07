@@ -102,6 +102,20 @@ export function createKeyHandler(ctx) {
 
     const q = session.questions[session.index];
 
+    // Phím tắt Alt+T (hoặc 't' khi không gõ vào ô nhập) để bật/tắt bản dịch tiếng Việt
+    const isEditingInput = typeof document !== 'undefined' &&
+      (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA');
+    const isTranslateKey = (ev.altKey && (ev.key === 't' || ev.key === 'T')) ||
+      (!isEditingInput && !ev.ctrlKey && !ev.metaKey && !ev.altKey && (ev.key === 't' || ev.key === 'T'));
+
+    if (isTranslateKey) {
+      ev.preventDefault();
+      if (typeof ctx.toggleTranslate === 'function') {
+        ctx.toggleTranslate();
+      }
+      return;
+    }
+
     // Phím tắt Alt+L để nghe lại phát âm (cho Listen mode, Flashcard hoặc câu có từ vựng)
     if (ev.altKey && (ev.key === 'l' || ev.key === 'L')) {
       ev.preventDefault();

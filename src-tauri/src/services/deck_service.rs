@@ -356,7 +356,21 @@ pub fn delete_deck(
         state.package_store.delete(key);
     }
 
-    if let Some(did) = deck_id {
+    let mut resolved_deck_id = deck_id.map(|s| s.to_string());
+    if resolved_deck_id.is_none() {
+        if let Some(fp) = file_path {
+            if !fp.trim().is_empty() {
+                let _ = state.with_db_mut(|conn| {
+                    if let Ok(Some(did)) = crate::db::repositories::deck::DeckRepository::remove_deck_by_file_path(conn, fp) {
+                        resolved_deck_id = Some(did);
+                    }
+                    Ok(())
+                });
+            }
+        }
+    }
+
+    if let Some(ref did) = resolved_deck_id {
         let _ = state.with_db_mut(|conn| {
             crate::db::repositories::deck::DeckRepository::delete_deck(conn, did)
         });

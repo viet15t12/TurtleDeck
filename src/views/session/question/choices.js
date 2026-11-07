@@ -25,7 +25,7 @@ export function renderChoicesQuestion(ctx, q) {
       let stateClass = '';
       let statusMark = null;
       if (session.submitted) {
-        const isCorrect = q.answers.includes(i);
+        const isCorrect = (q.answers || []).some(ans => Number(ans) === i);
         if (isCorrect) {
           stateClass = 'choice-correct';
           statusMark = h('span', { class: 'choice-mark mark-ok', title: 'Đáp án đúng' }, '✓');

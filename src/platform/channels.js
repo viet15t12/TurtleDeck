@@ -100,6 +100,13 @@ export const CHANNEL_TO_COMMAND = {
   'meta:get': 'meta_get',
   'meta:setStarred': 'meta_set_starred',
   'meta:setNote': 'meta_set_note',
+
+  // Remote Controller
+  'remote:start': 'remote_start',
+  'remote:stop': 'remote_stop',
+  'remote:status': 'remote_status',
+  'remote:broadcast': 'remote_broadcast_state',
+  'remote:setPin': 'remote_set_pin',
 };
 
 /**

@@ -8,6 +8,7 @@ pub mod import;
 pub mod library;
 pub mod lifecycle;
 pub mod progress;
+pub mod remote;
 pub mod settings;
 pub mod srs;
 pub mod stats;

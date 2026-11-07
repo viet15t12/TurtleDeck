@@ -4,12 +4,19 @@ import { newDeckId } from '../../core/deckmodel.js';
 import { clearProgress } from '../../core/srs.js';
 import { fileName } from '../../views/dom.js';
 import { notify } from '../../views/notify.js';
-import { applyResult } from '../entries.js';
+import { applyResult, samePath } from '../entries.js';
 import { persistDeckPaths } from '../library.js';
 import { render } from '../runtime.js';
 import { withBusy } from '../busy.js';
 
-const api = window.api;
+const getApi = () => (typeof window !== 'undefined' ? window.api : undefined);
+const api = new Proxy({}, {
+  get: (_, prop) => {
+    const a = getApi();
+    const val = a?.[prop];
+    return typeof val === 'function' ? val.bind(a) : val;
+  },
+});
 
 // Lưu thành .sdeck (hộp thoại chọn nơi lưu do main hiển thị)
 export async function saveEntry(entry, saveAs) {
@@ -123,13 +130,18 @@ export function deckActions({ state, actions }) {
       // 3. Đóng package nếu còn mở
       if (entry.deckKey) await api.closeDeck(entry.deckKey);
 
-      // 4. Xoá khỏi mảng entries
-      const idx = state.entries.indexOf(entry);
-      if (idx !== -1) {
-        state.entries.splice(idx, 1);
-      }
+      // 4. Xoá khỏi mảng entries (lọc an toàn theo tham chiếu, uid hoặc đường dẫn file)
+      const isTarget = e =>
+        e === entry ||
+        (entry.uid && e.uid === entry.uid) ||
+        (entry.path && samePath(e.path, entry.path));
+
+      state.entries = state.entries.filter(e => !isTarget(e));
 
       // 5. Cập nhật đường dẫn còn lại vào settings
+      if (entry.path) {
+        state.settings.decks = (state.settings.decks || []).filter(p => !samePath(p, entry.path));
+      }
       await persistDeckPaths();
 
       // 6. Điều hướng về home nếu đang mở bộ thẻ này

@@ -110,6 +110,14 @@ test('submit: gradeAnswer chấm điểm thuần đúng cho các dạng câu h�
   const resSingleWrong = gradeAnswer(qSingle, 0);
   assert.equal(resSingleWrong.grade.ok, false);
 
+  // Trắc nghiệm single/multi với answers chứa chuỗi số (từ Rust IPC hoặc định dạng chuỗi)
+  const qSingleStr: any = { kind: 'single', answers: ['2'] };
+  assert.equal(gradeAnswer(qSingleStr, 2).grade.ok, true);
+
+  const qMultiStr: any = { kind: 'multi', answers: ['2', '3', '4', '6'] };
+  assert.equal(gradeAnswer(qMultiStr, [2, 3, 4, 6]).grade.ok, true);
+  assert.equal(gradeAnswer(qMultiStr, [2, 3]).grade.ok, false);
+
   // Điền / Text
   const qFill: any = { kind: 'fill', answers: ['hello', 'hi'], match: 'text' };
   const resFillRight = gradeAnswer(qFill, '  Hello  ');
