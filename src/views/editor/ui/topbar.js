@@ -1,5 +1,5 @@
 // src/views/editor/ui/topbar.js — Render thanh công cụ trên cùng Topbar (§4)
-import { h } from '../../dom.js';
+import { h, setChildren } from '../../dom.js';
 import { KINDS, kindOf, kindLabel } from '../../../core/deckkinds.js';
 
 export function formatTimeHHMM(date) {
@@ -130,7 +130,8 @@ export function renderTopbar(topbarEl, { state, actions, modals }) {
     onclick: () => modals.openDeckMetaModal(),
   }, KINDS[currentKind]?.icon || '📝', kindLabel(currentKind));
 
-  topbarEl.replaceChildren(
+  setChildren(
+    topbarEl,
     h('div', { class: 'editor-topbar-left' },
       h('button', {
         type: 'button',

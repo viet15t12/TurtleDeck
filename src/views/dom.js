@@ -23,6 +23,20 @@ function append(el, children) {
   }
 }
 
+export function setChildren(el, ...children) {
+  const flattened = [];
+  function collect(list) {
+    for (const c of list) {
+      if (c === undefined || c === null || c === false) continue;
+      if (Array.isArray(c)) collect(c);
+      else flattened.push(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+  }
+  collect(children);
+  el.replaceChildren(...flattened);
+  return el;
+}
+
 // Rút gọn nội dung để xem nhanh trong bảng (văn bản thuần, gộp xuống dòng)
 export function shorten(s, max = 110) {
   const t = String(s ?? '').replace(/\s+/g, ' ').trim();

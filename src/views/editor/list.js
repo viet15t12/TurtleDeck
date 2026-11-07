@@ -1,5 +1,5 @@
 // src/views/editor/list.js — Cột Danh sách mục có ảo hoá, tìm kiếm bỏ dấu, chip lọc, kéo thả, context menu (§5)
-import { h } from '../dom.js';
+import { h, setChildren } from '../dom.js';
 import { toPlain } from '../../core/richtext.js';
 import { validateItem, hasError, friendlyIssue } from '../../core/validate.js';
 import { stripAccents, isBlankNewItem } from '../../core/deckmodel.js';
@@ -204,7 +204,8 @@ export function createListPane({
       ? h('span', { class: `list-status-dot ${st.dot}`, title: dotTitle })
       : null;
 
-    rowEl.replaceChildren(
+    setChildren(
+      rowEl,
       lead,
       h('span', { class: 'list-type-badge' }, badge),
       body,
