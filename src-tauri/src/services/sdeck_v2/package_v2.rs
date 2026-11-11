@@ -28,10 +28,7 @@ pub fn is_v2_deck(deck: &Value) -> bool {
 }
 
 /// Đóng gói cấu trúc bộ thẻ v2 thành các entry trong file nén ZIP .sdeck
-pub fn build_v2_package(
-    deck: &Value,
-    assets: &HashMap<String, Vec<u8>>,
-) -> AppResult<Vec<u8>> {
+pub fn build_v2_package(deck: &Value, assets: &HashMap<String, Vec<u8>>) -> AppResult<Vec<u8>> {
     let meta_obj = deck
         .get("meta")
         .and_then(|m| m.as_object())
@@ -72,7 +69,10 @@ pub fn build_v2_package(
 
     // Cập nhật thống kê stats
     let total_items = items.len();
-    let vocab_count = items.iter().filter(|i| i.get("type").and_then(|t| t.as_str()) == Some("vocab")).count();
+    let vocab_count = items
+        .iter()
+        .filter(|i| i.get("type").and_then(|t| t.as_str()) == Some("vocab"))
+        .count();
     let quiz_count = total_items.saturating_sub(vocab_count);
 
     let mut stats = v2_meta
@@ -166,4 +166,3 @@ pub fn unpack_v2_package(
 
     Ok(deck)
 }
-

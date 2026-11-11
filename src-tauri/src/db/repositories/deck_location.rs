@@ -295,8 +295,7 @@ impl DeckLocationRepository {
                 other => AppError::Database(other),
             })?;
 
-            Self::get_location_by_id(conn, &id)?
-                .ok_or_else(|| AppError::NotFound(id))
+            Self::get_location_by_id(conn, &id)?.ok_or_else(|| AppError::NotFound(id))
         })
     }
 

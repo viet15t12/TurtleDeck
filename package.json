@@ -5,6 +5,7 @@
   "version": "0.3.1",
   "description": "Ứng dụng học tập offline bằng flashcard và trắc nghiệm",
   "scripts": {
+    "pretest": "npm run build:samples",
     "test": "node --import ./tools/register-test-hooks.mjs --test",
     "typecheck": "tsc --noEmit",
     "build": "node tools/build.mjs",
@@ -14,7 +15,7 @@
     "tauri": "tauri",
     "tauri:dev": "node tools/build.mjs && tauri dev",
     "tauri:build": "node tools/build.mjs && tauri build",
-    "build:samples": "node tools/sdeck.mjs pack-all data/samples-src data/samples"
+    "build:samples": "node --import ./tools/register-test-hooks.mjs tools/sdeck.mjs pack-all data/samples-src data/samples"
   },
   "repository": {
     "type": "git",

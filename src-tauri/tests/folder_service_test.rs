@@ -69,12 +69,8 @@ fn test_folder_service_create_rename_move_reorder_delete() {
     assert_eq!(moved_topic.path, "Topic 1");
 
     // 5. Sắp xếp lại thứ tự các thư mục ở cấp gốc (reorder_folders)
-    folder_service::reorder_folders(
-        &conn,
-        None,
-        &[res_sub2.id.clone(), res_root.id.clone()],
-    )
-    .unwrap();
+    folder_service::reorder_folders(&conn, None, &[res_sub2.id.clone(), res_root.id.clone()])
+        .unwrap();
     let tree = folder_service::get_folder_tree(&conn).unwrap();
     assert_eq!(tree.len(), 2);
     assert_eq!(tree[0].id, res_sub2.id);
@@ -111,8 +107,7 @@ fn test_db_invariants_and_constraints() {
     assert!(sql_dup_root.is_err());
 
     // 2. Tên trùng trong cùng thư mục con (không phân biệt hoa thường) -> FolderNameConflict
-    let _sub1 =
-        folder_service::create_folder(&conn, None, "TiengNhat", Some(&root_a.id)).unwrap();
+    let _sub1 = folder_service::create_folder(&conn, None, "TiengNhat", Some(&root_a.id)).unwrap();
     let dup_sub = folder_service::create_folder(&conn, None, "tiengnhat", Some(&root_a.id));
     assert!(matches!(dup_sub, Err(AppError::FolderNameConflict(_))));
 
@@ -183,7 +178,10 @@ fn test_db_invariants_and_constraints() {
         .unwrap()
         .unwrap();
     let unlink_primary = deck_location_service::unlink_deck(&conn, &primary_loc.id, false);
-    assert!(matches!(unlink_primary, Err(AppError::CannotUnlinkPrimary(_))));
+    assert!(matches!(
+        unlink_primary,
+        Err(AppError::CannotUnlinkPrimary(_))
+    ));
     assert_eq!(unlink_primary.unwrap_err().code(), "CannotUnlinkPrimary");
 }
 
@@ -266,5 +264,7 @@ fn test_deep_tree_thousands_of_levels() {
         .unwrap()
         .unwrap();
     assert!(loc_after.folder_id.is_none());
-    assert!(DeckRepository::get_deck(&conn, "deck-deep").unwrap().is_some());
+    assert!(DeckRepository::get_deck(&conn, "deck-deep")
+        .unwrap()
+        .is_some());
 }

@@ -11,9 +11,8 @@ pub async fn folder_create(
     name: String,
     parent_id: Option<String>,
 ) -> AppResult<Value> {
-    let folder = state.with_db(|conn| {
-        folder_service::create_folder(conn, None, &name, parent_id.as_deref())
-    })?;
+    let folder = state
+        .with_db(|conn| folder_service::create_folder(conn, None, &name, parent_id.as_deref()))?;
     Ok(serde_json::json!({ "ok": true, "folder": folder }))
 }
 

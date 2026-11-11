@@ -463,6 +463,7 @@ impl FolderRepository {
     /// 2. Đưa vị trí chính (`is_link = 0`) trong subtree về gốc (`folder_id = NULL`).
     /// 3. Xóa các liên kết (`is_link = 1`) trong subtree.
     /// 4. Xóa `folders WHERE id = ?` (cascade xóa các thư mục con).
+    ///
     /// Trả về danh sách `deck_id` bị ảnh hưởng.
     pub fn delete_folder(conn: &Connection, id: &str) -> AppResult<Vec<String>> {
         with_immediate_tx(conn, || {

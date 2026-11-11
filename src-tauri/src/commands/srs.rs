@@ -159,7 +159,8 @@ pub async fn srs_grade_answer(
 ) -> AppResult<Value> {
     let mode_str = mode.unwrap_or_else(|| "normalized".to_string());
 
-    if mode_str == "choice" || mode_str == "choices" || mode_str == "single" || mode_str == "multi" {
+    if mode_str == "choice" || mode_str == "choices" || mode_str == "single" || mode_str == "multi"
+    {
         let selected: Vec<i64> = if let Some(arr) = input.as_array() {
             arr.iter().filter_map(|v| v.as_i64()).collect()
         } else if let Some(n) = input.as_i64() {
@@ -169,7 +170,10 @@ pub async fn srs_grade_answer(
         };
         let correct: Vec<i64> = if let Some(arr) = answers.as_array() {
             arr.iter()
-                .filter_map(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+                .filter_map(|v| {
+                    v.as_i64()
+                        .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                })
                 .collect()
         } else if let Some(n) = answers.as_i64() {
             vec![n]

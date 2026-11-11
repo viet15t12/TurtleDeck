@@ -87,7 +87,12 @@ fn test_sdeck_v2_vocab_anki_compatibility() {
         "clean_items không còn chứa explanation"
     );
     assert_eq!(
-        solutions.solutions.get("vocab-ubiquitous").unwrap().explanation.as_deref(),
+        solutions
+            .solutions
+            .get("vocab-ubiquitous")
+            .unwrap()
+            .explanation
+            .as_deref(),
         Some("Từ bắt nguồn từ tiếng Latin 'ubique' có nghĩa là 'khắp mọi nơi'.")
     );
 
@@ -102,11 +107,20 @@ fn test_sdeck_v2_vocab_anki_compatibility() {
     let loaded = &loaded_items[0];
     assert_eq!(loaded["id"], "vocab-ubiquitous");
     assert_eq!(loaded["term"], "ubiquitous");
-    assert_eq!(loaded["definition"], "present, appearing, or found everywhere");
+    assert_eq!(
+        loaded["definition"],
+        "present, appearing, or found everywhere"
+    );
     assert_eq!(loaded["phonetic"], "/juːˈbɪk.wɪ.təs/");
     assert_eq!(loaded["pos"], "adj");
-    assert_eq!(loaded["example"], "Smartphones are ubiquitous in modern society.");
-    assert_eq!(loaded["exampleMeaning"], "Điện thoại thông minh hiện diện ở khắp mọi nơi trong xã hội hiện đại.");
+    assert_eq!(
+        loaded["example"],
+        "Smartphones are ubiquitous in modern society."
+    );
+    assert_eq!(
+        loaded["exampleMeaning"],
+        "Điện thoại thông minh hiện diện ở khắp mọi nơi trong xã hội hiện đại."
+    );
     assert_eq!(loaded["audio"], "audio/ubiquitous.mp3");
     assert_eq!(loaded["ankiGuid"], "uB1qUiT0uS");
     assert_eq!(loaded["ankiNoteId"], 1730001234567i64);
@@ -193,7 +207,10 @@ fn test_sdeck_v2_all_item_types_roundtrip() {
     assert_eq!(unified[0]["front"], "ADN là gì?");
 
     assert_eq!(unified[1]["type"], "single");
-    assert_eq!(unified[1]["choices"], json!(["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Huế"]));
+    assert_eq!(
+        unified[1]["choices"],
+        json!(["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Huế"])
+    );
     assert_eq!(unified[1]["answer"], json!([0]));
 
     assert_eq!(unified[2]["type"], "multi");
@@ -247,8 +264,7 @@ fn test_sdeck_v2_package_write_and_read_roundtrip() {
     assert!(is_v2_deck(&deck), "Nhận diện đúng deck v2");
 
     // 1. Đóng gói với write_package_v2
-    let write_res = write_package_v2(&deck.to_string(), &assets, true)
-        .expect("write package v2");
+    let write_res = write_package_v2(&deck.to_string(), &assets, true).expect("write package v2");
     assert!(write_res.kept_assets.contains_key("img/diagram.png"));
 
     // 2. Đọc metadata qua read_package_meta: siêu dữ liệu nhẹ, không chứa items
@@ -260,7 +276,11 @@ fn test_sdeck_v2_package_write_and_read_roundtrip() {
     assert_eq!(meta_val["meta"]["files"]["db"], DECK_DB_ENTRY);
     assert_eq!(meta_val["meta"]["files"]["solutions"], SOLUTIONS_ENTRY);
     assert_eq!(meta_val["meta"]["stats"]["totalItems"], 2);
-    assert_eq!(meta_val.get("items"), None, "deck.json v2 không được chứa mảng items");
+    assert_eq!(
+        meta_val.get("items"),
+        None,
+        "deck.json v2 không được chứa mảng items"
+    );
 
     // 3. Đọc toàn bộ gói qua read_package: tự động giải nén questions.db & solutions.json và ghép thành items
     let read_res = read_package(&write_res.bytes).expect("read package v2");
@@ -273,7 +293,10 @@ fn test_sdeck_v2_package_write_and_read_roundtrip() {
 
     assert_eq!(loaded_items[0]["id"], "v2-item-1");
     assert_eq!(loaded_items[0]["type"], "card");
-    assert_eq!(loaded_items[0]["front"], "Mặt trước có ảnh ![sơ đồ](img/diagram.png)");
+    assert_eq!(
+        loaded_items[0]["front"],
+        "Mặt trước có ảnh ![sơ đồ](img/diagram.png)"
+    );
 
     assert_eq!(loaded_items[1]["id"], "v2-item-2");
     assert_eq!(loaded_items[1]["type"], "single");
@@ -312,4 +335,3 @@ fn test_sdeck_v1_backward_compatibility() {
     assert_eq!(loaded["items"].as_array().unwrap().len(), 1);
     assert_eq!(loaded["items"][0]["front"], "Cũ 1");
 }
-

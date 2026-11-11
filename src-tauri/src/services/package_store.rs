@@ -623,7 +623,8 @@ pub fn write_package(
             let cursor = Cursor::new(&mut buf);
             let mut zip = ZipWriter::new(cursor);
 
-            let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+            let options =
+                SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
             zip.start_file("deck.json", options)
                 .map_err(|e| AppError::Custom(format!("Lỗi tạo entry deck.json: {e}")))?;

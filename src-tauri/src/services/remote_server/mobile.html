@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Turtle Deck Remote</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --purple: #8b5cf6;
+      --radius: 16px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root.system-theme {
+        --bg: #f1f5f9;
+        --card-bg: #ffffff;
+        --card-border: #e2e8f0;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+      }
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    .header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: var(--card-bg);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-title {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      font-weight: 600;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .status-badge.offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+    }
+    .status-badge.offline .status-dot {
+      background: var(--danger);
+    }
+    .main-container {
+      flex: 1;
+      padding: 16px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      display: flex;
+      flex-direction: column;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    /* Auth Screen */
+    #auth-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      text-align: center;
+      padding: 24px 12px;
+    }
+    .auth-logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .pin-display {
+      letter-spacing: 12px;
+      font-size: 28px;
+      font-weight: bold;
+      padding: 12px 24px;
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius);
+      min-width: 180px;
+      text-align: center;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 20px;
+    }
+    .key-btn {
+      aspect-ratio: 1.2;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 24px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .key-btn:active {
+      background: var(--card-border);
+      transform: scale(0.95);
+    }
+    .auth-error {
+      color: var(--danger);
+      font-size: 14px;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    /* Controller Screen */
+    #controller-screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      gap: 16px;
+    }
+    .progress-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .q-counter {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--primary);
+    }
+    .mode-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Pad Choice buttons */
+    .choices-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 6px;
+    }
+    .choice-btn {
+      min-height: 85px;
+      border-radius: var(--radius);
+      border: 2px solid var(--card-border);
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 26px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .choice-btn .choice-subtext {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .choice-btn:active {
+      transform: scale(0.96);
+    }
+    .choice-btn.selected {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.2);
+    }
+    .choice-btn.correct {
+      border-color: var(--success) !important;
+      background: rgba(16, 185, 129, 0.2) !important;
+      color: var(--success);
+    }
+    .choice-btn.wrong {
+      border-color: var(--danger) !important;
+      background: rgba(239, 68, 68, 0.2) !important;
+      color: var(--danger);
+    }
+
+    /* Flashcard Controls */
+    .flashcard-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .flip-btn {
+      width: 100%;
+      min-height: 100px;
+      border-radius: var(--radius);
+      border: 2px dashed var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+      color: var(--primary);
+      font-size: 24px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .flip-btn:active {
+      transform: scale(0.98);
+      background: rgba(59, 130, 246, 0.18);
+    }
+    .srs-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .srs-btn {
+      padding: 16px 4px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .srs-btn:active {
+      transform: scale(0.94);
+    }
+    .srs-btn.rate-1 { background: #ef4444; }
+    .srs-btn.rate-2 { background: #f97316; }
+    .srs-btn.rate-3 { background: #10b981; }
+    .srs-btn.rate-4 { background: #3b82f6; }
+
+    /* Explanation Card */
+    .explanation-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: fadeIn 0.2s ease-out;
+    }
+    .exp-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .exp-body {
+      font-size: 15px;
+      line-height: 1.6;
+      max-height: 250px;
+      overflow-y: auto;
+      user-select: text;
+    }
+
+    /* Nav Buttons */
+    .nav-bar {
+      margin-top: auto;
+      padding-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 12px;
+    }
+    .nav-btn {
+      padding: 14px;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 700;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .nav-btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .nav-btn:active {
+      transform: scale(0.97);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-title">
+      <span>🐢</span>
+      <span>Turtle Remote</span>
+    </div>
+    <div id="conn-badge" class="status-badge offline">
+      <span class="status-dot"></span>
+      <span id="conn-text">Chưa kết nối</span>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- AUTH SCREEN -->
+    <section id="auth-screen">
+      <div class="auth-logo">📱🔒</div>
+      <h1 class="auth-title">Kết nối điều khiển</h1>
+      <p class="auth-subtitle">Nhập mã PIN hiển thị trên màn hình máy tính</p>
+      
+      <div id="pin-display" class="pin-display">____</div>
+      <div id="auth-error" class="auth-error"></div>
+
+      <div class="keypad">
+        <button class="key-btn" onclick="pressPin('1')">1</button>
+        <button class="key-btn" onclick="pressPin('2')">2</button>
+        <button class="key-btn" onclick="pressPin('3')">3</button>
+        <button class="key-btn" onclick="pressPin('4')">4</button>
+        <button class="key-btn" onclick="pressPin('5')">5</button>
+        <button class="key-btn" onclick="pressPin('6')">6</button>
+        <button class="key-btn" onclick="pressPin('7')">7</button>
+        <button class="key-btn" onclick="pressPin('8')">8</button>
+        <button class="key-btn" onclick="pressPin('9')">9</button>
+        <button class="key-btn" onclick="clearPin()">C</button>
+        <button class="key-btn" onclick="pressPin('0')">0</button>
+        <button class="key-btn" onclick="submitAuth()">✓</button>
+      </div>
+    </section>
+
+    <!-- CONTROLLER SCREEN -->
+    <section id="controller-screen">
+      <div class="progress-card">
+        <div>
+          <div id="q-counter" class="q-counter">Câu --/--</div>
+          <div id="mode-label" class="mode-label">Chờ phiên học...</div>
+        </div>
+        <button class="nav-btn" style="padding: 6px 12px; font-size: 13px;" onclick="disconnect()">Thoát</button>
+      </div>
+
+      <!-- Quiz / Multiple Choice Pad -->
+      <div id="quiz-pad" class="choices-grid" style="display: none;">
+        <button class="choice-btn" id="btn-choice-A" onclick="handleChoice('A')">
+          <span>A</span>
+          <span class="choice-subtext" id="subtext-A"></span>
+        </button>
+        <button class="choice-btn" id="btn-choice-B" onclick="handleChoice('B')">
+          <span>B</span>
+          <span class="choice-subtext" id="subtext-B"></span>
+        </button>
+        <button class="choice-btn" id="btn-choice-C" onclick="handleChoice('C')">
+          <span>C</span>
+          <span class="choice-subtext" id="subtext-C"></span>
+        </button>
+        <button class="choice-btn" id="btn-choice-D" onclick="handleChoice('D')">
+          <span>D</span>
+          <span class="choice-subtext" id="subtext-D"></span>
+        </button>
+      </div>
+
+      <!-- Flashcard Pad -->
+      <div id="flashcard-pad" class="flashcard-box" style="display: none;">
+        <button id="flip-btn" class="flip-btn" onclick="handleFlip()">
+          <span>🔄</span>
+          <span>LẬT THẺ</span>
+        </button>
+        <div id="srs-ratings" class="srs-grid" style="display: none;">
+          <button class="srs-btn rate-1" onclick="handleRate(1)">
+            <span>1</span>
+            <span>Lại</span>
+          </button>
+          <button class="srs-btn rate-2" onclick="handleRate(2)">
+            <span>2</span>
+            <span>Khó</span>
+          </button>
+          <button class="srs-btn rate-3" onclick="handleRate(3)">
+            <span>3</span>
+            <span>Tốt</span>
+          </button>
+          <button class="srs-btn rate-4" onclick="handleRate(4)">
+            <span>4</span>
+            <span>Dễ</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Explanation / Back note -->
+      <div id="exp-card" class="explanation-card" style="display: none;">
+        <div class="exp-title">
+          <span>💡</span>
+          <span id="exp-header-text">Giải thích chi tiết</span>
+        </div>
+        <div id="exp-content" class="exp-body"></div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="nav-bar">
+        <button class="nav-btn" id="btn-prev" onclick="handleAction('PREV')">⬅ Câu trước</button>
+        <button class="nav-btn primary" id="btn-next" onclick="handleAction('NEXT')">Câu tiếp ➡</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let authToken = sessionStorage.getItem('turtle_remote_token') || '';
+    let enteredPin = '';
+    let eventSource = null;
+    let currentState = null;
+
+    // Tự động đọc token từ query param ?token=... (khi quét mã QR)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('token')) {
+      authToken = urlParams.get('token');
+      sessionStorage.setItem('turtle_remote_token', authToken);
+    }
+
+    function haptic() {
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate(35); } catch (e) {}
+      }
+    }
+
+    function pressPin(num) {
+      haptic();
+      if (enteredPin.length < 6) {
+        enteredPin += num;
+        updatePinDisplay();
+      }
+      if (enteredPin.length >= 4) {
+        // Tự động submit nếu nhập đủ 4 số
+        submitAuth();
+      }
+    }
+
+    function clearPin() {
+      haptic();
+      enteredPin = '';
+      updatePinDisplay();
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    function updatePinDisplay() {
+      const display = document.getElementById('pin-display');
+      display.textContent = enteredPin.padEnd(4, '_');
+    }
+
+    async function submitAuth() {
+      const errEl = document.getElementById('auth-error');
+      errEl.textContent = 'Đang kiểm tra...';
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: enteredPin })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          authToken = data.token;
+          sessionStorage.setItem('turtle_remote_token', authToken);
+          showController();
+        } else {
+          errEl.textContent = data.message || 'Mã PIN không đúng!';
+          enteredPin = '';
+          updatePinDisplay();
+        }
+      } catch (err) {
+        errEl.textContent = 'Lỗi kết nối tới máy chủ!';
+      }
+    }
+
+    function showController() {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('controller-screen').style.display = 'flex';
+      connectSSE();
+    }
+
+    function disconnect() {
+      if (eventSource) eventSource.close();
+      sessionStorage.removeItem('turtle_remote_token');
+      authToken = '';
+      enteredPin = '';
+      updatePinDisplay();
+      document.getElementById('controller-screen').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+      setConnStatus(false);
+    }
+
+    function setConnStatus(online) {
+      const badge = document.getElementById('conn-badge');
+      const text = document.getElementById('conn-text');
+      if (online) {
+        badge.className = 'status-badge';
+        text.textContent = 'Đã kết nối';
+      } else {
+        badge.className = 'status-badge offline';
+        text.textContent = 'Mất kết nối';
+      }
+    }
+
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+      const sseUrl = `/api/events?token=${encodeURIComponent(authToken)}`;
+      eventSource = new EventSource(sseUrl);
+
+      eventSource.onopen = () => {
+        setConnStatus(true);
+      };
+
+      eventSource.onerror = () => {
+        setConnStatus(false);
+      };
+
+      eventSource.addEventListener('state', (e) => {
+        try {
+          const state = JSON.parse(e.data);
+          renderState(state);
+        } catch (err) {
+          console.error('Lỗi phân tích state SSE:', err);
+        }
+      });
+    }
+
+    async function handleAction(action, payload = {}) {
+      haptic();
+      try {
+        await fetch('/api/action', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ action, payload })
+        });
+      } catch (err) {
+        console.error('Lỗi gửi action:', err);
+      }
+    }
+
+    function handleChoice(optionId) {
+      handleAction('SELECT_CHOICE', { optionId });
+    }
+
+    function handleFlip() {
+      handleAction('FLIP');
+    }
+
+    function handleRate(rating) {
+      handleAction('RATE_SRS', { rating });
+    }
+
+    function renderState(state) {
+      currentState = state;
+      const qCounter = document.getElementById('q-counter');
+      const modeLabel = document.getElementById('mode-label');
+      const quizPad = document.getElementById('quiz-pad');
+      const flashcardPad = document.getElementById('flashcard-pad');
+      const srsRatings = document.getElementById('srs-ratings');
+      const flipBtn = document.getElementById('flip-btn');
+      const expCard = document.getElementById('exp-card');
+      const expContent = document.getElementById('exp-content');
+      const expHeaderText = document.getElementById('exp-header-text');
+
+      if (!state || !state.session_active) {
+        qCounter.textContent = 'Chưa vào bài học';
+        modeLabel.textContent = 'Hãy mở bộ thẻ trên máy tính';
+        quizPad.style.display = 'none';
+        flashcardPad.style.display = 'none';
+        expCard.style.display = 'none';
+        return;
+      }
+
+      qCounter.textContent = `Câu ${state.index + 1} / ${state.total}`;
+      modeLabel.textContent = `Chế độ: ${state.mode.toUpperCase()}`;
+
+      // Reset choice buttons styling
+      ['A', 'B', 'C', 'D'].forEach(letter => {
+        const btn = document.getElementById(`btn-choice-${letter}`);
+        btn.className = 'choice-btn';
+        btn.querySelector('.choice-subtext').textContent = '';
+      });
+
+      if (state.kind === 'card') {
+        // Flashcard mode
+        quizPad.style.display = 'none';
+        flashcardPad.style.display = 'flex';
+
+        if (state.card_flipped) {
+          flipBtn.style.display = 'none';
+          srsRatings.style.display = 'grid';
+          if (state.explanation) {
+            expCard.style.display = 'block';
+            expHeaderText.textContent = 'Mặt sau / Ghi chú';
+            expContent.innerHTML = state.explanation;
+          } else {
+            expCard.style.display = 'none';
+          }
+        } else {
+          flipBtn.style.display = 'flex';
+          srsRatings.style.display = 'none';
+          expCard.style.display = 'none';
+        }
+      } else {
+        // Quiz / Multiple Choice
+        flashcardPad.style.display = 'none';
+        quizPad.style.display = 'grid';
+
+        // Gán text ngắn nếu có
+        if (state.choices && state.choices.length > 0) {
+          state.choices.forEach((c, idx) => {
+            const letter = ['A', 'B', 'C', 'D'][idx] || c.id;
+            const btn = document.getElementById(`btn-choice-${letter}`);
+            if (btn) {
+              if (c.selected) btn.classList.add('selected');
+              if (state.submitted) {
+                if (c.is_correct === true) btn.classList.add('correct');
+                else if (c.selected && c.is_correct === false) btn.classList.add('wrong');
+              }
+              const subtext = btn.querySelector('.choice-subtext');
+              if (subtext) subtext.textContent = c.text || '';
+            }
+          });
+        }
+
+        // Lời giải thích
+        if (state.submitted && state.explanation) {
+          expCard.style.display = 'block';
+          expHeaderText.textContent = state.is_correct ? '✓ Đúng rồi! Lời giải:' : '✗ Chưa đúng! Lời giải:';
+          expContent.innerHTML = state.explanation;
+        } else {
+          expCard.style.display = 'none';
+        }
+      }
+    }
+
+    // Khởi động nếu đã có token sẵn
+    if (authToken) {
+      showController();
+    }
+  </script>
+</body>
+</html>

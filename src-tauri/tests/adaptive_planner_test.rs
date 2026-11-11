@@ -89,8 +89,14 @@ fn test_adaptive_planner_prioritizes_low_retrievability_and_lapses() {
         "Top priority must be low retention or high lapses, got: {first_id}"
     );
 
-    let low_r_pos = planned.iter().position(|p| p.item_id == "item-low-r").unwrap();
-    let high_r_pos = planned.iter().position(|p| p.item_id == "item-high-r").unwrap();
+    let low_r_pos = planned
+        .iter()
+        .position(|p| p.item_id == "item-low-r")
+        .unwrap();
+    let high_r_pos = planned
+        .iter()
+        .position(|p| p.item_id == "item-high-r")
+        .unwrap();
     assert!(low_r_pos < high_r_pos, "low R must come before high R");
 }
 

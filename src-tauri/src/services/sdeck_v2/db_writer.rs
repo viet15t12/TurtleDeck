@@ -92,7 +92,10 @@ pub fn build_questions_db_bytes(items: &[Value]) -> AppResult<Vec<u8>> {
             }
             "fill" => {
                 let question = it.get("question").and_then(|v| v.as_str()).unwrap_or("");
-                let match_mode = it.get("match").and_then(|v| v.as_str()).unwrap_or("normalized");
+                let match_mode = it
+                    .get("match")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("normalized");
                 let tolerance = it.get("tolerance").and_then(|v| v.as_f64()).unwrap_or(0.0);
                 let answer_display = it.get("answerDisplay").and_then(|v| v.as_str());
                 conn.execute(

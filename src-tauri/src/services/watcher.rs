@@ -15,7 +15,10 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Đồng bộ DB khi Watcher phát hiện file .sdeck bị xóa khỏi đĩa:
 /// Xóa hẳn hàng `decks` -> `deck_locations` và `items` bị cascade xóa theo (không còn hàng mồ côi).
-pub fn handle_watcher_file_removed(conn: &mut Connection, path: &Path) -> AppResult<Option<String>> {
+pub fn handle_watcher_file_removed(
+    conn: &mut Connection,
+    path: &Path,
+) -> AppResult<Option<String>> {
     let path_str = path.to_string_lossy().to_string();
     DeckRepository::remove_deck_by_file_path(conn, &path_str)
 }
@@ -130,9 +133,9 @@ impl AppWatcher {
                 if matches!(kind, EventKind::Remove(_)) || !target_path.exists() {
                     let mut removed_deck_id = None;
                     if let Some(state) = app_handle.try_state::<AppState>() {
-                        if let Ok(did) = state.with_db_mut(|conn| {
-                            handle_watcher_file_removed(conn, &target_path)
-                        }) {
+                        if let Ok(did) = state
+                            .with_db_mut(|conn| handle_watcher_file_removed(conn, &target_path))
+                        {
                             removed_deck_id = did;
                         }
                     }

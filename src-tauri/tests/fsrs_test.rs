@@ -1,5 +1,5 @@
-use turtle_deck_lib::srs::fsrs::{calculate_interval, retrievability, schedule_fsrs};
 use turtle_deck_lib::db::repositories::srs::{SrsCard, DAY_MS};
+use turtle_deck_lib::srs::fsrs::{calculate_interval, retrievability, schedule_fsrs};
 
 #[test]
 fn test_fsrs_initial_ratings_for_new_card() {
@@ -29,7 +29,7 @@ fn test_fsrs_initial_ratings_for_new_card() {
 #[test]
 fn test_fsrs_retrievability_decay() {
     let stability = 10.0; // 10 days
-    // At t = 0, R = 1.0
+                          // At t = 0, R = 1.0
     let r0 = retrievability(0.0, stability);
     assert!((r0 - 1.0).abs() < 1e-4);
 
@@ -78,7 +78,10 @@ fn test_fsrs_review_progression() {
     // Review Good (3)
     let next_good = schedule_fsrs(&card, 3, now, 0.9, false);
     assert_eq!(next_good.state, "review");
-    assert!(next_good.stability.unwrap() > 10.0, "Stability should increase on Good");
+    assert!(
+        next_good.stability.unwrap() > 10.0,
+        "Stability should increase on Good"
+    );
     assert!(next_good.interval > 10, "Interval should increase on Good");
     assert_eq!(next_good.reps, 3);
     assert_eq!(next_good.lapses, 0);
@@ -86,7 +89,13 @@ fn test_fsrs_review_progression() {
     // Review Again (1) -> Lapses and Stability drop
     let next_again = schedule_fsrs(&card, 1, now, 0.9, false);
     assert_eq!(next_again.state, "relearning");
-    assert!(next_again.stability.unwrap() < 10.0, "Stability should drop on Again");
+    assert!(
+        next_again.stability.unwrap() < 10.0,
+        "Stability should drop on Again"
+    );
     assert_eq!(next_again.lapses, 1);
-    assert!(next_again.difficulty.unwrap() > card.difficulty.unwrap(), "Difficulty increases on Again");
+    assert!(
+        next_again.difficulty.unwrap() > card.difficulty.unwrap(),
+        "Difficulty increases on Again"
+    );
 }

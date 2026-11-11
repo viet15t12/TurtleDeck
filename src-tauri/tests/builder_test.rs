@@ -46,7 +46,10 @@ fn test_build_write_question() {
     // Fwd (prompt: definition -> type term)
     let q_rev = build_write(&item, "rev").expect("Write rev question");
     assert_eq!(q_rev.prompt, "máy tính; máy vi tính");
-    assert_eq!(q_rev.answers.as_ref().unwrap(), &vec!["computer".to_string()]);
+    assert_eq!(
+        q_rev.answers.as_ref().unwrap(),
+        &vec!["computer".to_string()]
+    );
 
     // Fwd (prompt: term -> type definition)
     let q_fwd = build_write(&item, "fwd").expect("Write fwd question");

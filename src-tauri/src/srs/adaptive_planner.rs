@@ -82,8 +82,15 @@ pub fn plan_adaptive_session(
     let mut learning_bucket: Vec<PlannedCardItem> = Vec::new();
     let mut new_bucket: Vec<PlannedCardItem> = Vec::new();
 
-    let build_mode = config.mode.as_deref().unwrap_or(if deck_kind == "vocab" { "mc" } else { "quiz" });
-    let builder_opts = BuilderOptions { count: 4, seed: config.seed };
+    let build_mode =
+        config
+            .mode
+            .as_deref()
+            .unwrap_or(if deck_kind == "vocab" { "mc" } else { "quiz" });
+    let builder_opts = BuilderOptions {
+        count: 4,
+        seed: config.seed,
+    };
 
     for &dir in &directions {
         for it in items {
@@ -184,10 +191,8 @@ pub fn plan_adaptive_session(
         .collect();
 
     // 1. Gộp và xen kẽ (Interleave) thẻ mới với thẻ ôn tập
-    let mut review_pool: VecDeque<PlannedCardItem> = VecDeque::new();
-    for item in learning_bucket.into_iter().chain(due_bucket.into_iter()) {
-        review_pool.push_back(item);
-    }
+    let mut review_pool: VecDeque<PlannedCardItem> =
+        learning_bucket.into_iter().chain(due_bucket).collect();
 
     let mut combined_pool: Vec<PlannedCardItem> = Vec::new();
     if review_pool.is_empty() {

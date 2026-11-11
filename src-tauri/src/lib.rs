@@ -42,7 +42,9 @@ pub fn run() {
                 watcher: std::sync::Mutex::new(None),
                 renderer_ready: std::sync::atomic::AtomicBool::new(false),
                 pending_external_files: std::sync::Mutex::new(Vec::new()),
-                remote_service: tokio::sync::Mutex::new(services::remote_server::RemoteService::new()),
+                remote_service: tokio::sync::Mutex::new(
+                    services::remote_server::RemoteService::new(),
+                ),
             }
         }
         Err(e) => {

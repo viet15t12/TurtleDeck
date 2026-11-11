@@ -3,10 +3,10 @@ use crate::db::repositories::srs::{SrsCard, DAY_MS, MINUTE_MS};
 
 pub const DEFAULT_WEIGHTS: [f64; 17] = [
     0.40255, 1.18385, 3.173, 15.69105, // w0..w3: Initial stability for ratings 1, 2, 3, 4
-    7.1949, 0.5345, 1.4604, 0.0046,     // w4..w7: Initial difficulty & difficulty adjustment
-    1.5457, 0.1192, 1.0192,              // w8..w10: Stability update on Recall
-    1.9395, 0.11, 0.29605, 0.22695,      // w11..w14: Stability update on Forgetting (Again)
-    0.2315, 2.9898,                      // w15..w16: Hard penalty & Easy bonus
+    7.1949, 0.5345, 1.4604, 0.0046, // w4..w7: Initial difficulty & difficulty adjustment
+    1.5457, 0.1192, 1.0192, // w8..w10: Stability update on Recall
+    1.9395, 0.11, 0.29605, 0.22695, // w11..w14: Stability update on Forgetting (Again)
+    0.2315, 2.9898, // w15..w16: Hard penalty & Easy bonus
 ];
 
 pub const FACTOR: f64 = 19.0 / 81.0;
@@ -64,13 +64,7 @@ pub fn next_difficulty(d: f64, rating: i64, weights: &[f64; 17]) -> f64 {
 }
 
 // Cập nhật stability khi nhớ thành công (rating >= 2)
-pub fn next_stability_recall(
-    d: f64,
-    s: f64,
-    r: f64,
-    rating: i64,
-    weights: &[f64; 17],
-) -> f64 {
+pub fn next_stability_recall(d: f64, s: f64, r: f64, rating: i64, weights: &[f64; 17]) -> f64 {
     let s_clean = s.max(0.1);
     let d_clean = d.clamp(1.0, 10.0);
     let r_clean = r.clamp(0.01, 1.0);
@@ -94,12 +88,7 @@ pub fn next_stability_recall(
 }
 
 // Cập nhật stability khi quên (rating == 1: Again)
-pub fn next_stability_forget(
-    d: f64,
-    s: f64,
-    r: f64,
-    weights: &[f64; 17],
-) -> f64 {
+pub fn next_stability_forget(d: f64, s: f64, r: f64, weights: &[f64; 17]) -> f64 {
     let s_clean = s.max(0.1);
     let d_clean = d.clamp(1.0, 10.0);
     let r_clean = r.clamp(0.01, 1.0);
@@ -185,7 +174,7 @@ pub fn schedule_fsrs(
             c.state = "learning".to_string();
             c.step = 0;
             c.interval = 0;
-            c.due = now + 1 * MINUTE_MS;
+            c.due = now + MINUTE_MS;
             c.lapses += 1;
         } else {
             c.state = "review".to_string();
@@ -217,7 +206,7 @@ pub fn schedule_fsrs(
         c.lapses += 1;
         // Interval tạm thời 1 ngày khi tốt nghiệp relearning, hiện tại cần ôn lại sau 1 phút
         c.interval = 1;
-        c.due = now + 1 * MINUTE_MS;
+        c.due = now + MINUTE_MS;
     } else {
         // Nhớ được (Hard, Good, Easy)
         let next_s = next_stability_recall(next_d, current_stability, current_r, r_clean, weights);

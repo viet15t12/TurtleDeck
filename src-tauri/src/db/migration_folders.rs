@@ -32,10 +32,7 @@ fn extract_deck_meta_from_sdeck(path: &Path) -> Option<(String, String, String)>
         .and_then(|v| v.as_str())
         .unwrap_or("Bộ thẻ")
         .to_string();
-    let kind_raw = meta
-        .get("kind")
-        .and_then(|v| v.as_str())
-        .unwrap_or("quiz");
+    let kind_raw = meta.get("kind").and_then(|v| v.as_str()).unwrap_or("quiz");
     let kind = match kind_raw {
         "qa" | "quiz" | "vocab" => kind_raw.to_string(),
         _ => "quiz".to_string(),
@@ -269,7 +266,13 @@ pub fn migrate_to_folders(conn: &mut Connection, library_dir: &Path) -> Migratio
             }
 
             let mut found_files = Vec::new();
-            collect_files(library_dir, library_dir, None, &folder_map, &mut found_files);
+            collect_files(
+                library_dir,
+                library_dir,
+                None,
+                &folder_map,
+                &mut found_files,
+            );
 
             // 2a. Xử lý các file .sdeck vật lý thật -> Vị trí chính (is_link = 0)
             for item in found_files.iter().filter(|f| !f.is_symlink) {
@@ -354,7 +357,8 @@ pub fn migrate_to_folders(conn: &mut Connection, library_dir: &Path) -> Migratio
                     continue;
                 }
 
-                let mut deck_id = extract_deck_meta_from_sdeck(&item.full_path).map(|(id, _, _)| id);
+                let mut deck_id =
+                    extract_deck_meta_from_sdeck(&item.full_path).map(|(id, _, _)| id);
                 if deck_id.is_none() {
                     if let Ok(canon) = fs::canonicalize(&item.full_path) {
                         let canon_str = canon.to_string_lossy().to_string();

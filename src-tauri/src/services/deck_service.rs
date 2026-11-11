@@ -361,7 +361,11 @@ pub fn delete_deck(
         if let Some(fp) = file_path {
             if !fp.trim().is_empty() {
                 let _ = state.with_db_mut(|conn| {
-                    if let Ok(Some(did)) = crate::db::repositories::deck::DeckRepository::remove_deck_by_file_path(conn, fp) {
+                    if let Ok(Some(did)) =
+                        crate::db::repositories::deck::DeckRepository::remove_deck_by_file_path(
+                            conn, fp,
+                        )
+                    {
                         resolved_deck_id = Some(did);
                     }
                     Ok(())
@@ -408,4 +412,3 @@ pub fn delete_deck(
 
     Ok(json!({ "ok": true }))
 }
-

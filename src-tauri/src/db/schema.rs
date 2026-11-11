@@ -372,10 +372,8 @@ pub fn migrate_v1_to_v2(conn: &Connection) -> AppResult<()> {
             if is_link == 1 && fid.is_none() {
                 continue;
             }
-            if is_link == 0 {
-                if primary_decks.contains(&loc.deck_id) {
-                    continue;
-                }
+            if is_link == 0 && primary_decks.contains(&loc.deck_id) {
+                continue;
             }
             if let Some(ref f) = fid {
                 if deck_folder_pairs.contains(&(loc.deck_id.clone(), f.clone())) {

@@ -187,4 +187,3 @@ pub fn read_questions_db_bytes(bytes: &[u8]) -> AppResult<Vec<Value>> {
 
     Ok(items)
 }
-

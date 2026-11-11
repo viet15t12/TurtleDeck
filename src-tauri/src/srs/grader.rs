@@ -31,16 +31,20 @@ pub fn levenshtein(a: &str, b: &str) -> usize {
 
     let mut dp = vec![vec![0usize; n + 1]; m + 1];
 
-    for i in 0..=m {
-        dp[i][0] = i;
+    for (i, row) in dp.iter_mut().enumerate() {
+        row[0] = i;
     }
-    for j in 0..=n {
-        dp[0][j] = j;
+    for (j, cell) in dp[0].iter_mut().enumerate() {
+        *cell = j;
     }
 
     for i in 1..=m {
         for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] { 0 } else { 1 };
+            let cost = if a_chars[i - 1] == b_chars[j - 1] {
+                0
+            } else {
+                1
+            };
             dp[i][j] = (dp[i - 1][j] + 1)
                 .min(dp[i][j - 1] + 1)
                 .min(dp[i - 1][j - 1] + cost);
@@ -55,7 +59,12 @@ pub fn grade_number(input: &str, answers: &[&str], tol: f64) -> GradeResult {
     let parsed_input: Result<f64, _> = input.trim().parse();
     let x = match parsed_input {
         Ok(val) => val,
-        Err(_) => return GradeResult { ok: false, near: false },
+        Err(_) => {
+            return GradeResult {
+                ok: false,
+                near: false,
+            }
+        }
     };
 
     let ok = answers.iter().any(|&a| {
@@ -108,7 +117,7 @@ pub fn grade_text(
 
     if mode == "exact" {
         return GradeResult {
-            ok: answers.iter().any(|&a| a == raw_input),
+            ok: answers.contains(&raw_input),
             near: false,
         };
     }
@@ -143,11 +152,17 @@ pub fn grade_text(
 
     // Khớp chính xác hoàn toàn sau khi chuẩn hoá
     if normalized_answers.contains(&x) {
-        return GradeResult { ok: true, near: false };
+        return GradeResult {
+            ok: true,
+            near: false,
+        };
     }
 
     if x.is_empty() {
-        return GradeResult { ok: false, near: false };
+        return GradeResult {
+            ok: false,
+            near: false,
+        };
     }
 
     // Dung sai Levenshtein: từ dài cho phép sai 1-2 ký tự (gần đúng - near)
@@ -162,9 +177,15 @@ pub fn grade_text(
         };
 
         if max_d > 0 && levenshtein(a, &x) <= max_d {
-            return GradeResult { ok: true, near: true };
+            return GradeResult {
+                ok: true,
+                near: true,
+            };
         }
     }
 
-    GradeResult { ok: false, near: false }
+    GradeResult {
+        ok: false,
+        near: false,
+    }
 }

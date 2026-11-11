@@ -46,12 +46,22 @@ fn test_srs_schema_migration_and_fsrs_persistence() {
         .and_then(|c| c.get("test_deck:item_fsrs:fwd"))
         .expect("Exported card must exist");
 
-    assert_eq!(card_json.get("stability").and_then(|s| s.as_f64()), Some(11.85));
-    assert_eq!(card_json.get("difficulty").and_then(|d| d.as_f64()), Some(6.2));
-    assert_eq!(card_json.get("lastReview").and_then(|l| l.as_i64()), Some(now));
+    assert_eq!(
+        card_json.get("stability").and_then(|s| s.as_f64()),
+        Some(11.85)
+    );
+    assert_eq!(
+        card_json.get("difficulty").and_then(|d| d.as_f64()),
+        Some(6.2)
+    );
+    assert_eq!(
+        card_json.get("lastReview").and_then(|l| l.as_i64()),
+        Some(now)
+    );
 
     // 4. Clear and re-import
-    let (c_count, _, _) = SrsRepository::import_progress_data(&mut conn, &exported, "replace").unwrap();
+    let (c_count, _, _) =
+        SrsRepository::import_progress_data(&mut conn, &exported, "replace").unwrap();
     assert_eq!(c_count, 1);
 
     let re_retrieved = SrsRepository::get_card(&conn, "test_deck", "item_fsrs", "fwd")
@@ -85,7 +95,8 @@ fn test_migration_from_v1_legacy_table_without_fsrs_columns() {
         );
         PRAGMA user_version = 1;
         ",
-    ).unwrap();
+    )
+    .unwrap();
 
     // Chạy create_schema để kích hoạt auto-migration
     create_schema(&conn).unwrap();

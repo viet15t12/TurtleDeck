@@ -32,7 +32,9 @@ impl AppState {
             watcher: Mutex::new(None),
             renderer_ready: AtomicBool::new(false),
             pending_external_files: Mutex::new(Vec::new()),
-            remote_service: tokio::sync::Mutex::new(crate::services::remote_server::RemoteService::new()),
+            remote_service: tokio::sync::Mutex::new(
+                crate::services::remote_server::RemoteService::new(),
+            ),
         }
     }
 

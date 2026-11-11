@@ -30,13 +30,26 @@ fn test_grade_text_modes() {
     // "elephant" (len 8 >= 5) với 1 lỗi typo "elephent"
     let res_typo = grade_text("elephent", &["elephant"], "normalized", None);
     assert!(res_typo.ok);
-    assert!(res_typo.near, "1 typo in 8-char word should be counted as near");
+    assert!(
+        res_typo.near,
+        "1 typo in 8-char word should be counted as near"
+    );
 
     // 4. Regex
-    let res_regex = grade_text("systemctl status nginx", &["^systemctl (status|restart) nginx$"], "regex", None);
+    let res_regex = grade_text(
+        "systemctl status nginx",
+        &["^systemctl (status|restart) nginx$"],
+        "regex",
+        None,
+    );
     assert!(res_regex.ok);
 
-    let res_regex_fail = grade_text("systemctl stop nginx", &["^systemctl (status|restart) nginx$"], "regex", None);
+    let res_regex_fail = grade_text(
+        "systemctl stop nginx",
+        &["^systemctl (status|restart) nginx$"],
+        "regex",
+        None,
+    );
     assert!(!res_regex_fail.ok);
 }
 

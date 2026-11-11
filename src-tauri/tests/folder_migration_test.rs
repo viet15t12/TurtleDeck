@@ -58,8 +58,11 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
     #[cfg(unix)]
     {
         // Valid symlink inside Languages/Japanese pointing to lpic101.sdeck
-        std::os::unix::fs::symlink(&lpic_file, lib_dir.join("Languages/Japanese/lpic-link.sdeck"))
-            .unwrap();
+        std::os::unix::fs::symlink(
+            &lpic_file,
+            lib_dir.join("Languages/Japanese/lpic-link.sdeck"),
+        )
+        .unwrap();
         // Broken symlink inside LPIC
         std::os::unix::fs::symlink(
             lib_dir.join("non-existent.sdeck"),

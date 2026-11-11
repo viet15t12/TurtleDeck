@@ -38,7 +38,10 @@ fn test_srs_plan_and_review_flow_in_rust() {
     // 1. Lập lịch phiên học (Adaptive Plan)
     let planned = plan_adaptive_session(&items, &cards, &config, now);
     assert_eq!(planned.len(), 6);
-    assert!(planned[0].question.is_some(), "Question should be pre-built by Rust");
+    assert!(
+        planned[0].question.is_some(),
+        "Question should be pre-built by Rust"
+    );
     let q = planned[0].question.as_ref().unwrap();
     assert!(!q.prompt.is_empty());
 

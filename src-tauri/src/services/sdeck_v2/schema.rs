@@ -145,4 +145,3 @@ pub fn init_deck_db(conn: &Connection) -> AppResult<()> {
         .map_err(|e| AppError::Custom(format!("Lỗi tạo schema quan hệ questions.db: {e}")))?;
     Ok(())
 }
-

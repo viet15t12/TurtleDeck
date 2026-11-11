@@ -223,16 +223,37 @@ fn test_deck_repository_delete_deck_cascades_and_clears_progress() {
     };
     SrsRepository::record_review(&mut conn, &card, 3, now, 1000, false).unwrap();
 
-    assert!(DeckRepository::get_deck(&conn, "deck-del-1").unwrap().is_some());
-    assert_eq!(DeckRepository::get_items(&conn, "deck-del-1").unwrap().len(), 1);
-    assert!(SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd").unwrap().is_some());
+    assert!(DeckRepository::get_deck(&conn, "deck-del-1")
+        .unwrap()
+        .is_some());
+    assert_eq!(
+        DeckRepository::get_items(&conn, "deck-del-1")
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(
+        SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd")
+            .unwrap()
+            .is_some()
+    );
 
     // Xoá bộ thẻ
     DeckRepository::delete_deck(&mut conn, "deck-del-1").unwrap();
 
     // Xác nhận đã xoá sạch bộ thẻ và tiến trình
-    assert!(DeckRepository::get_deck(&conn, "deck-del-1").unwrap().is_none());
-    assert_eq!(DeckRepository::get_items(&conn, "deck-del-1").unwrap().len(), 0);
-    assert!(SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd").unwrap().is_none());
+    assert!(DeckRepository::get_deck(&conn, "deck-del-1")
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        DeckRepository::get_items(&conn, "deck-del-1")
+            .unwrap()
+            .len(),
+        0
+    );
+    assert!(
+        SrsRepository::get_card(&conn, "deck-del-1", "item-1", "fwd")
+            .unwrap()
+            .is_none()
+    );
 }
-

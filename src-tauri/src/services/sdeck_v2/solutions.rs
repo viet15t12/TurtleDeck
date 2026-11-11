@@ -82,10 +82,7 @@ pub fn split_v1_items_to_v2(items: &[Value]) -> (Vec<Value>, SolutionsFile) {
 }
 
 /// Ghép nối câu hỏi (từ SQLite) và lời giải (từ solutions.json) thành cấu trúc thống nhất
-pub fn merge_v2_to_unified_items(
-    db_items: Vec<Value>,
-    solutions: &SolutionsFile,
-) -> Vec<Value> {
+pub fn merge_v2_to_unified_items(db_items: Vec<Value>, solutions: &SolutionsFile) -> Vec<Value> {
     db_items
         .into_iter()
         .map(|mut it| {
@@ -111,4 +108,3 @@ pub fn merge_v2_to_unified_items(
         })
         .collect()
 }
-

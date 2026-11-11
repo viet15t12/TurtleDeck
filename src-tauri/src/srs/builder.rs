@@ -57,7 +57,10 @@ pub fn build_mc(
 ) -> Option<BuiltQuestion> {
     let item_id = item.get("id").and_then(|v| v.as_str())?;
     let term = item.get("term").and_then(|v| v.as_str()).unwrap_or("");
-    let definition = item.get("definition").and_then(|v| v.as_str()).unwrap_or("");
+    let definition = item
+        .get("definition")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     if term.is_empty() || definition.is_empty() {
         return None;
@@ -92,7 +95,11 @@ pub fn build_mc(
     let mut group_tag = Vec::new();
     let mut group_other = Vec::new();
 
-    let max_d = if norm_correct.chars().count() >= 8 { 2 } else { 1 };
+    let max_d = if norm_correct.chars().count() >= 8 {
+        2
+    } else {
+        1
+    };
 
     for cand in all_items {
         let _cand_id = match cand.get("id").and_then(|v| v.as_str()) {
@@ -125,11 +132,8 @@ pub fn build_mc(
             .get("tags")
             .and_then(|v| v.as_array())
             .map(|arr| {
-                arr.iter().any(|t| {
-                    t.as_str()
-                        .map(|s| item_tags.contains(s))
-                        .unwrap_or(false)
-                })
+                arr.iter()
+                    .any(|t| t.as_str().map(|s| item_tags.contains(s)).unwrap_or(false))
             })
             .unwrap_or(false);
 
@@ -175,16 +179,28 @@ pub fn build_mc(
         .position(|c| c == correct_answer)
         .unwrap_or(0);
 
-    let explanation = item.get("example").and_then(|v| v.as_str()).map(|ex| {
-        format!("*Ví dụ:* {ex}")
-    }).or_else(|| {
-        item.get("explanation").and_then(|v| v.as_str()).map(|e| e.to_string())
-    });
+    let explanation = item
+        .get("example")
+        .and_then(|v| v.as_str())
+        .map(|ex| format!("*Ví dụ:* {ex}"))
+        .or_else(|| {
+            item.get("explanation")
+                .and_then(|v| v.as_str())
+                .map(|e| e.to_string())
+        });
 
-    let phonetic = item.get("phonetic").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let topic = item.get("pos").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let phonetic = item
+        .get("phonetic")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let topic = item
+        .get("pos")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     let image = if is_fwd {
-        item.get("image").and_then(|v| v.as_str()).map(|s| s.to_string())
+        item.get("image")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
     } else {
         None
     };
@@ -198,7 +214,9 @@ pub fn build_mc(
         direction: dir.to_string(),
         explanation,
         topic,
-        tags: item.get("tags").and_then(|t| serde_json::from_value(t.clone()).ok()),
+        tags: item
+            .get("tags")
+            .and_then(|t| serde_json::from_value(t.clone()).ok()),
         phonetic,
         image,
         answer_image: None,
@@ -208,7 +226,10 @@ pub fn build_mc(
 pub fn build_write(item: &Value, dir: &str) -> Option<BuiltQuestion> {
     let item_id = item.get("id").and_then(|v| v.as_str())?;
     let term = item.get("term").and_then(|v| v.as_str()).unwrap_or("");
-    let definition = item.get("definition").and_then(|v| v.as_str()).unwrap_or("");
+    let definition = item
+        .get("definition")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     if term.is_empty() || definition.is_empty() {
         return None;
@@ -235,11 +256,25 @@ pub fn build_write(item: &Value, dir: &str) -> Option<BuiltQuestion> {
         choices: None,
         answers: Some(answers),
         direction: dir.to_string(),
-        explanation: item.get("explanation").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        topic: item.get("pos").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        tags: item.get("tags").and_then(|t| serde_json::from_value(t.clone()).ok()),
-        phonetic: item.get("phonetic").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        image: item.get("image").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        explanation: item
+            .get("explanation")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        topic: item
+            .get("pos")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        tags: item
+            .get("tags")
+            .and_then(|t| serde_json::from_value(t.clone()).ok()),
+        phonetic: item
+            .get("phonetic")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        image: item
+            .get("image")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
         answer_image: None,
     })
 }
@@ -251,12 +286,23 @@ pub fn build_flashcard(item: &Value, dir: &str) -> Option<BuiltQuestion> {
 
     let (front, back) = if is_vocab {
         let t = item.get("term").and_then(|v| v.as_str()).unwrap_or("");
-        let d = item.get("definition").and_then(|v| v.as_str()).unwrap_or("");
-        if is_fwd { (t, d) } else { (d, t) }
+        let d = item
+            .get("definition")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if is_fwd {
+            (t, d)
+        } else {
+            (d, t)
+        }
     } else {
         let f = item.get("front").and_then(|v| v.as_str()).unwrap_or("");
         let b = item.get("back").and_then(|v| v.as_str()).unwrap_or("");
-        if is_fwd { (f, b) } else { (b, f) }
+        if is_fwd {
+            (f, b)
+        } else {
+            (b, f)
+        }
     };
 
     Some(BuiltQuestion {
@@ -267,11 +313,28 @@ pub fn build_flashcard(item: &Value, dir: &str) -> Option<BuiltQuestion> {
         answers: None,
         direction: dir.to_string(),
         explanation: Some(back.to_string()),
-        topic: item.get("topic").or_else(|| item.get("pos")).and_then(|v| v.as_str()).map(|s| s.to_string()),
-        tags: item.get("tags").and_then(|t| serde_json::from_value(t.clone()).ok()),
-        phonetic: item.get("phonetic").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        image: item.get("frontImage").or_else(|| item.get("image")).and_then(|v| v.as_str()).map(|s| s.to_string()),
-        answer_image: item.get("backImage").or_else(|| item.get("answerImage")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+        topic: item
+            .get("topic")
+            .or_else(|| item.get("pos"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        tags: item
+            .get("tags")
+            .and_then(|t| serde_json::from_value(t.clone()).ok()),
+        phonetic: item
+            .get("phonetic")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        image: item
+            .get("frontImage")
+            .or_else(|| item.get("image"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        answer_image: item
+            .get("backImage")
+            .or_else(|| item.get("answerImage"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
     })
 }
 
@@ -309,13 +372,19 @@ pub fn build_question(
         })
     });
 
-    let answers: Option<Vec<String>> = if let Some(ans_arr) = item.get("answer").and_then(|a| a.as_array()) {
-        Some(ans_arr.iter().map(|v| v.to_string().trim_matches('"').to_string()).collect())
-    } else if let Some(ans_str) = item.get("answer").and_then(|a| a.as_str()) {
-        Some(vec![ans_str.to_string()])
-    } else {
-        None
-    };
+    let answers: Option<Vec<String>> =
+        if let Some(ans_arr) = item.get("answer").and_then(|a| a.as_array()) {
+            Some(
+                ans_arr
+                    .iter()
+                    .map(|v| v.to_string().trim_matches('"').to_string())
+                    .collect(),
+            )
+        } else {
+            item.get("answer")
+                .and_then(|a| a.as_str())
+                .map(|ans_str| vec![ans_str.to_string()])
+        };
 
     Some(BuiltQuestion {
         id: item_id.to_string(),
@@ -324,11 +393,25 @@ pub fn build_question(
         choices,
         answers,
         direction: dir.to_string(),
-        explanation: item.get("explanation").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        topic: item.get("topic").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        tags: item.get("tags").and_then(|t| serde_json::from_value(t.clone()).ok()),
+        explanation: item
+            .get("explanation")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        topic: item
+            .get("topic")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        tags: item
+            .get("tags")
+            .and_then(|t| serde_json::from_value(t.clone()).ok()),
         phonetic: None,
-        image: item.get("image").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        answer_image: item.get("answerImage").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        image: item
+            .get("image")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
+        answer_image: item
+            .get("answerImage")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
     })
 }

@@ -619,8 +619,20 @@ impl SrsRepository {
                     .unwrap_or(0);
 
                 stmt.execute(params![
-                    deck_id, item_id, direction, state, step, ease, interval, due, reps, lapses,
-                    updated_at, stability, difficulty, last_review
+                    deck_id,
+                    item_id,
+                    direction,
+                    state,
+                    step,
+                    ease,
+                    interval,
+                    due,
+                    reps,
+                    lapses,
+                    updated_at,
+                    stability,
+                    difficulty,
+                    last_review
                 ])?;
                 cards_count += 1;
             }
