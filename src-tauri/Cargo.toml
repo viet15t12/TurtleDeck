@@ -1,6 +1,6 @@
 [package]
 name = "turtle-deck"
-version = "0.3.0"
+version = "0.3.1"
 description = "Ứng dụng học tập offline bằng flashcard và trắc nghiệm"
 authors = ["Viet15t12 <quocviet15t12@gmail.com>"]
 license = "MIT"
