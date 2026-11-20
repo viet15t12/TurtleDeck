@@ -4,6 +4,7 @@
 import { validateItem, hasError } from './validate.js';
 import { lev } from './grader.js';
 import { toPlain } from './richtext.js';
+import { getItemForLanguage, getPrimaryLanguage } from './deckmodel.js';
 
 const norm = (s: unknown): string => String(s ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -14,6 +15,61 @@ export function shuffle<T>(array: T[], rand = Math.random): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+export function applyQuestionSpacing(list: any[], minSeparation = 5): any[] {
+  if (!Array.isArray(list) || list.length <= 2) return list || [];
+  const result = [...list];
+  const getId = (q: any) => q?.rootId || q?.itemId || q?.id;
+
+  for (let i = 0; i < result.length - 1; i++) {
+    const curId = getId(result[i]);
+    const maxLookahead = Math.min(result.length - 1, i + minSeparation);
+    for (let j = i + 1; j <= maxLookahead; j++) {
+      if (getId(result[j]) === curId) {
+        let swapIdx = -1;
+        for (let k = i + minSeparation + 1; k < result.length; k++) {
+          if (getId(result[k]) !== curId) {
+            const prevJ = getId(result[j - 1]);
+            const nextJ = j < result.length - 1 ? getId(result[j + 1]) : null;
+            if (getId(result[k]) !== prevJ && getId(result[k]) !== nextJ) {
+              swapIdx = k;
+              break;
+            } else if (swapIdx === -1) {
+              swapIdx = k;
+            }
+          }
+        }
+        if (swapIdx === -1) {
+          for (let k = result.length - 1; k > j; k--) {
+            if (getId(result[k]) !== curId) {
+              swapIdx = k;
+              break;
+            }
+          }
+        }
+        if (swapIdx !== -1) {
+          const temp = result[j];
+          result[j] = result[swapIdx];
+          result[swapIdx] = temp;
+        }
+      }
+    }
+  }
+
+  // Đảm bảo không bao giờ có 2 câu cùng id nằm liền kề
+  for (let i = 0; i < result.length - 1; i++) {
+    if (getId(result[i]) === getId(result[i + 1])) {
+      const swapIdx = result.findIndex((q, idx) => idx > i + 1 && getId(q) !== getId(result[i]));
+      if (swapIdx !== -1) {
+        const temp = result[i + 1];
+        result[i + 1] = result[swapIdx];
+        result[swapIdx] = temp;
+      }
+    }
+  }
+
+  return result;
 }
 
 // ── Các hàm builder cho Từ vựng (vocab) ─────────────────────────────────────
@@ -246,11 +302,17 @@ export function buildQuestion(item: any, opts: any = {}): any {
   if (!item || typeof item !== 'object') return null;
 
   const type = item.type || (item.term ? 'vocab' : (item.front ? 'card' : null));
+  const cardId = item.cardId || item.id;
+  const rootId = item.rootId || item.id;
+  const lang = item.lang;
 
   switch (type) {
     case 'single':
       return {
-        id: item.id,
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
         kind: 'single',
         prompt: item.question ?? '',
         choices: Array.isArray(item.choices) ? [...item.choices] : [],
@@ -266,7 +328,10 @@ export function buildQuestion(item: any, opts: any = {}): any {
 
     case 'multi':
       return {
-        id: item.id,
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
         kind: 'multi',
         prompt: item.question ?? '',
         choices: Array.isArray(item.choices) ? [...item.choices] : [],
@@ -282,7 +347,10 @@ export function buildQuestion(item: any, opts: any = {}): any {
 
     case 'fill':
       return {
-        id: item.id,
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
         kind: 'fill',
         prompt: item.question ?? '',
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
@@ -299,7 +367,10 @@ export function buildQuestion(item: any, opts: any = {}): any {
 
     case 'command':
       return {
-        id: item.id,
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
         kind: 'command',
         prompt: item.question ?? '',
         answers: Array.isArray(item.answer) ? [...item.answer] : [item.answer],
@@ -315,7 +386,10 @@ export function buildQuestion(item: any, opts: any = {}): any {
 
     case 'card':
       return {
-        id: item.id,
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
         kind: 'card',
         prompt: item.front ?? '',
         front: item.front ?? '',
@@ -330,14 +404,41 @@ export function buildQuestion(item: any, opts: any = {}): any {
         rawItem: item,
       };
 
+    case 'translate':
+      return {
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
+        kind: 'translate',
+        prompt: item.vi ?? '',
+        vi: item.vi ?? '',
+        keyword: item.keyword ?? '',
+        answers: Array.isArray(item.answers) ? [...item.answers] : [item.answers],
+        pattern: item.pattern,
+        acceptableForms: item.acceptableForms,
+        explanation: item.explanation ?? '',
+        topic: item.topic,
+        tags: item.tags,
+        rawItem: item,
+      };
+
     case 'vocab': {
       const mode = opts.mode;
       const dir = opts.dir || opts.direction || 'fwd';
-      if (mode === 'mc') return buildMC(item, opts.allItems || [], dir, opts);
-      if (mode === 'write') return buildWrite(item, dir);
-      if (mode === 'cloze') return buildCloze(item);
-      if (mode === 'listen') return buildListen(item);
-      return buildFlashcard(item, dir);
+      let q: any = null;
+      if (mode === 'mc') q = buildMC(item, opts.allItems || [], dir, opts);
+      else if (mode === 'write') q = buildWrite(item, dir);
+      else if (mode === 'cloze') q = buildCloze(item);
+      else if (mode === 'listen') q = buildListen(item);
+      else q = buildFlashcard(item, dir);
+      if (q) {
+        q.id = cardId;
+        q.itemId = rootId;
+        q.rootId = rootId;
+        q.lang = lang;
+      }
+      return q;
     }
 
     default:
@@ -352,46 +453,62 @@ export function buildSessionQuestions(items: any[], options: any = {}): any[] {
   const mode = options.mode || (options.deckKind === 'vocab' ? 'flashcards' : undefined);
   const direction = options.direction || 'both';
 
+  // Nếu có tùy chọn selectedLangs: mở rộng items theo tập ngôn ngữ được chọn
+  let itemsToBuild: any[] = validItems;
+  if (Array.isArray(options.selectedLangs) && options.selectedLangs.length > 0) {
+    const selected = options.selectedLangs.map((s: string) => String(s).trim().toLowerCase());
+    const primaryLang = getPrimaryLanguage(options.deck?.meta || { lang: selected[0] }, validItems);
+    const expanded: any[] = [];
+    for (const it of validItems) {
+      if (it.type === 'translate') {
+        // Dạng translate vốn song ngữ, ngôn ngữ-trung-lập: luôn sinh đúng 1 thẻ
+        expanded.push({ ...it, cardId: it.id, rootId: it.id, lang: primaryLang });
+      } else {
+        for (const l of selected) {
+          const itLang = getItemForLanguage(it, l, primaryLang);
+          if (itLang) expanded.push(itLang);
+        }
+      }
+    }
+    itemsToBuild = expanded;
+  }
+
   if (options.deckKind === 'vocab') {
     const dirs = direction === 'both' ? ['fwd', 'rev'] : [direction];
 
-    for (const it of validItems) {
+    for (const it of itemsToBuild) {
       for (const d of dirs) {
         let q: any = null;
-        if (mode === 'mc') q = buildMC(it, validItems, d, options);
+        if (mode === 'mc') q = buildMC(it, itemsToBuild, d, options);
         else if (mode === 'write') q = buildWrite(it, d);
         else if (mode === 'cloze') q = buildCloze(it);
         else if (mode === 'listen') q = buildListen(it);
         else q = buildFlashcard(it, d);
 
-        if (q) list.push(q);
+        if (q) {
+          if (it.cardId) q.id = it.cardId;
+          if (it.rootId) { q.itemId = it.rootId; q.rootId = it.rootId; }
+          if (it.lang) q.lang = it.lang;
+          list.push(q);
+        }
       }
     }
   } else {
-    list = validItems.map(it => buildQuestion(it, options)).filter(Boolean);
+    list = itemsToBuild.map(it => buildQuestion(it, options)).filter(Boolean);
   }
 
   if (options.itemIds && Array.isArray(options.itemIds)) {
     const idSet = new Set(options.itemIds);
-    list = list.filter(q => idSet.has(q.id));
+    list = list.filter(q => idSet.has(q.id) || idSet.has(q.rootId) || idSet.has(q.itemId));
   }
 
   if (options.shuffle) {
     list = shuffle(list, options.rng || Math.random);
   }
 
-  if (list.length > 2) {
-    for (let i = 0; i < list.length - 1; i++) {
-      if (list[i].id === list[i + 1].id) {
-        const swapIdx = list.findIndex((q, idx) => idx > i + 1 && q.id !== list[i].id);
-        if (swapIdx !== -1) {
-          const temp = list[i + 1];
-          list[i + 1] = list[swapIdx];
-          list[swapIdx] = temp;
-        }
-      }
-    }
-  }
+  // Tách các câu trùng rootId ít nhất minSeparation thẻ
+  const minSep = options.minSeparation ?? 5;
+  list = applyQuestionSpacing(list, minSep);
 
   const count = Number(options.count);
   if (count > 0 && count < list.length) {

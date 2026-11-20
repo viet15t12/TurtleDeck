@@ -9,6 +9,21 @@ export interface ChoiceObject {
 
 export type ChoiceItem = string | ChoiceObject;
 
+export interface ItemTranslationOverride {
+  front?: string;
+  back?: string;
+  question?: string;
+  choices?: ChoiceItem[];
+  explanation?: string;
+  answerDisplay?: string;
+  answer?: [number] | number[] | string[];
+  term?: string;
+  definition?: string;
+  example?: string;
+  phonetic?: string;
+  [key: string]: unknown;
+}
+
 export interface BaseItem {
   id: string;
   topic?: string;
@@ -18,6 +33,8 @@ export interface BaseItem {
   answerImage?: string;
   starred?: boolean;
   note?: string;
+  translations?: Record<string, ItemTranslationOverride>;
+  [key: string]: unknown;
 }
 
 export interface SingleChoiceItem extends BaseItem {

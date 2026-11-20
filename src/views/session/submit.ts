@@ -151,8 +151,14 @@ export function overrideAsCorrect(session: SessionState, deps: SubmitDeps): void
   deps.progress.cards = nextProgress.cards;
   deps.progress.log = nextProgress.log;
 
-  if (deps.persist) {
-    window.api.saveProgress(deps.progress);
+  if (deps.persist && window.api?.recordReview) {
+    window.api.recordReview({
+      deckId: deps.deckId,
+      itemId: q.id,
+      direction: (q.direction as any) || 'fwd',
+      rating: RATING.GOOD,
+      elapsedMs: 0,
+    }).catch((e: any) => console.warn('Lỗi ghi đè recordReview:', e));
   }
 
   session.grade = { ok: true, near: false, rating: RATING.GOOD, overridden: true };

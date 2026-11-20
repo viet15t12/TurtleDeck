@@ -176,7 +176,15 @@ impl DeckRepository {
             .and_then(|t| t.as_str())
             .unwrap_or("Bộ thẻ");
         let kind = meta.get("kind").and_then(|k| k.as_str()).unwrap_or("quiz");
-        let lang = meta.get("lang").and_then(|l| l.as_str()).unwrap_or("vi");
+        let lang = meta.get("lang").and_then(|l| {
+            if let Some(s) = l.as_str() {
+                Some(s.to_string())
+            } else if let Some(arr) = l.as_array() {
+                arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
+            } else {
+                None
+            }
+        }).unwrap_or_else(|| "vi".to_string());
         let description = meta.get("description").and_then(|d| d.as_str());
         let version = deck
             .get("formatVersion")

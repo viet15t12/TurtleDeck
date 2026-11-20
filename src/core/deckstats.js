@@ -9,6 +9,7 @@ import {
   getValidDeckItems,
 } from './planner.js';
 import { kindOf } from './deckkinds.js';
+import { getItemForLanguage, getPrimaryLanguage } from './deckmodel.js';
 
 function resolveTimestamp(now) {
   if (now instanceof Date) return now.getTime();
@@ -71,10 +72,31 @@ export function deckStats(deck, progress = {}, settings = {}, now = Date.now()) 
     ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
     : ['fwd'];
 
-  for (const item of validItems) {
+  const selectedLangs = Array.isArray(settings?.selectedLangs) && settings.selectedLangs.length > 0
+    ? settings.selectedLangs.map(s => String(s).trim().toLowerCase())
+    : null;
+  const primaryLang = getPrimaryLanguage(deck?.meta || { lang: 'vi' }, validItems);
+
+  let targetCards = [];
+  if (selectedLangs) {
+    for (const item of validItems) {
+      if (item.type === 'translate') {
+        targetCards.push({ cardId: item.id, rootId: item.id });
+      } else {
+        for (const l of selectedLangs) {
+          const itL = getItemForLanguage(item, l, primaryLang);
+          if (itL) targetCards.push({ cardId: itL.cardId, rootId: item.id });
+        }
+      }
+    }
+  } else {
+    targetCards = validItems.map(it => ({ cardId: it.id, rootId: it.id }));
+  }
+
+  for (const tc of targetCards) {
     for (const d of directions) {
-      const key = cardKey(deckId, item.id, d);
-      const rawCard = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : null);
+      const key = cardKey(deckId, tc.cardId, d);
+      const rawCard = cards[key] || (d === 'fwd' && tc.cardId === tc.rootId && cards[tc.rootId] ? cards[tc.rootId] : null);
       const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
 
       if (card.state === 'review') {

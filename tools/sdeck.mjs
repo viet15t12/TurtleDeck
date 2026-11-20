@@ -82,7 +82,8 @@ async function check(file) {
   const parsed = parseDeck(pkg.deckText);
   if (!parsed.ok) { console.log(`✕ ${file}: ${parsed.error}`); printIssues(pkg.issues); return 1; }
   const { meta, items } = parsed.deck;
-  console.log(`✓ ${file}\n  id: ${meta.id}\n  tiêu đề: ${meta.title}\n  loại: ${meta.kind}` +
+  const langDisplay = Array.isArray(meta.lang) ? meta.lang.join(', ') : (meta.lang || 'vi');
+  console.log(`✓ ${file}\n  id: ${meta.id}\n  tiêu đề: ${meta.title}\n  ngôn ngữ: ${langDisplay}\n  loại: ${meta.kind}` +
     `\n  phiên bản định dạng: ${meta.formatVersion ?? '(không ghi)'}\n  mục học được: ${items.length}/${parsed.total}\n  ảnh: ${pkg.assets.size}`);
   const all = [...pkg.issues, ...parsed.issues];
   if (all.length) { console.log(`  cảnh báo (${all.length}):`); printIssues(all, '    '); }

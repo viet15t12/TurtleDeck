@@ -45,19 +45,18 @@ export async function scanLibrary(actions) {
   for (const f of libFiles) {
     const existing = state.entries.find(e => samePath(e.path, f.path));
     if (!existing) {
-      const [opened] = await api.openDecks(f.path);
-      if (opened?.ok) {
-        const deckId = opened.deck?.meta?.id;
+      if (f.ok && f.deck) {
+        const deckId = f.deck?.meta?.id;
         // Kiểm tra xem có entry cũ nào cùng deckId đang bị 'missing' không (do vừa di chuyển file)
         const ghost = state.entries.find(e => e.deck?.meta?.id && e.deck.meta.id === deckId);
         if (ghost) {
-          applyResult(opened, ghost);
+          applyResult(f, ghost);
           ghost.group = f.group;
           ghost.relPath = f.relPath;
           ghost.inLibrary = true;
           ghost.status = 'ok';
         } else {
-          const e = applyResult(opened);
+          const e = applyResult(f);
           e.group = f.group;
           e.relPath = f.relPath;
           e.inLibrary = true;

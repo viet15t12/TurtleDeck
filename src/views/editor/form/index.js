@@ -84,6 +84,15 @@ export function createFormPane({
       onPatchItem({ answer: nextAnswers }, meta);
       return;
     }
+    if (path.startsWith('translations.')) {
+      const parts = path.split('.');
+      const langKey = parts[1];
+      const fieldKey = parts[2];
+      const nextTranslations = { ...(item.translations || {}) };
+      nextTranslations[langKey] = { ...(nextTranslations[langKey] || {}), [fieldKey]: val };
+      onPatchItem({ translations: nextTranslations }, meta);
+      return;
+    }
     onPatchItem({ [path]: val }, meta);
   }
 
@@ -405,6 +414,109 @@ export function createFormPane({
               focusFieldByPath(ch.focusPath);
             },
           }, ch.label)))
+      );
+    }
+
+    // Phần bản dịch đa ngôn ngữ (Translations)
+    if (t !== 'translate') {
+      const translations = item.translations || {};
+      const transLangs = Object.keys(translations);
+      const transNodes = [];
+
+      for (const langKey of transLangs) {
+        const tr = translations[langKey] || {};
+        const qField = (t === 'card') ? 'front' : ((t === 'vocab') ? 'term' : 'question');
+        const qLabel = (t === 'card') ? 'Mặt trước' : ((t === 'vocab') ? 'Thuật ngữ' : 'Câu hỏi');
+        const ansField = (t === 'card') ? 'back' : ((t === 'vocab') ? 'Định nghĩa' : null);
+        const ansLabel = (t === 'card') ? 'Mặt sau' : ((t === 'vocab') ? 'Định nghĩa' : null);
+
+        transNodes.push(
+          h('div', { class: 'panel', style: 'margin-top: 10px; padding: 12px; border-left: 3px solid var(--c-primary, #3b82f6);' },
+            h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;' },
+              h('span', { style: 'font-weight: 700; font-size: 13px;' }, `🌐 Bản dịch: ${langKey.toUpperCase()}`),
+              h('button', {
+                type: 'button',
+                class: 'ux-btn xs ghost danger-hover',
+                title: 'Xoá bản dịch này',
+                onclick: () => {
+                  const nextTr = { ...translations };
+                  delete nextTr[langKey];
+                  onPatchItem({ translations: nextTr });
+                  render();
+                }
+              }, '✕ Xoá')
+            ),
+            createMarkdownField({
+              label: `${qLabel} (${langKey.toUpperCase()})`,
+              path: `translations.${langKey}.${qField}`,
+              value: tr[qField] || '',
+              placeholder: `Nhập bản dịch ${qLabel.toLowerCase()}…`,
+              rich,
+              onInput: val => applyPathValue(`translations.${langKey}.${qField}`, val),
+              onFocusPath: focusFieldByPath,
+              onPickImageDialog,
+              onSetActiveTextarea,
+            }),
+            ansField ? createMarkdownField({
+              label: `${ansLabel} (${langKey.toUpperCase()})`,
+              path: `translations.${langKey}.${ansField}`,
+              value: tr[ansField] || '',
+              placeholder: `Nhập bản dịch ${ansLabel.toLowerCase()}…`,
+              rich,
+              onInput: val => applyPathValue(`translations.${langKey}.${ansField}`, val),
+              onFocusPath: focusFieldByPath,
+              onPickImageDialog,
+              onSetActiveTextarea,
+            }) : null,
+            createMarkdownField({
+              label: `Giải thích (${langKey.toUpperCase()})`,
+              path: `translations.${langKey}.explanation`,
+              value: tr.explanation || '',
+              placeholder: 'Nhập bản dịch giải thích (tuỳ chọn)…',
+              rich,
+              onInput: val => applyPathValue(`translations.${langKey}.explanation`, val),
+              onFocusPath: focusFieldByPath,
+              onPickImageDialog,
+              onSetActiveTextarea,
+            })
+          )
+        );
+      }
+
+      mainNodes.push(
+        h('div', { class: 'form-translations-section', style: 'margin-top: 16px;' },
+          h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' },
+            h('span', { style: 'font-size: 13px; font-weight: 600; color: var(--c-text-muted);' }, 'Bản dịch đa ngôn ngữ'),
+            h('button', {
+              type: 'button',
+              class: 'ux-btn xs ghost',
+              onclick: () => {
+                const langInput = window.prompt('Nhập mã ngôn ngữ mới (vd: vi, en, ja, fr):');
+                if (!langInput) return;
+                const cleanLang = langInput.trim().toLowerCase();
+                if (!cleanLang) return;
+                const nextTr = { ...(item.translations || {}) };
+                if (!nextTr[cleanLang]) {
+                  nextTr[cleanLang] = {};
+                  onPatchItem({ translations: nextTr });
+                  const currentDeck = getDeck();
+                  if (currentDeck && currentDeck.meta) {
+                    const deckLangs = Array.isArray(currentDeck.meta.lang)
+                      ? [...currentDeck.meta.lang]
+                      : (typeof currentDeck.meta.lang === 'string' ? [currentDeck.meta.lang] : ['vi']);
+                    if (!deckLangs.includes(cleanLang)) {
+                      deckLangs.push(cleanLang);
+                      currentDeck.meta.lang = deckLangs;
+                      currentDeck.meta.formatVersion = 2;
+                    }
+                  }
+                  render();
+                }
+              }
+            }, '+ Thêm bản dịch')
+          ),
+          ...transNodes
+        )
       );
     }
 

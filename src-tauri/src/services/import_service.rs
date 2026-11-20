@@ -330,27 +330,28 @@ pub fn parse_csv_import(text: &str, delim: char, has_source_dir: bool) -> (Vec<V
             "definition": definition,
         });
 
-        let obj = item.as_object_mut().unwrap();
-        if !phonetic.is_empty() {
-            obj.insert("phonetic".into(), json!(phonetic));
-        }
-        if !pos.is_empty() {
-            obj.insert("pos".into(), json!(pos));
-        }
-        if !example.is_empty() {
-            obj.insert("example".into(), json!(example));
-        }
-        if !forms.is_empty() {
-            obj.insert("forms".into(), json!(forms));
-        }
-        if !synonyms.is_empty() {
-            obj.insert("synonyms".into(), json!(synonyms));
-        }
-        if !tags.is_empty() {
-            obj.insert("tags".into(), json!(tags));
-        }
-        if !image.is_empty() {
-            obj.insert("image".into(), json!(image));
+        if let Some(obj) = item.as_object_mut() {
+            if !phonetic.is_empty() {
+                obj.insert("phonetic".into(), json!(phonetic));
+            }
+            if !pos.is_empty() {
+                obj.insert("pos".into(), json!(pos));
+            }
+            if !example.is_empty() {
+                obj.insert("example".into(), json!(example));
+            }
+            if !forms.is_empty() {
+                obj.insert("forms".into(), json!(forms));
+            }
+            if !synonyms.is_empty() {
+                obj.insert("synonyms".into(), json!(synonyms));
+            }
+            if !tags.is_empty() {
+                obj.insert("tags".into(), json!(tags));
+            }
+            if !image.is_empty() {
+                obj.insert("image".into(), json!(image));
+            }
         }
 
         items.push(item);

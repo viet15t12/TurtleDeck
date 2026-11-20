@@ -52,8 +52,10 @@ export function renderNewDeckModal(onCreate, onCancel, preselectedKind) {
           },
         },
           h('div', { class: 'ux-kind-card-head' },
-            h('span', { class: 'ux-kind-icon' }, info.icon),
-            info.comingSoon ? h('span', { class: 'ux-kind-soon' }, info.comingSoon) : null),
+            h('span', { class: 'ux-kind-icon-plate' }, info.icon),
+            info.comingSoon
+              ? h('span', { class: 'ux-kind-soon' }, info.comingSoon)
+              : h('span', { class: 'ux-kind-radio' }, active ? '✓' : '')),
           h('div', { class: 'ux-kind-title' }, info.label),
           h('div', { class: 'ux-kind-desc' }, info.description));
       })

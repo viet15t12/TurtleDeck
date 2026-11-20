@@ -20,12 +20,17 @@ pub async fn library_pick_dir(
     state: State<'_, AppState>,
 ) -> AppResult<Option<String>> {
     let current = state.get_active_library_dir();
-    let picked = app
-        .dialog()
-        .file()
-        .set_title("Chọn thư mục Thư viện bộ thẻ")
-        .set_directory(&current)
-        .blocking_pick_folder();
+    let app_handle = app.clone();
+    let picked = tokio::task::spawn_blocking(move || {
+        app_handle
+            .dialog()
+            .file()
+            .set_title("Chọn thư mục Thư viện bộ thẻ")
+            .set_directory(&current)
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("Lỗi hộp thoại: {e}")))?;
 
     let picked_str = match picked {
         Some(f) => f.to_string(),

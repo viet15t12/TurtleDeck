@@ -191,6 +191,11 @@ Thích hợp cho danh sách từ vựng ngoại ngữ đầy đủ phiên âm, t
 > 2. `answer` của câu trắc nghiệm (`single`, `multi`) là **mảng chỉ số** bắt đầu từ 0 (ví dụ `[0]` là lựa chọn đầu tiên, `[0, 2]` là lựa chọn thứ 1 và 3).
 > 3. `answer` của câu điền từ (`fill`, `command`) là **mảng chuỗi** các đáp án được chấp nhận (ví dụ `["Hà Nội", "Ha Noi"]`).
 > 4. Câu dịch có từ gợi ý (`translate`): yêu cầu `vi` (câu tiếng Việt), `keyword` (từ neo), `answers` (mảng các câu tiếng Anh chấp nhận được). Tham khảo tệp mẫu chuyên biệt: [`templates/sample-translate.json`](./sample-translate.json).
+> 5. **Hỗ trợ đa ngôn ngữ (Multilingual / formatVersion 2):**
+>    - `meta.lang` có thể là chuỗi (vd `"vi"`) hoặc mảng (vd `["en", "vi"]`). Ngôn ngữ đầu tiên trong mảng là ngôn ngữ chính (primary).
+>    - Mỗi item có thể thêm trường `translations` với key là mã ngôn ngữ phụ, chứa các trường ghi đè dịch nghĩa (`question`, `choices`, `explanation`, `front`, `back`, `answerDisplay`, `answer`...).
+>    - Loại câu hỏi `translate` là ngôn ngữ-trung-lập, không áp dụng `translations`, luôn xuất hiện trong mọi lựa chọn ngôn ngữ.
+>    - Bộ thẻ đơn ngữ giữ `formatVersion: 1`; bộ thẻ dùng tính năng đa ngôn ngữ ghi `formatVersion: 2`. Xem file mẫu: [`templates/sample-multilingual.json`](./sample-multilingual.json).
 
 ---
 

@@ -1,5 +1,22 @@
-// src/views/deck.js — Deck view (GĐ3B Lượt 2): huy hiệu loại, 4 ô số thống kê, thẻ Chế độ học theo loại,
-// khối cảnh báo thu gọn, bảng mục có tìm kiếm & lọc (Dạng/Chủ đề/Trạng thái), bấm dòng mở Editor tại đúng mục.
+// src/views/deck.js — Deck View thiết kế lại theo chuẩn Apple macOS HIG (Split Layout):
+// ┌──────────────────────────────────────────────────────────┐
+// │ ← Về trang chủ   LPIC-1 101.1 …      [Ôn ngay][Sửa][Info]│  header cố định
+// ├──────────────────────────────────────────────────────────┤
+// │ [Mới 31] [Đang học 3] [Đến hạn 37] [Đã thuộc 29]         │  hàng thống kê (click để lọc)
+// │ ████████████▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░                  │  thanh tiến trình (cố định)
+// ├───────────────┬──────────────────────────────────────────┤
+// │ CHẾ ĐỘ HỌC    │ 🔍 Tìm… [Dạng▾][Chủ đề▾][Nhãn▾][Trạng thái▾]│
+// │ ▸ Ôn hôm nay  ├──────────────────────────────────────────┤
+// │   (60)        │ # ★ Dạng  Nội dung        Chủ đề  Trạng thái│
+// │ ▸ Luyện tập   │ 1 ☆ …                                    │
+// │ ▸ Thi thử     │ 2 ☆ …                                    │  chỉ vùng này cuộn
+// │               │ 3 ☆ …                                    │
+// │ Bộ lọc nhanh: │ …                                        │
+// │ ○ Đến hạn     │                                          │
+// │ ○ Sai nhiều   │                                          │
+// │ ○ Đã gắn ★    │                                          │
+// └───────────────┴──────────────────────────────────────────┘
+
 import { h, fileName } from './dom.js';
 import { toPlain } from '../core/richtext.js';
 import {
@@ -15,7 +32,7 @@ import {
 } from '../core/deckkinds.js';
 import { deckStats } from '../core/deckstats.js';
 import { cardKey, DAY } from '../core/srs.js';
-import { stripAccents } from '../core/deckmodel.js';
+import { stripAccents, getDeckLanguages, getPrimaryLanguage } from '../core/deckmodel.js';
 import { extractTags } from '../core/filters.js';
 import { renderStackedBar } from './components/stackedbar.js';
 import { speak, hasVoice } from '../tts.js';
@@ -54,7 +71,7 @@ function createSearchSvg() {
   return svg;
 }
 
-// Nội dung chính + đáp án của item dạng văn bản thuần (toPlain)
+// Nội dung chính + đáp án của item dạng văn bản thuần
 function summarize(it, deckKind) {
   const type = detectItemType(it, deckKind) || 'vocab';
   switch (type) {
@@ -87,7 +104,7 @@ function summarize(it, deckKind) {
   }
 }
 
-// Xác định trạng thái học của từng mục để hiển thị và lọc trên bảng
+// Xác định trạng thái học của từng mục
 function getItemStudyStatus(deckId, item, progress, now) {
   const cards = progress?.cards || {};
   const key = cardKey(deckId, item.id, 'fwd');
@@ -125,7 +142,7 @@ function getItemStudyStatus(deckId, item, progress, now) {
 }
 
 function renderCollapsibleIssues(issues) {
-  if (!issues.length) return null;
+  if (!issues || !issues.length) return null;
   const sorted = [...issues].sort((a, b) => (a.level === 'error' ? 0 : 1) - (b.level === 'error' ? 0 : 1));
   const errCount = sorted.filter(i => i.level === 'error' || i.skipped).length;
   const warnCount = sorted.length - errCount;
@@ -138,7 +155,7 @@ function renderCollapsibleIssues(issues) {
       h('span', { class: 'issue-icon' }, '⚠'),
       h('span', { style: 'font-weight: 600;' }, `Cảnh báo / mục cần lưu ý (${parts.join(', ')})`),
       h('span', { class: 'muted', style: 'margin-left: auto; font-size: 12px;' }, 'Bấm để xem chi tiết ▾')),
-    h('ul', { class: 'issues', style: 'margin-top: 10px;' }, sorted.map(i =>
+    h('ul', { class: 'issues', style: 'margin-top: 8px;' }, sorted.map(i =>
       h('li', { class: `issue ${i.level}` },
         h('span', { class: 'issue-icon' }, i.level === 'error' ? '✕' : '⚠'),
         h('span', null, i.msg)))));
@@ -151,6 +168,40 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
   const kind = kindOf(entry.deck);
   const kInfo = KINDS[kind];
 
+  const deckLangs = getDeckLanguages(entry.deck.meta, entry.deck.items);
+  const primaryLang = getPrimaryLanguage(entry.deck.meta, entry.deck.items);
+
+  let savedLangs = null;
+  if (deckLangs.length > 1) {
+    try {
+      const raw = localStorage.getItem(`turtle_deck_lang_${deckId}`);
+      if (raw) savedLangs = JSON.parse(raw);
+    } catch {}
+    if (!Array.isArray(savedLangs) || savedLangs.length === 0) {
+      savedLangs = [...deckLangs];
+    }
+    savedLangs = savedLangs.filter(l => deckLangs.includes(l));
+    if (savedLangs.length === 0) savedLangs = [primaryLang];
+  } else {
+    savedLangs = [primaryLang];
+  }
+
+  function countCardsForLangs(langs) {
+    let total = 0;
+    const valid = (entry.deck.items || []).filter(it => it && it.id);
+    for (const it of valid) {
+      if (it.type === 'translate') {
+        if (langs.length > 0) total++;
+      } else {
+        for (const l of langs) {
+          if (l === primaryLang) total++;
+          else if (it.translations && it.translations[l]) total++;
+        }
+      }
+    }
+    return total;
+  }
+
   const rawIssues = entry.issues || [];
   const mismatched = mismatchedItems(entry.deck);
   const hasMismatchInIssues = rawIssues.some(i => i.mismatch || (i.msg && i.msg.includes('nằm trong bộ')));
@@ -158,118 +209,172 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     ? [...rawIssues, { level: 'warn', mismatch: true, msg: formatMismatchWarning(entry.deck) }]
     : rawIssues;
 
-  const st = deckStats(entry.deck, progress, settings, now);
+  const st = deckStats(entry.deck, progress, { ...settings, selectedLangs: savedLangs }, now);
   const dueToday = st.due + st.learning;
   const totalToday = dueToday + st.newLeftToday;
-  const totalValid = st.new + st.learning + st.due + st.mastered;
+  const totalValid = countCardsForLangs(savedLangs);
   const modes = modesFor(kind);
 
-  // 1. Đầu trang: huy hiệu loại, tên, mô tả, nút Sửa bộ thẻ
-  const headerEl = h('header', { class: 'page-head deck-view-head' },
-    h('div', { class: 'deck-view-title-block' },
-      h('button', { type: 'button', class: 'ux-btn ghost sm back-btn', onclick: actions.home }, '← Về trang chủ'),
-      h('div', { class: 'deck-view-badges' },
-        h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
-        entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu'),
-        entry.assetCount ? h('span', { class: 'ux-chip', style: 'cursor: default;' }, `🖼 ${entry.assetCount} ảnh`) : null),
-      h('h1', { class: 'deck-view-h1' }, meta.title),
-      meta.description ? h('p', { class: 'deck-view-desc muted' }, meta.description) : null),
-    h('div', { class: 'toolbar' },
-      h('button', {
-        type: 'button',
-        class: 'ux-btn primary',
-        onclick: () => actions.openEditor(entry),
-      }, '✏ Sửa bộ thẻ'),
-      actions.openDeckInfoModal ? h('button', {
-        type: 'button',
-        class: 'ux-btn',
-        onclick: () => actions.openDeckInfoModal(entry),
-      }, 'ℹ Thông tin') : null,
-      entry.path ? null : h('button', {
-        type: 'button',
-        class: 'ux-btn',
-        onclick: () => actions.saveAs(entry),
-      }, '💾 Lưu thành .sdeck…'),
-      h('button', {
-        type: 'button',
-        class: 'ux-btn ghost danger-hover',
-        onclick: () => actions.remove(entry),
-      }, 'Gỡ khỏi danh sách')));
+  // Đếm nhanh số lượng theo các nhóm đặc biệt
+  const countStarred = items.filter(it => {
+    const metaKey = `${deckId}:${it.id}`;
+    return Boolean(progress?.meta?.[metaKey]?.starred) || it.starred === true;
+  }).length;
 
-  // 2. Bốn ô số thống kê (Mới, Đang học, Đến hạn, Đã thuộc) + thanh phân bổ
-  const statsSection = h('section', { class: 'deck-stats-panel panel' },
-    h('div', { class: 'deck-stat-boxes' },
-      h('div', { class: 'deck-stat-box' },
-        h('div', { class: 'deck-stat-label' }, 'Mới'),
-        h('div', { class: 'deck-stat-num num-new' }, String(st.new)),
-        h('div', { class: 'deck-stat-sub muted' }, `Hạn mức hôm nay: ${st.newLeftToday}`)),
-      h('div', { class: 'deck-stat-box' },
-        h('div', { class: 'deck-stat-label' }, 'Đang học'),
-        h('div', { class: 'deck-stat-num num-learning' }, String(st.learning)),
-        h('div', { class: 'deck-stat-sub muted' }, 'Trong các bước nhắc ngắn')),
-      h('div', { class: 'deck-stat-box' },
-        h('div', { class: 'deck-stat-label' }, 'Đến hạn'),
-        h('div', { class: `deck-stat-num ${st.due > 0 ? 'num-due' : ''}` }, String(st.due)),
-        h('div', { class: 'deck-stat-sub muted' }, st.due > 0 ? 'Cần ôn tập ngay' : 'Không có thẻ trễ hạn')),
-      h('div', { class: 'deck-stat-box' },
-        h('div', { class: 'deck-stat-label' }, 'Đã thuộc'),
-        h('div', { class: 'deck-stat-num num-mastered' }, String(st.mastered)),
-        h('div', { class: 'deck-stat-sub muted' }, `Tổng ${totalValid} mục hợp lệ`))),
-    renderStackedBar(st));
+  const countLeechOrError = items.filter(it => {
+    const key = cardKey(deckId, it.id, 'fwd');
+    const c = progress?.cards?.[key] || progress?.cards?.[it.id];
+    return Number(c?.lapses || 0) >= 1;
+  }).length;
 
-  // 3. Thẻ "Chế độ học" theo loại (biểu tượng + mô tả + số mục áp dụng)
-  const modesSection = h('section', { class: 'deck-modes-section' },
-    h('h2', { class: 'section-label' }, 'Chế độ học'),
-    h('div', { class: 'deck-modes-grid' },
-      ...modes.map(m => {
-        const isSrs = m.id === 'srs';
-        const icon = MODE_ICONS[m.id] || '▶';
-        const avail = checkModeAvailability(m.id, entry.deck, {
-          hasVoice: hasVoice(settings?.ttsLang || 'en-US'),
-        });
+  // Hàm khởi chạy nhanh phiên học khuyến nghị
+  function startPrimaryStudy() {
+    const sessionOpts = deckLangs.length > 1 ? { selectedLangs: savedLangs } : {};
+    if (dueToday > 0 || totalToday > 0) {
+      actions.startSrsSession(entry, sessionOpts);
+    } else {
+      actions.openSessionSetup(entry, { defaultMode: 'practice', ...sessionOpts });
+    }
+  }
 
-        let countBadgeText = isSrs
-          ? (totalToday > 0 ? `${totalToday} mục cần ôn hôm nay` : 'Hôm nay đã xong ✓')
-          : `${totalValid} mục áp dụng`;
-
-        const disabled = !avail.available || totalValid === 0;
-        if (!avail.available) {
-          countBadgeText = avail.reason;
-        }
-        const isPrimaryCard = isSrs && totalToday > 0;
-
-        return h('button', {
-          type: 'button',
-          class: `deck-mode-card ${isPrimaryCard ? 'primary-mode' : ''} ${disabled ? 'disabled-mode' : ''}`,
-          disabled,
-          title: avail.reason || '',
-          onclick: () => {
-            if (disabled) return;
-            if (m.id === 'srs') actions.startSrsSession(entry);
-            else if (m.id === 'learn') actions.startLearnSession(entry);
-            else if (m.id === 'match') actions.startMatchSession(entry);
-            else if (m.id === 'exam') actions.openSessionSetup(entry, { defaultMode: 'exam' });
-            else if (m.id === 'all' || (m.id === 'flashcards' && kind !== 'vocab')) {
-              actions.startSession(entry, { mode: m.id, count: items.length, shuffle: false, persist: true });
-            } else {
-              actions.openSessionSetup(entry, { defaultMode: m.id });
-            }
-          },
-        },
-          h('div', { class: 'deck-mode-card-top' },
-            h('span', { class: 'deck-mode-icon' }, icon),
-            h('span', { class: `ux-chip ${isPrimaryCard ? 'active' : ''} ${!avail.available ? 'warn' : ''}` }, countBadgeText)),
-          h('div', { class: 'deck-mode-title' }, m.label),
-          h('div', { class: 'deck-mode-desc muted' }, m.description));
-      })));
-
-  // 4. Bảng mục có tìm kiếm và lọc theo Dạng / Chủ đề / Nhãn / Trạng thái, bấm dòng mở Editor tại đúng mục đó
+  // Quản lý bộ lọc bảng
   let searchQuery = '';
   let filterType = 'all';
   let filterTopic = 'all';
   let filterTag = 'all';
   let filterStatus = 'all';
+  let currentPage = 1;
+  let pageSize = 50; // Mặc định 50 mục / trang để bảng gọn nhẹ và cuộn nhanh
 
+  // 1. Header cố định (Fixed Header Bar)
+  const langChipsEl = deckLangs.length > 1 ? h('div', {
+    style: 'display: flex; align-items: center; gap: 4px; margin-left: 8px; flex-wrap: wrap;',
+    title: 'Bấm để bật/tắt ngôn ngữ ôn tập',
+  },
+    ...deckLangs.map(l => {
+      const isChecked = savedLangs.includes(l);
+      const lCount = countCardsForLangs([l]);
+      return h('button', {
+        type: 'button',
+        class: `ux-chip sm ${isChecked ? 'active' : ''}`,
+        style: `cursor: pointer; padding: 2px 8px; font-size: 11px; font-weight: ${isChecked ? '600' : 'normal'}; border: 1px solid ${isChecked ? 'var(--c-primary)' : 'var(--c-border)'}; background: ${isChecked ? 'var(--c-primary-soft)' : 'transparent'}; color: ${isChecked ? 'var(--c-primary)' : 'inherit'}; border-radius: 9999px;`,
+        onclick: () => {
+          let next;
+          if (isChecked) {
+            if (savedLangs.length <= 1) return;
+            next = savedLangs.filter(x => x !== l);
+          } else {
+            next = [...savedLangs, l];
+          }
+          try { localStorage.setItem(`turtle_deck_lang_${deckId}`, JSON.stringify(next)); } catch {}
+          actions.openDeckView(entry);
+        },
+      }, `${l.toUpperCase()} (${lCount})`);
+    })
+  ) : null;
+
+  const headerEl = h('header', { class: 'deck-header-bar' },
+    h('div', { class: 'deck-header-left' },
+      h('button', {
+        type: 'button',
+        class: 'ux-btn ghost sm back-btn',
+        onclick: actions.home,
+        title: 'Về trang chủ',
+      }, '← Về trang chủ'),
+      h('div', { class: 'deck-header-title-wrap' },
+        h('div', { class: 'deck-header-badges' },
+          h('span', { class: 'ux-kind-badge', 'data-kind': kind }, kInfo?.icon || '📝', kindLabel(kind)),
+          entry.path ? null : h('span', { class: 'badge unsaved' }, '● chưa lưu'),
+          entry.assetCount ? h('span', { class: 'ux-chip', style: 'cursor: default;' }, `🖼 ${entry.assetCount} ảnh`) : null,
+          langChipsEl
+        ),
+        h('h1', { class: 'deck-header-h1', title: meta.title }, meta.title),
+        meta.description ? h('p', { class: 'deck-header-desc', title: meta.description }, meta.description) : null
+      )
+    ),
+    h('div', { class: 'deck-header-actions' },
+      h('button', {
+        type: 'button',
+        class: 'ux-btn primary deck-header-cta',
+        onclick: startPrimaryStudy,
+      }, `▶ Ôn ngay (${totalToday > 0 ? totalToday : totalValid})`),
+      h('button', {
+        type: 'button',
+        class: 'ux-btn sm',
+        onclick: () => actions.openEditor(entry),
+      }, '✏ Sửa bộ thẻ'),
+      actions.openDeckInfoModal ? h('button', {
+        type: 'button',
+        class: 'ux-btn sm',
+        onclick: () => actions.openDeckInfoModal(entry),
+      }, 'ℹ Thông tin') : null,
+      entry.path ? null : h('button', {
+        type: 'button',
+        class: 'ux-btn sm',
+        onclick: () => actions.saveAs(entry),
+      }, '💾 Lưu .sdeck…'),
+      h('button', {
+        type: 'button',
+        class: 'ux-btn ghost sm danger-hover',
+        onclick: () => actions.remove(entry),
+      }, 'Gỡ')
+    )
+  );
+
+  // 2. Hàng thống kê cố định (Fixed Stats Strip + Progress Bar) - Bấm ô để lọc trực tiếp
+  const statBoxElements = new Map();
+
+  function updateFilterState(newStatus) {
+    filterStatus = newStatus;
+    currentPage = 1;
+    if (statusSelect) statusSelect.value = newStatus;
+
+    // Cập nhật trạng thái active trên các ô thống kê
+    for (const [key, el] of statBoxElements.entries()) {
+      el.classList.toggle('active-filter', filterStatus === key);
+    }
+
+    // Cập nhật trạng thái active trên sidebar
+    sidebarFilterItems.forEach(item => {
+      item.el.classList.toggle('active', filterStatus === item.key);
+    });
+
+    renderTableBody();
+  }
+
+  function createStatBox(label, count, numCls, sub, statusKey) {
+    const el = h('div', {
+      class: 'deck-stat-box',
+      role: 'button',
+      tabindex: '0',
+      title: `Bấm để lọc danh sách câu hỏi: ${label}`,
+      onclick: () => {
+        // Toggle nếu bấm lại vào ô đang lọc
+        const next = filterStatus === statusKey ? 'all' : statusKey;
+        updateFilterState(next);
+      },
+    },
+      h('div', { class: 'deck-stat-label-wrap' },
+        h('span', { class: 'deck-stat-label' }, label),
+        h('span', { class: 'deck-stat-filter-hint' }, 'Lọc ▾')),
+      h('div', { class: `deck-stat-num ${numCls}` }, String(count)),
+      h('div', { class: 'deck-stat-sub' }, sub));
+
+    statBoxElements.set(statusKey, el);
+    return el;
+  }
+
+  const statsRowEl = h('section', { class: 'deck-stats-strip' },
+    h('div', { class: 'deck-stat-boxes' },
+      createStatBox('Mới', st.new, 'num-new', `Hạn mức hôm nay: ${st.newLeftToday}`, 'new'),
+      createStatBox('Đang học', st.learning, 'num-learning', 'Các bước nhắc ngắn', 'learning'),
+      createStatBox('Đến hạn', st.due, st.due > 0 ? 'num-due' : '', st.due > 0 ? 'Cần ôn tập ngay' : 'Không trễ hạn', 'due'),
+      createStatBox('Đã thuộc', st.mastered, 'num-mastered', `Tổng ${totalValid} mục`, 'mastered')
+    ),
+    renderStackedBar(st)
+  );
+
+  // 3. Chuẩn bị dữ liệu bảng
   const preparedRows = items.map((it, idx) => {
     const s = summarize(it, kind);
     const typeLbl = itemTypeLabel(s.type);
@@ -295,8 +400,104 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
   const distinctTopics = [...new Set(preparedRows.map(r => r.topic).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
   const distinctTags = extractTags(items);
 
+  // 4. Cột trái: CHẾ ĐỘ HỌC & BỘ LỌC NHANH
+  const sidebarFilterItems = [];
+
+  function createFilterItem(label, count, dotClass, key) {
+    const el = h('button', {
+      type: 'button',
+      class: `deck-sidebar-filter-item ${filterStatus === key ? 'active' : ''}`,
+      onclick: () => updateFilterState(key),
+    },
+      h('span', { style: 'display: flex; align-items: center;' },
+        h('span', { class: `deck-filter-dot ${dotClass}` }),
+        label
+      ),
+      h('span', { class: 'muted', style: 'font-size: 11px;' }, String(count))
+    );
+    sidebarFilterItems.push({ key, el });
+    return el;
+  }
+
+  const sidebarEl = h('aside', { class: 'deck-sidebar' },
+    // A. CHẾ ĐỘ HỌC
+    h('div', null,
+      h('div', { class: 'deck-sidebar-section-title' }, 'Chế độ học'),
+      h('div', { class: 'deck-sidebar-modes' },
+        ...modes.map(m => {
+          const isSrs = m.id === 'srs';
+          const icon = MODE_ICONS[m.id] || '▶';
+          const avail = checkModeAvailability(m.id, entry.deck, {
+            hasVoice: hasVoice(settings?.ttsLang || 'en-US'),
+          });
+
+          let badgeText = isSrs
+            ? (totalToday > 0 ? `${totalToday}` : 'Xong ✓')
+            : `${totalValid}`;
+
+          const disabled = !avail.available || totalValid === 0;
+          if (!avail.available) badgeText = '—';
+          const isPrimary = isSrs && totalToday > 0;
+
+          return h('button', {
+            type: 'button',
+            class: `deck-sidebar-mode-btn ${isPrimary ? 'primary-mode' : ''}`,
+            disabled,
+            title: avail.reason || m.description,
+            onclick: () => {
+              if (disabled) return;
+              const sessionOpts = deckLangs.length > 1 ? { selectedLangs: savedLangs } : {};
+              if (m.id === 'srs') actions.startSrsSession(entry, sessionOpts);
+              else if (m.id === 'learn') actions.startLearnSession(entry, sessionOpts);
+              else if (m.id === 'match') actions.startMatchSession(entry, sessionOpts);
+              else if (m.id === 'exam') actions.openSessionSetup(entry, { defaultMode: 'exam', ...sessionOpts });
+              else if (m.id === 'all' || (m.id === 'flashcards' && kind !== 'vocab')) {
+                actions.startSession(entry, { mode: m.id, count: totalValid, shuffle: false, persist: true, ...sessionOpts });
+              } else {
+                actions.openSessionSetup(entry, { defaultMode: m.id, ...sessionOpts });
+              }
+            },
+          },
+            h('div', { class: 'deck-sidebar-mode-left' },
+              h('span', { class: 'deck-sidebar-mode-icon' }, icon),
+              h('span', { class: 'deck-sidebar-mode-label' }, m.label)
+            ),
+            h('span', { class: `ux-chip sm ${isPrimary ? 'active' : ''} ${!avail.available ? 'warn' : ''}` }, badgeText)
+          );
+        })
+      )
+    ),
+
+    h('div', { class: 'deck-sidebar-divider' }),
+
+    // B. BỘ LỌC NHANH
+    h('div', null,
+      h('div', { class: 'deck-sidebar-section-title' },
+        h('span', null, 'Bộ lọc nhanh'),
+        filterStatus !== 'all' ? h('button', {
+          type: 'button',
+          class: 'ux-btn ghost sm',
+          style: 'padding: 0 4px; font-size: 10px; height: 18px;',
+          onclick: () => updateFilterState('all'),
+        }, 'Xoá lọc') : null
+      ),
+      h('div', { class: 'deck-sidebar-filters' },
+        createFilterItem('Tất cả mục', items.length, 'dot-all', 'all'),
+        createFilterItem('Đến hạn cần ôn', st.due, 'dot-due', 'due'),
+        createFilterItem('Sai nhiều / Leech', countLeechOrError, 'dot-error', 'error-prone'),
+        createFilterItem('Đã gắn sao ★', countStarred, 'dot-starred', 'starred'),
+        createFilterItem('Đang học', st.learning, 'dot-learning', 'learning'),
+        createFilterItem('Đã thuộc', st.mastered, 'dot-mastered', 'mastered'),
+        createFilterItem('Chưa học (Mới)', st.new, 'dot-new', 'new')
+      )
+    )
+  );
+
+  // 5. Cột phải: NGÂN HÀNG CÂU HỎI (Vùng cuộn độc lập)
+  const countLabelEl = h('span', { class: 'muted', style: 'font-size: 12px; font-weight: 500;' });
+  const tableContainerEl = h('div', { class: 'deck-table-container' });
   const tableHost = h('div');
-  const countLabelEl = h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 400; margin-left: 8px;' });
+  tableContainerEl.append(tableHost);
 
   const searchInput = h('input', {
     type: 'text',
@@ -305,6 +506,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     oninput: ev => {
       searchQuery = ev.target.value;
       clearSearchBtn.hidden = !searchQuery;
+      currentPage = 1;
       renderTableBody();
     },
   });
@@ -318,6 +520,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
       searchQuery = '';
       searchInput.value = '';
       clearSearchBtn.hidden = true;
+      currentPage = 1;
       renderTableBody();
       searchInput.focus();
     },
@@ -331,6 +534,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     'aria-label': 'Lọc theo dạng mục',
     onchange: ev => {
       filterType = ev.target.value;
+      currentPage = 1;
       renderTableBody();
     },
   },
@@ -342,6 +546,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     'aria-label': 'Lọc theo chủ đề',
     onchange: ev => {
       filterTopic = ev.target.value;
+      currentPage = 1;
       renderTableBody();
     },
   },
@@ -353,6 +558,7 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     'aria-label': 'Lọc theo nhãn',
     onchange: ev => {
       filterTag = ev.target.value;
+      currentPage = 1;
       renderTableBody();
     },
   },
@@ -363,18 +569,17 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
     class: 'ux-select',
     'aria-label': 'Lọc theo trạng thái học',
     onchange: ev => {
-      filterStatus = ev.target.value;
-      renderTableBody();
+      updateFilterState(ev.target.value);
     },
   },
     h('option', { value: 'all' }, 'Tất cả trạng thái'),
-    h('option', { value: 'new' }, 'Trạng thái: Mới'),
-    h('option', { value: 'learning' }, 'Trạng thái: Đang học'),
     h('option', { value: 'due' }, 'Trạng thái: Đến hạn'),
-    h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'),
     h('option', { value: 'error-prone' }, 'Trạng thái: ⚠ Sai nhiều'),
-    h('option', { value: 'leech' }, 'Trạng thái: ⚠ Thẻ khó nhớ (Leech)'),
-    h('option', { value: 'starred' }, 'Trạng thái: ★ Đã sao'));
+    h('option', { value: 'leech' }, 'Trạng thái: ⚠ Thẻ khó (Leech)'),
+    h('option', { value: 'starred' }, 'Trạng thái: ★ Đã sao'),
+    h('option', { value: 'learning' }, 'Trạng thái: Đang học'),
+    h('option', { value: 'mastered' }, 'Trạng thái: Đã thuộc'),
+    h('option', { value: 'new' }, 'Trạng thái: Mới'));
 
   function renderTableBody() {
     const qNorm = stripAccents(searchQuery.trim());
@@ -392,24 +597,35 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
       return true;
     });
 
-    countLabelEl.textContent = filtered.length === items.length
-      ? `(${items.length} mục — bấm vào dòng để sửa)`
-      : `(Hiển thị ${filtered.length} / ${items.length} mục — bấm vào dòng để sửa)`;
+    const totalFiltered = filtered.length;
+    const effectivePageSize = pageSize === 'all' ? totalFiltered : Number(pageSize);
+    const totalPages = effectivePageSize > 0 ? Math.max(1, Math.ceil(totalFiltered / effectivePageSize)) : 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIdx = (currentPage - 1) * effectivePageSize;
+    const endIdx = pageSize === 'all' ? totalFiltered : Math.min(startIdx + effectivePageSize, totalFiltered);
+    const pageRows = pageSize === 'all' ? filtered : filtered.slice(startIdx, endIdx);
+
+    countLabelEl.textContent = totalFiltered === items.length
+      ? `${items.length} mục`
+      : `${totalFiltered} / ${items.length} mục`;
 
     if (!items.length) {
       tableHost.replaceChildren(
-        h('div', { class: 'empty', style: 'padding: 28px;' },
+        h('div', { class: 'empty', style: 'padding: 40px;' },
           h('p', { style: 'font-weight: 600; margin: 0 0 6px;' }, 'Bộ thẻ chưa có mục nào.'),
           h('p', { class: 'muted', style: 'margin: 0 0 14px; font-size: 13px;' }, 'Mở trình soạn để thêm câu hỏi hoặc thẻ mới.'),
           h('button', { type: 'button', class: 'ux-btn primary sm', onclick: () => actions.openEditor(entry) }, '✏ Mở trình soạn'))
       );
+      paginationHost.replaceChildren();
       return;
     }
 
     if (!filtered.length) {
       tableHost.replaceChildren(
-        h('div', { class: 'empty', style: 'padding: 24px;' },
-          h('p', { class: 'muted', style: 'margin: 0 0 10px;' }, 'Không có mục nào khớp với bộ lọc hiện tại.'),
+        h('div', { class: 'empty', style: 'padding: 36px;' },
+          h('p', { class: 'muted', style: 'margin: 0 0 12px;' }, 'Không có mục nào khớp với bộ lọc hiện tại.'),
           h('button', {
             type: 'button',
             class: 'ux-btn sm',
@@ -418,108 +634,167 @@ export function renderDeck(root, entry, actions, { progress, settings } = {}) {
               filterType = 'all';
               filterTopic = 'all';
               filterTag = 'all';
-              filterStatus = 'all';
               searchInput.value = '';
               clearSearchBtn.hidden = true;
               typeSelect.value = 'all';
               if (topicSelect) topicSelect.value = 'all';
               if (tagSelect) tagSelect.value = 'all';
-              statusSelect.value = 'all';
-              renderTableBody();
+              updateFilterState('all');
             },
-          }, 'Xoá bộ lọc'))
+          }, 'Xoá tất cả bộ lọc'))
       );
+      paginationHost.replaceChildren();
       return;
     }
 
+    // Bảng dữ liệu câu hỏi
     tableHost.replaceChildren(
-      h('div', { class: 'table-wrap' },
-        h('table', { class: 'items deck-items-table' },
-          h('thead', null, h('tr', null,
-            h('th', { class: 'num' }, '#'),
-            h('th', { style: 'width: 40px;' }, '★'),
-            h('th', { style: 'width: 120px;' }, 'Dạng'),
-            h('th', null, 'Nội dung'),
-            h('th', { style: 'width: 150px;' }, 'Chủ đề'),
-            h('th', { style: 'width: 160px;' }, 'Nhãn'),
-            h('th', { style: 'width: 150px;' }, 'Trạng thái'))),
-          h('tbody', null, filtered.map(r => {
-            const metaKey = `${deckId}:${r.item.id}`;
-            const isStarred = Boolean(progress?.meta?.[metaKey]?.starred);
-            const starBtn = h('button', {
+      h('table', { class: 'items deck-items-table' },
+        h('thead', null, h('tr', null,
+          h('th', { class: 'num' }, '#'),
+          h('th', { style: 'width: 36px;' }, '★'),
+          h('th', { style: 'width: 110px;' }, 'Dạng'),
+          h('th', null, 'Nội dung câu hỏi / thuật ngữ'),
+          h('th', { style: 'width: 140px;' }, 'Chủ đề'),
+          h('th', { style: 'width: 140px;' }, 'Nhãn'),
+          h('th', { style: 'width: 130px;' }, 'Trạng thái'))),
+        h('tbody', null, pageRows.map(r => {
+          const metaKey = `${deckId}:${r.item.id}`;
+          const isStarred = Boolean(progress?.meta?.[metaKey]?.starred);
+          const starBtn = h('button', {
+            type: 'button',
+            class: `star-btn ${isStarred ? 'starred' : ''}`,
+            title: isStarred ? 'Bỏ gắn sao' : 'Gắn sao mục này',
+            onclick: async ev => {
+              ev.stopPropagation();
+              if (!progress.meta) progress.meta = {};
+              if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
+              progress.meta[metaKey].starred = !isStarred;
+              if (window.api?.saveProgress) await window.api.saveProgress(progress);
+              renderTableBody();
+            },
+          }, isStarred ? '★' : '☆');
+
+          return h('tr', {
+            class: 'deck-item-tr',
+            tabindex: '0',
+            role: 'button',
+            title: 'Bấm để mở trình soạn tại mục này',
+            onclick: () => actions.openEditor(entry, r.item.id),
+            onkeydown: ev => {
+              if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                actions.openEditor(entry, r.item.id);
+              }
+            },
+          },
+            h('td', { class: 'num' }, r.index),
+            h('td', { style: 'text-align: center; width: 36px;' }, starBtn),
+            h('td', null, h('span', { class: `chip type-badge type-${r.type}` }, r.typeLabel)),
+            h('td', null,
+              h('div', { class: 'item-cell-main line-clamp-2', style: 'display: flex; align-items: center; gap: 6px;' },
+                h('span', null, r.main || '(Chưa có nội dung)'),
+                r.item.term ? h('button', {
+                  type: 'button',
+                  class: 'ux-btn ghost sm',
+                  style: 'padding: 0 4px; height: 18px; font-size: 11px; flex-shrink: 0;',
+                  title: 'Phát âm (TTS)',
+                  onclick: ev => {
+                    ev.stopPropagation();
+                    speak(r.item.term, settings?.ttsLang || 'en-US');
+                  },
+                }, '🔊') : null),
+              r.answer ? h('div', { class: 'item-cell-ans line-clamp-1' }, `→ ${r.answer}`) : null),
+            h('td', null, r.topic ? h('span', { class: 'ux-chip sm', style: 'cursor: pointer;' }, r.topic) : h('span', { class: 'muted' }, '—')),
+            h('td', null, r.tags.length ? r.tags.map(t => h('span', { class: 'tag' }, t)) : h('span', { class: 'muted' }, '—')),
+            h('td', null, h('span', { class: `item-status-pill ${r.status.cls}` }, r.status.label))
+          );
+        }))
+      )
+    );
+
+    // Thanh phân trang (Pagination Footer)
+    paginationHost.replaceChildren(
+      h('div', { class: 'deck-pagination-bar' },
+        h('div', { style: 'display: flex; align-items: center; gap: 8px;' },
+          h('span', null, `Hiển thị ${totalFiltered > 0 ? startIdx + 1 : 0}–${endIdx} trong ${totalFiltered} mục`),
+          h('div', { class: 'deck-page-size-selector' },
+            h('span', { style: 'margin-left: 8px; margin-right: 2px;' }, 'Mỗi trang:'),
+            ...[25, 50, 100, 'all'].map(sz => h('button', {
               type: 'button',
-              class: `star-btn ${isStarred ? 'starred' : ''}`,
-              title: isStarred ? 'Bỏ gắn sao' : 'Gắn sao mục này',
-              onclick: async ev => {
-                ev.stopPropagation();
-                if (!progress.meta) progress.meta = {};
-                if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
-                progress.meta[metaKey].starred = !isStarred;
-                await window.api.saveProgress(progress);
+              class: `deck-page-size-btn ${pageSize === sz ? 'active' : ''}`,
+              onclick: () => {
+                pageSize = sz;
+                currentPage = 1;
                 renderTableBody();
               },
-            }, isStarred ? '★' : '☆');
-
-            return h('tr', {
-              class: 'deck-item-tr',
-              tabindex: '0',
-              role: 'button',
-              title: 'Bấm để mở trình soạn tại mục này',
-              onclick: () => actions.openEditor(entry, r.item.id),
-              onkeydown: ev => {
-                if (ev.key === 'Enter' || ev.key === ' ') {
-                  ev.preventDefault();
-                  actions.openEditor(entry, r.item.id);
-                }
-              },
+            }, sz === 'all' ? 'Tất cả' : String(sz))))
+        ),
+        totalPages > 1 ? h('div', { class: 'deck-page-nav' },
+          h('button', {
+            type: 'button',
+            class: 'ux-btn ghost sm deck-page-btn',
+            disabled: currentPage <= 1,
+            onclick: () => {
+              if (currentPage > 1) {
+                currentPage--;
+                renderTableBody();
+                tableContainerEl.scrollTop = 0;
+              }
             },
-              h('td', { class: 'num' }, r.index),
-              h('td', { style: 'text-align: center; width: 40px;' }, starBtn),
-              h('td', null, h('span', { class: `chip type-badge type-${r.type}` }, r.typeLabel)),
-              h('td', null,
-                h('div', { class: 'item-cell-main line-clamp-2', style: 'display: flex; align-items: center; gap: 6px;' },
-                  h('span', null, r.main || '(Chưa có nội dung)'),
-                  r.item.term ? h('button', {
-                    type: 'button',
-                    class: 'ux-btn ghost sm',
-                    style: 'padding: 0 4px; height: 20px; font-size: 11px; flex-shrink: 0;',
-                    title: 'Phát âm (Web Speech TTS)',
-                    onclick: ev => {
-                      ev.stopPropagation();
-                      speak(r.item.term, settings?.ttsLang || 'en-US');
-                    },
-                  }, '🔊') : null),
-                r.answer ? h('div', { class: 'item-cell-ans muted line-clamp-1' }, `→ ${r.answer}`) : null),
-              h('td', null, r.topic ? h('span', { class: 'ux-chip', style: 'cursor: pointer;' }, r.topic) : h('span', { class: 'muted' }, '—')),
-              h('td', null, r.tags.length ? r.tags.map(t => h('span', { class: 'tag' }, t)) : h('span', { class: 'muted' }, '—')),
-              h('td', null, h('span', { class: `item-status-pill ${r.status.cls}` }, r.status.label))
-            );
-          }))
-        )
+          }, '◀ Trước'),
+          h('span', { style: 'font-weight: 600; padding: 0 4px;' }, `Trang ${currentPage} / ${totalPages}`),
+          h('button', {
+            type: 'button',
+            class: 'ux-btn ghost sm deck-page-btn',
+            disabled: currentPage >= totalPages,
+            onclick: () => {
+              if (currentPage < totalPages) {
+                currentPage++;
+                renderTableBody();
+                tableContainerEl.scrollTop = 0;
+              }
+            },
+          }, 'Sau ▶')) : null
       )
     );
   }
 
-  renderTableBody();
+  const paginationHost = h('div');
 
-  const itemsPanel = h('section', { class: 'panel' },
-    h('div', { class: 'deck-table-head' },
-      h('h2', { style: 'margin: 0;' }, 'Danh sách mục', countLabelEl),
+  const mainContentEl = h('main', { class: 'deck-main-content' },
+    h('div', { class: 'deck-main-toolbar' },
+      searchWrap,
       h('div', { class: 'deck-table-filters' },
-        searchWrap,
         typeSelect,
         topicSelect,
         tagSelect,
-        statusSelect)),
-    tableHost);
-
-  root.replaceChildren(
-    headerEl,
-    statsSection,
-    modesSection,
-    renderCollapsibleIssues(issues),
-    itemsPanel
+        statusSelect,
+        countLabelEl
+      )
+    ),
+    tableContainerEl,
+    paginationHost
   );
 
+  renderTableBody();
+
+  // 6. Split layout: Cột trái (Chế độ học + Lọc nhanh) + Cột phải (Ngân hàng câu hỏi)
+  const splitLayoutEl = h('div', { class: 'deck-split-layout' },
+    sidebarEl,
+    mainContentEl
+  );
+
+  // 7. Lắp ráp toàn bộ vào .deck-view-container (Không để lại bất kỳ giá trị null nào)
+  const containerEl = h('div', { class: 'deck-view-container' },
+    ...[
+      headerEl,
+      renderCollapsibleIssues(issues),
+      statsRowEl,
+      splitLayoutEl,
+    ].filter(Boolean)
+  );
+
+  root.replaceChildren(containerEl);
   root.ownerDocument.title = `${meta.title} — ${fileName(entry.path) || 'Turtle Deck'}`;
 }

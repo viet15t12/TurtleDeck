@@ -58,12 +58,17 @@ pub async fn deck_open(
     }
 
     if paths.is_empty() {
-        let picked = app
-            .dialog()
-            .file()
-            .set_title("Mở bộ thẻ")
-            .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
-            .blocking_pick_files();
+        let app_handle = app.clone();
+        let picked = tokio::task::spawn_blocking(move || {
+            app_handle
+                .dialog()
+                .file()
+                .set_title("Mở bộ thẻ")
+                .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
+                .blocking_pick_files()
+        })
+        .await
+        .map_err(|e| AppError::Custom(format!("Lỗi hộp thoại: {e}")))?;
 
         if let Some(files) = picked {
             for f in files {
@@ -141,14 +146,21 @@ pub async fn deck_save(
 
         let default_name = format!("{}.sdeck", slugify(&title));
 
-        let picked = app
-            .dialog()
-            .file()
-            .set_title("Lưu thành .sdeck")
-            .set_directory(base_dir)
-            .set_file_name(&default_name)
-            .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
-            .blocking_save_file();
+        let app_handle = app.clone();
+        let base_dir_buf = base_dir.to_path_buf();
+        let default_name_clone = default_name.clone();
+        let picked = tokio::task::spawn_blocking(move || {
+            app_handle
+                .dialog()
+                .file()
+                .set_title("Lưu thành .sdeck")
+                .set_directory(&base_dir_buf)
+                .set_file_name(&default_name_clone)
+                .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
+                .blocking_save_file()
+        })
+        .await
+        .map_err(|e| AppError::Custom(format!("Lỗi hộp thoại: {e}")))?;
 
         match picked {
             Some(f) => {
@@ -238,15 +250,21 @@ pub async fn deck_export_copy(
     let default_name = valid
         .file_name()
         .and_then(|n| n.to_str())
-        .unwrap_or("bo-the.sdeck");
+        .unwrap_or("bo-the.sdeck")
+        .to_string();
 
-    let picked = app
-        .dialog()
-        .file()
-        .set_title("Xuất bản sao bộ thẻ (giữ nguyên mã bộ thẻ)")
-        .set_file_name(default_name)
-        .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
-        .blocking_save_file();
+    let app_handle = app.clone();
+    let picked = tokio::task::spawn_blocking(move || {
+        app_handle
+            .dialog()
+            .file()
+            .set_title("Xuất bản sao bộ thẻ (giữ nguyên mã bộ thẻ)")
+            .set_file_name(&default_name)
+            .add_filter("Bộ thẻ (.sdeck)", &["sdeck"])
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("Lỗi hộp thoại: {e}")))?;
 
     let dest_str = match picked {
         Some(f) => {

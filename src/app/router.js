@@ -3,11 +3,11 @@
 import { renderHome, detachHomeKeyboard } from '../views/home.js';
 import { renderDeck } from '../views/deck.js';
 import { renderSession, disposeSession } from '../views/session.js';
-import { renderEditor } from '../views/editor.js';
+import { renderEditor, disposeEditor } from '../views/editor.js';
 import { renderSettings } from '../views/settings.js';
-import { renderStats } from '../views/stats.js';
+import { renderStats, disposeStats } from '../views/stats.js';
 import { renderLearn } from '../views/learn.js';
-import { renderMatch } from '../views/match.js';
+import { renderMatch, disposeMatch } from '../views/match.js';
 import { renderExam } from '../views/exam.js';
 import { setShortcutScope } from '../shortcuts.js';
 import { handleRecordReview } from './progress.js';
@@ -21,6 +21,15 @@ export function createRouter({ state, actions, root }) {
     }
     if (state.route.name !== 'session') {
       disposeSession();
+    }
+    if (state.route.name !== 'editor') {
+      disposeEditor?.();
+    }
+    if (state.route.name !== 'match') {
+      disposeMatch?.();
+    }
+    if (state.route.name !== 'stats') {
+      disposeStats?.();
     }
 
     document.body.classList.toggle('in-editor', state.route.name === 'editor');

@@ -21,6 +21,8 @@ import { renderQuestionBody } from './question/index.js';
 import { renderFeedback } from './feedback/index.js';
 import { renderActionsRow } from './actions-row.js';
 import { translateText } from '../../core/translate/quick-translate.js';
+import { getDeckLanguages, getPrimaryLanguage, getItemForLanguage } from '../../core/deckmodel.js';
+import { buildQuestion, applyQuestionSpacing } from '../../core/builder.js';
 
 let activeCleanup = null;
 
@@ -39,6 +41,13 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
   const deckId = entry.deck.meta?.id || 'deck';
   const learnSteps = settings?.learnSteps;
   const rich = makeRich(entry.deckKey);
+
+  const deckLangs = getDeckLanguages(entry.deck.meta, entry.deck.items);
+  const primaryLang = getPrimaryLanguage(entry.deck.meta, entry.deck.items);
+  let activeLangs = Array.isArray(config.selectedLangs) && config.selectedLangs.length > 0
+    ? config.selectedLangs.map(s => String(s).trim().toLowerCase())
+    : [...deckLangs];
+  let langMenuOpen = false;
 
   const questions = createQuestions({ entry, config, progress, settings });
 
@@ -79,6 +88,51 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
   }
 
   initAnswerForCurrent();
+
+  function toggleLanguage(langToToggle) {
+    const l = langToToggle.toLowerCase();
+    if (activeLangs.includes(l)) {
+      if (activeLangs.length <= 1) return; // Không bỏ nếu chỉ còn 1 ngôn ngữ
+      activeLangs = activeLangs.filter(x => x !== l);
+      // Loại bỏ các thẻ chưa học của ngôn ngữ đó
+      const answered = session.questions.slice(0, session.index + 1);
+      const remaining = session.questions.slice(session.index + 1).filter(q => {
+        if (q.kind === 'translate') return true;
+        const qLang = (q.lang || primaryLang).toLowerCase();
+        return qLang !== l;
+      });
+      session.questions = answered.concat(remaining);
+    } else {
+      activeLangs.push(l);
+      // Chèn các thẻ của ngôn ngữ mới vào hàng đợi còn lại
+      const answeredCardIds = new Set(session.history.map(h => h.question?.id));
+      const currentCardIds = new Set(session.questions.map(q => q.id));
+      const validItems = (entry.deck.items || []);
+      const newQuestions = [];
+      for (const item of validItems) {
+        if (item.type === 'translate') continue; // translate đã có sẵn
+        const itL = getItemForLanguage(item, l, primaryLang);
+        if (itL && !answeredCardIds.has(itL.cardId) && !currentCardIds.has(itL.cardId)) {
+          const q = buildQuestion(itL, config);
+          if (q) {
+            q.id = itL.cardId;
+            q.itemId = item.id;
+            q.rootId = item.id;
+            q.lang = l;
+            newQuestions.push(q);
+          }
+        }
+      }
+      if (newQuestions.length > 0) {
+        const answered = session.questions.slice(0, session.index + 1);
+        const remaining = session.questions.slice(session.index + 1).concat(newQuestions);
+        const spaced = applyQuestionSpacing(remaining, 5);
+        session.questions = answered.concat(spaced);
+      }
+    }
+    config.selectedLangs = [...activeLangs];
+    render();
+  }
 
   // Thoát phiên học (chỉ hỏi khi đã trả lời >= 1 câu)
   function requestExit() {
@@ -285,8 +339,16 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
 
   const onKeyDown = createKeyHandler(ctx);
   window.addEventListener('keydown', onKeyDown);
+  const closeLangMenu = () => {
+    if (langMenuOpen) {
+      langMenuOpen = false;
+      render();
+    }
+  };
+  window.addEventListener('click', closeLangMenu);
   activeCleanup = () => {
     window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('click', closeLangMenu);
     setShortcutScope('home');
   };
 
@@ -338,6 +400,38 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             '✕ Thoát (Esc)'
           ),
           h('div', { class: 'session-deck-title' }, entry.deck.meta.title),
+          deckLangs.length > 1 ? h('div', { class: 'session-lang-menu-wrapper', style: 'position: relative; display: inline-block;' },
+            h('button', {
+              type: 'button',
+              class: 'ux-btn xs ghost',
+              style: 'font-weight: 600;',
+              title: 'Bật/tắt ngôn ngữ trong phiên học',
+              onclick: ev => {
+                ev.stopPropagation();
+                langMenuOpen = !langMenuOpen;
+                render();
+              }
+            }, `🌐 ${activeLangs.map(x => x.toUpperCase()).join('+')} ▾`),
+            langMenuOpen ? h('div', {
+              class: 'session-lang-popover panel',
+              style: 'position: absolute; right: 0; top: 100%; z-index: 100; min-width: 150px; padding: 8px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 6px;',
+              onclick: ev => ev.stopPropagation()
+            },
+              h('div', { style: 'font-size: 11px; font-weight: 700; color: var(--c-text-muted); text-transform: uppercase;' }, 'Ngôn ngữ ôn tập'),
+              ...deckLangs.map(dl => {
+                const isActive = activeLangs.includes(dl);
+                return h('label', { style: 'display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;' },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: isActive,
+                    disabled: isActive && activeLangs.length <= 1,
+                    onchange: () => toggleLanguage(dl)
+                  }),
+                  h('span', null, dl.toUpperCase())
+                );
+              })
+            ) : null
+          ) : null,
           h('div', { class: 'session-progress-text' }, `Câu ${num} / ${total}`)
         ),
 
@@ -352,6 +446,7 @@ export function renderSession(root, { entry, config = {}, progress, settings, on
             'div',
             { class: 'question-meta' },
             h('span', { class: `chip type-badge type-${q.kind}` }, itemTypeLabel(q.kind)),
+            q.lang ? h('span', { class: 'chip lang-badge', style: 'font-weight: bold; background: var(--c-primary-soft, rgba(59,130,246,0.1)); color: var(--c-primary, #3b82f6);' }, q.lang.toUpperCase()) : null,
             q.category ? h('span', { class: `badge srs-cat-${q.category}` }, catLabels[q.category] || q.category) : null,
             q.retry ? h('span', { class: 'badge warn' }, '↻ Ôn lại câu sai') : null,
             q.topic ? h('span', { class: 'chip' }, q.topic) : null,

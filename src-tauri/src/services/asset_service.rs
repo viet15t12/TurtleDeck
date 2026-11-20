@@ -10,10 +10,9 @@ pub fn add_asset_files(
     deck_key: &str,
     file_paths: &[String],
 ) -> Vec<Value> {
-    let mut pkg = match package_store.get(deck_key) {
-        Some(p) => p,
-        None => return vec![],
-    };
+    if !package_store.has(deck_key) {
+        return vec![];
+    }
 
     let mut added = Vec::new();
     for p_str in file_paths {
@@ -41,14 +40,14 @@ pub fn add_asset_files(
         };
 
         let key = format!("img/{base}");
-        pkg.assets.insert(key.clone(), bytes);
-        added.push(json!({
-            "path": key,
-            "name": base,
-        }));
+        if package_store.add_asset(deck_key, key.clone(), bytes) {
+            added.push(json!({
+                "path": key,
+                "name": base,
+            }));
+        }
     }
 
-    package_store.set(deck_key.to_string(), pkg);
     added
 }
 
@@ -58,9 +57,9 @@ pub fn add_asset_bytes(
     name: &str,
     bytes: &[u8],
 ) -> AppResult<Value> {
-    let mut pkg = package_store
-        .get(deck_key)
-        .ok_or_else(|| AppError::Custom("Bộ thẻ không còn mở.".into()))?;
+    if !package_store.has(deck_key) {
+        return Err(AppError::Custom("Bộ thẻ không còn mở.".into()));
+    }
 
     if name.is_empty() || bytes.is_empty() {
         return Err(AppError::Custom("Thiếu tên hoặc dữ liệu ảnh.".into()));
@@ -83,8 +82,7 @@ pub fn add_asset_bytes(
         .unwrap_or("image.png");
 
     let key = format!("img/{base}");
-    pkg.assets.insert(key.clone(), bytes.to_vec());
-    package_store.set(deck_key.to_string(), pkg);
+    package_store.add_asset(deck_key, key.clone(), bytes.to_vec());
 
     Ok(json!({
         "ok": true,
@@ -93,10 +91,7 @@ pub fn add_asset_bytes(
 }
 
 pub fn list_assets(package_store: &PackageStore, deck_key: &str) -> Vec<String> {
-    match package_store.get(deck_key) {
-        Some(pkg) => pkg.assets.keys().cloned().collect(),
-        None => vec![],
-    }
+    package_store.list_assets(deck_key)
 }
 
 pub fn remove_asset(
@@ -104,9 +99,9 @@ pub fn remove_asset(
     deck_key: &str,
     asset_path: &str,
 ) -> AppResult<Value> {
-    let mut pkg = package_store
-        .get(deck_key)
-        .ok_or_else(|| AppError::Custom("Bộ thẻ không còn mở.".into()))?;
+    if !package_store.has(deck_key) {
+        return Err(AppError::Custom("Bộ thẻ không còn mở.".into()));
+    }
 
     if asset_path.is_empty() {
         return Err(AppError::Custom("Thiếu đường dẫn ảnh cần xoá.".into()));
@@ -118,8 +113,7 @@ pub fn remove_asset(
         format!("img/{asset_path}")
     };
 
-    if pkg.assets.remove(&norm).is_some() {
-        package_store.set(deck_key.to_string(), pkg);
+    if package_store.remove_asset(deck_key, &norm) {
         Ok(json!({ "ok": true }))
     } else {
         Err(AppError::Custom("Không tìm thấy ảnh trong gói.".into()))

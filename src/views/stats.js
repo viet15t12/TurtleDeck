@@ -1,6 +1,7 @@
 // src/views/stats.js — Màn hình Thống kê học tập (Stats View, Giai đoạn 6).
 import { h, fileName } from './dom.js';
 import { toPlain } from '../core/richtext.js';
+import { getDeckLanguages, getPrimaryLanguage } from '../core/deckmodel.js';
 import {
   streak,
   reviewsPerDay,
@@ -12,6 +13,18 @@ import {
 } from '../core/stats.js';
 
 let chartInstance = null;
+let themeObserver = null;
+
+export function disposeStats() {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
+  if (themeObserver) {
+    themeObserver.disconnect();
+    themeObserver = null;
+  }
+}
 
 // Lấy màu từ biến CSS để Chart.js tự đổi theo Light/Dark theme
 function getThemeColor(varName, fallback) {
@@ -23,36 +36,76 @@ function getThemeColor(varName, fallback) {
   }
 }
 
+let statsFilterDeckId = 'all';
+let statsFilterDays = 30;
+let statsFilterLang = 'all';
+
 export function renderStats(root, { progress, entries, settings }, actions) {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
+  disposeStats();
 
   const loadedEntries = (entries || []).filter(e => e.status === 'ok' && e.deck);
   const deckList = loadedEntries.map(e => e.deck);
+  const deckMap = new Map();
+  for (const d of deckList) {
+    if (d?.meta?.id) deckMap.set(d.meta.id, d);
+  }
 
-  let selectedDeckId = 'all'; // 'all' hoặc meta.id cụ thể
-  let selectedDays = 30;     // 7 | 30 | 90 ngày
+  const allAvailableLangs = new Set();
+  for (const d of deckList) {
+    for (const l of getDeckLanguages(d?.meta, d?.items)) {
+      allAvailableLangs.add(l);
+    }
+  }
+
+  function getCardLanguage(cKey) {
+    const parts = String(cKey || '').split(':');
+    const dId = parts[0];
+    const cId = parts[1] || '';
+    if (cId.includes('@')) {
+      return cId.split('@')[1].toLowerCase();
+    }
+    const d = deckMap.get(dId);
+    return getPrimaryLanguage(d?.meta, d?.items).toLowerCase();
+  }
+
+  let selectedDeckId = statsFilterDeckId;
+  let selectedDays = statsFilterDays;
+  let selectedLang = statsFilterLang;
 
   function refreshView() {
+    statsFilterDeckId = selectedDeckId;
+    statsFilterDays = selectedDays;
+    statsFilterLang = selectedLang;
     renderStats(root, { progress, entries, settings }, actions);
   }
 
   const now = Date.now();
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  // Lọc progress theo bộ thẻ đã chọn (nếu có)
-  const effectiveProgress = selectedDeckId === 'all'
-    ? progress
-    : {
-        version: 1,
-        cards: Object.fromEntries(
-          Object.entries(progress?.cards || {}).filter(([k]) => k.startsWith(`${selectedDeckId}:`))
-        ),
-        meta: progress?.meta || {},
-        log: (progress?.log || []).filter(e => e && String(e.card || '').startsWith(`${selectedDeckId}:`)),
-      };
+  // Lọc progress theo bộ thẻ và ngôn ngữ đã chọn
+  let filteredCards = progress?.cards || {};
+  let filteredLog = progress?.log || [];
+
+  if (selectedDeckId !== 'all') {
+    filteredCards = Object.fromEntries(
+      Object.entries(filteredCards).filter(([k]) => k.startsWith(`${selectedDeckId}:`))
+    );
+    filteredLog = filteredLog.filter(e => e && String(e.card || '').startsWith(`${selectedDeckId}:`));
+  }
+
+  if (selectedLang !== 'all') {
+    filteredCards = Object.fromEntries(
+      Object.entries(filteredCards).filter(([k]) => getCardLanguage(k) === selectedLang)
+    );
+    filteredLog = filteredLog.filter(e => e && getCardLanguage(e.card) === selectedLang);
+  }
+
+  const effectiveProgress = {
+    version: 1,
+    cards: filteredCards,
+    meta: progress?.meta || {},
+    log: filteredLog,
+  };
 
   const summ = summary(effectiveProgress, deckList, { now, tz });
   const hasLog = Array.isArray(progress?.log) && progress.log.length > 0;
@@ -129,10 +182,27 @@ export function renderStats(root, { progress, entries, settings }, actions) {
     },
   }, `${d} ngày`));
 
+  const langSelect = allAvailableLangs.size > 1 ? h('select', {
+    class: 'ux-select',
+    style: 'min-width: 140px;',
+    onchange: ev => {
+      selectedLang = ev.target.value;
+      refreshView();
+    },
+  },
+    h('option', { value: 'all', selected: selectedLang === 'all' }, 'Tất cả ngôn ngữ'),
+    ...[...allAvailableLangs].map(l => h('option', {
+      value: l,
+      selected: selectedLang === l,
+    }, l.toUpperCase()))
+  ) : null;
+
   const filtersBar = h('div', { class: 'stats-filters-bar' },
     h('div', { class: 'stats-filters-left' },
       h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 600;' }, 'Bộ thẻ:'),
-      deckSelect),
+      deckSelect,
+      langSelect ? h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 600; margin-left: 8px;' }, 'Ngôn ngữ:') : null,
+      langSelect),
     h('div', { class: 'stats-filters-right' },
       h('span', { class: 'muted', style: 'font-size: 13px; font-weight: 600;' }, 'Thời gian:'),
       h('div', { class: 'toolbar', style: 'gap: 4px;' }, ...daysButtons)));
@@ -402,9 +472,9 @@ export function renderStats(root, { progress, entries, settings }, actions) {
   root.ownerDocument.title = 'Thống kê — Turtle Deck';
 
   // Lắng nghe theme thay đổi để tự vẽ lại màu chart
-  const observer = new MutationObserver(() => {
+  themeObserver = new MutationObserver(() => {
     initOrUpdateBarChart();
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 

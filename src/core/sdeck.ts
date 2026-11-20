@@ -4,7 +4,7 @@ import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { collectImageRefs } from './deckmodel.js';
+import { collectImageRefs, hasMultiLanguageFeature } from './deckmodel.js';
 import { kindOf } from './deckkinds.js';
 
 export const LIMITS = { entries: 2000, deckJson: 20e6, image: 5e6, total: 500e6 };
@@ -99,7 +99,18 @@ export function writePackage(deckText: string, assets: Map<string, Uint8Array> =
   try { deck = JSON.parse(deckText); } catch (e: any) { return fail('deck.json không hợp lệ: ' + e.message); }
   if (!deck?.meta?.id || !Array.isArray(deck.items)) return fail('Thiếu meta.id hoặc danh sách items.');
   deck.meta.format = FORMAT;
-  deck.meta.formatVersion = FORMAT_VERSION;
+  const isMulti = hasMultiLanguageFeature(deck);
+  if (isMulti) {
+    deck.meta.formatVersion = 2;
+  } else {
+    deck.meta.formatVersion = (deck.meta.formatVersion && deck.meta.formatVersion >= 1) ? deck.meta.formatVersion : FORMAT_VERSION;
+    // Ghi file: nếu deck không dùng tính năng mới thì ghi lại đúng dạng cũ (lang là chuỗi), không tự nâng cấp.
+    if (Array.isArray(deck.meta.lang)) {
+      if (deck.meta.lang.length <= 1) {
+        deck.meta.lang = deck.meta.lang[0] || 'vi';
+      }
+    }
+  }
   deck.meta.kind = kindOf(deck);
   const deckBytes = strToU8(JSON.stringify(deck, null, 2));
   if (deckBytes.length > LIMITS.deckJson) return fail('deck.json vượt quá 20 MB.');

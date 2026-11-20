@@ -6,12 +6,13 @@ export interface DeckMeta {
   id: string;
   title: string;
   kind?: DeckKind;
-  lang?: string;
+  lang?: string | string[];
   description?: string;
   created?: number;
   updated?: number;
   totalItems?: number;
   formatVersion?: number;
+  [key: string]: unknown;
 }
 
 export interface DeckData {

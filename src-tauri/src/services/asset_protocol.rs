@@ -33,7 +33,7 @@ pub fn handle_asset_request(
             return Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(b"Missing deckKey in asset URL".to_vec())
-                .unwrap();
+                .unwrap_or_else(|_| Response::new(b"Not Found".to_vec()));
         }
     };
 
@@ -44,7 +44,7 @@ pub fn handle_asset_request(
         return Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(b"Invalid path traversal".to_vec())
-            .unwrap();
+            .unwrap_or_else(|_| Response::new(b"Not Found".to_vec()));
     }
 
     // Bỏ dấu gạch chéo đầu
@@ -54,7 +54,7 @@ pub fn handle_asset_request(
             return Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(b"Invalid URI encoding".to_vec())
-                .unwrap();
+                .unwrap_or_else(|_| Response::new(b"Not Found".to_vec()));
         }
     };
     let rel_path = decoded_path.trim_start_matches('/');
@@ -64,26 +64,17 @@ pub fn handle_asset_request(
         return Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(b"Not a valid image path".to_vec())
-            .unwrap();
+            .unwrap_or_else(|_| Response::new(b"Not Found".to_vec()));
     }
 
-    let pkg = match package_store.get(deck_key) {
-        Some(p) => p,
-        None => {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(b"Deck not found".to_vec())
-                .unwrap();
-        }
-    };
-
-    let asset_bytes = match pkg.assets.get(rel_path) {
-        Some(b) => b.clone(),
+    // Đọc ảnh trực tiếp từ PackageStore mà KHÔNG clone toàn bộ OpenPackage
+    let asset_bytes = match package_store.get_asset(deck_key, rel_path) {
+        Some(b) => b,
         None => {
             return Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(b"Asset not found".to_vec())
-                .unwrap();
+                .unwrap_or_else(|_| Response::new(b"Not Found".to_vec()));
         }
     };
 
@@ -98,7 +89,7 @@ pub fn handle_asset_request(
             "default-src 'none'; style-src 'unsafe-inline'; sandbox",
         )
         .body(asset_bytes)
-        .unwrap()
+        .unwrap_or_else(|_| Response::new(b"Internal Error".to_vec()))
 }
 
 // Giải mã URL component thủ công an toàn

@@ -9,7 +9,17 @@ import {
 } from '../core/matchgame.js';
 import { renderInlineMarkdown } from '../core/richtext.js';
 
+let activeMatchCleanup = null;
+
+export function disposeMatch() {
+  if (activeMatchCleanup) {
+    activeMatchCleanup();
+    activeMatchCleanup = null;
+  }
+}
+
 export function renderMatch(root, { entry, progress = {}, onRecordMatch = () => {} }, actions) {
+  disposeMatch();
   root.innerHTML = '';
   const deck = entry.deck;
   const deckId = deck?.meta?.id || 'deck';
@@ -45,6 +55,10 @@ export function renderMatch(root, { entry, progress = {}, onRecordMatch = () => 
       timerId = null;
     }
   }
+
+  activeMatchCleanup = () => {
+    stopTimer();
+  };
 
   const gridEl = h('div', { class: 'match-grid' });
 

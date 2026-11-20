@@ -2,10 +2,12 @@
 
 import { render } from '../runtime.js';
 import { buildQuestion } from '../../core/builder.js';
+import { applyResult } from '../entries.js';
 
 const api = window.api;
 
 async function planSessionWithRust(entry, config, settings) {
+  if (config?.selectedLangs) return null;
   if (!api?.planSession) return null;
   try {
     const planned = await api.planSession({
@@ -76,9 +78,9 @@ async function planSessionWithRust(entry, config, settings) {
 
 export function sessionActions({ state, actions }) {
   return {
-    async startSrsSession(entry) {
+    async startSrsSession(entry, customConfig = {}) {
       state.modal = null;
-      const config = { mode: 'srs', persist: true };
+      const config = { mode: 'srs', persist: true, ...customConfig };
       const plannedQuestions = await planSessionWithRust(entry, config, state.settings);
       state.route = {
         name: 'session',
@@ -108,6 +110,10 @@ export function sessionActions({ state, actions }) {
 
     async startSession(entry, config = {}) {
       state.modal = null;
+      if (!entry.deckKey && entry.path) {
+        const [r] = (await api?.openDecks?.(entry.path)) || [];
+        if (r?.ok) applyResult(r, entry);
+      }
       if (config.mode === 'learn') {
         state.route = { name: 'learn', uid: entry.uid, config };
       } else if (config.mode === 'match') {

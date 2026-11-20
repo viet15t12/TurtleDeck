@@ -21,12 +21,15 @@ export function createQuestions({ entry, config, progress, settings }) {
         newCardsPerDay,
         learnSteps,
         count: config.count,
+        selectedLangs: config.selectedLangs,
       })
     : buildSessionQuestions(entry.deck.items, {
         count: config.count,
         shuffle: Boolean(config.shuffle),
         itemIds: config.itemIds,
         deckKind,
+        selectedLangs: config.selectedLangs,
+        deck: entry.deck,
       });
 }
 

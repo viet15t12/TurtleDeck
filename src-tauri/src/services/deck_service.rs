@@ -47,8 +47,10 @@ pub fn open_one(p: &str, state: &AppState) -> Value {
             "issues": [{ "level": "error", "msg": error }]
         });
         if let Some(Value::Object(map)) = extra {
-            for (k, v) in map {
-                base.as_object_mut().unwrap().insert(k, v);
+            if let Some(base_map) = base.as_object_mut() {
+                for (k, v) in map {
+                    base_map.insert(k, v);
+                }
             }
         }
         base

@@ -1,5 +1,7 @@
-// src-tauri/src/services/sdeck_v2/mod.rs — Module dịch vụ định dạng gói thẻ .sdeck Version 2
-// Trách nhiệm duy nhất: Điều phối và công khai các chức năng schema, solutions, db_writer, db_reader, package_v2.
+// src-tauri/src/services/sdeck_v2/mod.rs — Module định dạng gói thẻ SQLite questions.db
+// DEPRECATED: Định dạng gói SQLite questions.db (v2) không còn sử dụng.
+// Toàn bộ hệ thống phát triển dựa trên định dạng chuẩn v1 (deck.json + img/ trong ZIP .sdeck).
+// Giữ lại module này chỉ để giải nén tương thích ngược nếu người dùng nạp file cũ có chứa questions.db.
 
 pub mod db_reader;
 pub mod db_writer;

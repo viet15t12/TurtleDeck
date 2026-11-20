@@ -594,19 +594,21 @@ select.form-control {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 14px 14px 12px;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
-  background: var(--c-surface);
+  background: var(--c-surface-2);
   color: var(--c-text);
   text-align: left;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+  user-select: none;
 }
 
 .ux-kind-card:hover:not(.disabled) {
   border-color: var(--c-border-strong);
+  background: var(--c-surface-3);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -616,22 +618,28 @@ select.form-control {
   box-shadow: var(--focus-ring);
 }
 
+.ux-kind-card.active {
+  border-color: var(--c-primary);
+  background: color-mix(in srgb, var(--c-primary-soft) 40%, var(--c-surface));
+  box-shadow: 0 0 0 1.5px var(--c-primary), var(--shadow-sm);
+}
+
 .ux-kind-card.active[data-kind="qa"] {
   border-color: var(--kind-qa);
   background: color-mix(in srgb, var(--kind-qa-soft) 40%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-qa) 24%, transparent), var(--shadow-sm);
+  box-shadow: 0 0 0 1.5px var(--kind-qa), var(--shadow-sm);
 }
 
 .ux-kind-card.active[data-kind="quiz"] {
   border-color: var(--kind-quiz);
   background: color-mix(in srgb, var(--kind-quiz-soft) 40%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-quiz) 24%, transparent), var(--shadow-sm);
+  box-shadow: 0 0 0 1.5px var(--kind-quiz), var(--shadow-sm);
 }
 
 .ux-kind-card.active[data-kind="vocab"] {
   border-color: var(--kind-vocab);
   background: color-mix(in srgb, var(--kind-vocab-soft) 40%, var(--c-surface));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kind-vocab) 24%, transparent), var(--shadow-sm);
+  box-shadow: 0 0 0 1.5px var(--kind-vocab), var(--shadow-sm);
 }
 
 .ux-kind-card.disabled {
@@ -647,6 +655,54 @@ select.form-control {
   justify-content: space-between;
   width: 100%;
   gap: 6px;
+}
+
+.ux-kind-icon-plate {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--c-surface-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.ux-kind-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--c-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: transparent;
+  transition: all var(--transition-fast);
+}
+
+.ux-kind-card.active .ux-kind-radio {
+  border-color: currentColor;
+  background: var(--c-primary);
+  color: #ffffff;
+}
+
+.ux-kind-card.active[data-kind="qa"] .ux-kind-radio { background: var(--kind-qa); }
+.ux-kind-card.active[data-kind="quiz"] .ux-kind-radio { background: var(--kind-quiz); }
+.ux-kind-card.active[data-kind="vocab"] .ux-kind-radio { background: var(--kind-vocab); }
+
+.ux-kind-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.01em;
+}
+
+.ux-kind-desc {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--c-text-muted);
 }
 
 .ux-kind-icon {

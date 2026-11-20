@@ -18,7 +18,9 @@ export function setItemStarred(progress: Progress, deckId: string, itemId: strin
   if (!progress.meta) progress.meta = {};
   if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
   progress.meta[metaKey].starred = starred;
-  api.saveProgress(progress);
+  if (api?.setItemStarred) {
+    api.setItemStarred(deckId, itemId, starred).catch((e: any) => console.warn('Lỗi lưu starred:', e));
+  }
 }
 
 export function setItemNote(progress: Progress, deckId: string, itemId: string, note: string): void {
@@ -26,6 +28,8 @@ export function setItemNote(progress: Progress, deckId: string, itemId: string, 
   if (!progress.meta) progress.meta = {};
   if (!progress.meta[metaKey]) progress.meta[metaKey] = { starred: false, note: '' };
   progress.meta[metaKey].note = String(note || '').slice(0, 2000);
-  api.saveProgress(progress);
+  if (api?.setItemNote) {
+    api.setItemNote(deckId, itemId, note).catch((e: any) => console.warn('Lỗi lưu note:', e));
+  }
 }
 

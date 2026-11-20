@@ -1,0 +1,72 @@
+{
+  "meta": {
+    "id": "sample-deck-multilingual",
+    "title": "Bộ thẻ mẫu đa ngôn ngữ (Multilingual Sample)",
+    "kind": "quiz",
+    "lang": ["en", "vi"],
+    "format": "studydeck",
+    "formatVersion": 2,
+    "description": "Bộ thẻ mẫu minh họa tính năng đa ngôn ngữ (EN + VI) với translations và item translate"
+  },
+  "items": [
+    {
+      "id": "mc_http_status",
+      "type": "single",
+      "question": "Which HTTP status code means the resource was **not found**?",
+      "choices": ["200 OK", "401 Unauthorized", "403 Forbidden", "404 Not Found"],
+      "answer": [3],
+      "explanation": "**404 Not Found** means the server could not find the requested URL.",
+      "topic": "Networking",
+      "tags": ["web", "http"],
+      "translations": {
+        "vi": {
+          "question": "Mã trạng thái HTTP nào biểu thị tài nguyên **không tìm thấy**?",
+          "explanation": "Mã **404 Not Found** cho biết máy chủ không thể tìm thấy tài nguyên theo URL yêu cầu."
+        }
+      }
+    },
+    {
+      "id": "fill_einstein",
+      "type": "fill",
+      "question": "What is Albert Einstein's mass-energy equivalence equation? $E =$ [___]?",
+      "answer": ["mc^2", "m*c^2", "m c^2"],
+      "answerDisplay": "$mc^2$",
+      "explanation": "$E = mc^2$ establishes that mass and energy are interchangeable.",
+      "topic": "Physics",
+      "tags": ["science", "physics"],
+      "translations": {
+        "vi": {
+          "question": "Phương trình tương đương khối lượng - năng lượng của Einstein là gì? $E =$ [___]?",
+          "explanation": "$E = mc^2$ khẳng định khối lượng và năng lượng có thể chuyển đổi qua lại."
+        }
+      }
+    },
+    {
+      "id": "card_pythagoras",
+      "type": "card",
+      "front": "State the formula of the **Pythagorean Theorem**.",
+      "back": "In a right-angled triangle:\n\n$$a^2 + b^2 = c^2$$",
+      "topic": "Geometry",
+      "tags": ["math", "geometry"],
+      "translations": {
+        "vi": {
+          "front": "Công thức của **Định lý Pytago** là gì?",
+          "back": "Trong tam giác vuông:\n\n$$a^2 + b^2 = c^2$$"
+        }
+      }
+    },
+    {
+      "id": "trans_weather",
+      "type": "translate",
+      "vi": "Thời tiết hôm nay thật đẹp.",
+      "keyword": "weather",
+      "answers": [
+        "The weather is very nice today.",
+        "The weather today is really nice.",
+        "Today the weather is very beautiful."
+      ],
+      "explanation": "Câu dịch tiếng Anh diễn đạt thời tiết hôm nay đẹp."
+    }
+  ]
+}
+

@@ -748,9 +748,19 @@ pub fn restore_full_backup(
 
         if name.starts_with("decks/") && name.ends_with(".sdeck") {
             let rel = &name["decks/".len()..];
+            if !crate::services::package_store::is_safe_entry(rel) {
+                continue;
+            }
             let target_path = library_dir.join(rel);
-            if let Some(parent) = target_path.parent() {
-                let _ = fs::create_dir_all(parent);
+            if let Ok(canon_lib) = fs::canonicalize(library_dir) {
+                if let Some(parent) = target_path.parent() {
+                    let _ = fs::create_dir_all(parent);
+                    if let Ok(canon_parent) = fs::canonicalize(parent) {
+                        if !canon_parent.starts_with(&canon_lib) {
+                            continue;
+                        }
+                    }
+                }
             }
             let mut buf = Vec::new();
             entry.read_to_end(&mut buf)?;

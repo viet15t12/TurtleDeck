@@ -2,8 +2,9 @@
 // Theo study-app.md mục 4.4 và study-app-phases.md GĐ3. Hàm thuần, ES module, nhận `now` để test.
 
 import { validateItem, hasError } from './validate.js';
-import { buildQuestion } from './builder.js';
+import { buildQuestion, applyQuestionSpacing } from './builder.js';
 import { cardKey, newCard } from './srs.js';
+import { getItemForLanguage, getPrimaryLanguage } from './deckmodel.js';
 import type { DeckItem } from './types/item.types.js';
 import type { DeckKind, DeckData } from './types/deck.types.js';
 import type { SrsCard, SrsDirection, LegacyProgressData, LegacyReviewLog } from './types/srs.types.js';
@@ -171,10 +172,31 @@ export function deckDueCounts(deckOrItems: any, progress: any = {}, now = Date.n
     ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
     : ['fwd'];
 
-  for (const item of validItems) {
+  const selectedLangs = Array.isArray(opts.selectedLangs) && opts.selectedLangs.length > 0
+    ? opts.selectedLangs.map((s: string) => String(s).trim().toLowerCase())
+    : null;
+  const primaryLang = getPrimaryLanguage(deckOrItems?.meta || { lang: 'vi' }, validItems);
+
+  let targetCards: { cardId: string; rootId: string }[] = [];
+  if (selectedLangs) {
+    for (const item of validItems) {
+      if (item.type === 'translate') {
+        targetCards.push({ cardId: item.id, rootId: item.id });
+      } else {
+        for (const l of selectedLangs) {
+          const itL = getItemForLanguage(item, l, primaryLang);
+          if (itL) targetCards.push({ cardId: itL.cardId, rootId: item.id });
+        }
+      }
+    }
+  } else {
+    targetCards = validItems.map(it => ({ cardId: it.id, rootId: it.id }));
+  }
+
+  for (const tc of targetCards) {
     for (const d of directions) {
-      const key = cardKey(deckId, item.id, d);
-      const card = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : newCard());
+      const key = cardKey(deckId, tc.cardId, d);
+      const card = cards[key] || (d === 'fwd' && tc.cardId === tc.rootId && cards[tc.rootId] ? cards[tc.rootId] : newCard());
       if (card.state === 'review') {
         if (card.due <= now) due++;
       } else if (card.state === 'learning' || card.state === 'relearning') {
@@ -196,7 +218,7 @@ export function deckDueCounts(deckOrItems: any, progress: any = {}, now = Date.n
     newAvailable,
     newStudiedToday,
     newToday,
-    total: validItems.length * directions.length,
+    total: targetCards.length * directions.length,
   };
 }
 
@@ -230,18 +252,44 @@ export function planSession(deckOrItems: any, progress: any = {}, now = Date.now
     ? (direction === 'fwd' || direction === 'rev' ? [direction] : ['fwd', 'rev'])
     : ['fwd'];
 
-  validItems.forEach((item, index) => {
+  const selectedLangs = Array.isArray(opts.selectedLangs) && opts.selectedLangs.length > 0
+    ? opts.selectedLangs.map((s: string) => String(s).trim().toLowerCase())
+    : null;
+  const primaryLang = getPrimaryLanguage(deckOrItems?.meta || { lang: 'vi' }, validItems);
+
+  let targetItems: any[] = [];
+  if (selectedLangs) {
+    for (const item of validItems) {
+      if (item.type === 'translate') {
+        targetItems.push({ ...item, cardId: item.id, rootId: item.id, lang: primaryLang });
+      } else {
+        for (const l of selectedLangs) {
+          const itL = getItemForLanguage(item, l, primaryLang);
+          if (itL) targetItems.push(itL);
+        }
+      }
+    }
+  } else {
+    targetItems = validItems.map(it => ({ ...it, cardId: it.id, rootId: it.id, lang: primaryLang }));
+  }
+
+  targetItems.forEach((item, index) => {
     for (const d of directions) {
-      const q = buildQuestion(item, { mode: opts.mode, dir: d, allItems: validItems });
+      const q = buildQuestion(item, { mode: opts.mode, dir: d, allItems: targetItems });
       if (!q) continue;
-      const key = cardKey(deckId, item.id, d);
-      const rawCard = cards[key] || (d === 'fwd' && cards[item.id] ? cards[item.id] : null);
+      const cardId = item.cardId || item.id;
+      const rootId = item.rootId || item.id;
+      const key = cardKey(deckId, cardId, d);
+      const rawCard = cards[key] || (d === 'fwd' && cardId === rootId && cards[rootId] ? cards[rootId] : null);
       const card = rawCard ? { ...newCard(), ...rawCard } : newCard();
 
       const entry = {
         ...q,
         item,
-        itemId: item.id,
+        itemId: rootId,
+        cardId,
+        rootId,
+        lang: item.lang,
         deckId,
         direction: d,
         key,
@@ -277,18 +325,8 @@ export function planSession(deckOrItems: any, progress: any = {}, now = Date.now
     return copy;
   });
 
-  if (planned.length > 2) {
-    for (let i = 0; i < planned.length - 1; i++) {
-      if (planned[i].itemId === planned[i + 1].itemId) {
-        const swapIdx = planned.findIndex((e, idx) => idx > i + 1 && e.itemId !== planned[i].itemId);
-        if (swapIdx !== -1) {
-          const temp = planned[i + 1];
-          planned[i + 1] = planned[swapIdx];
-          planned[swapIdx] = temp;
-        }
-      }
-    }
-  }
+  const minSep = opts.minSeparation ?? 5;
+  planned = applyQuestionSpacing(planned, minSep);
 
   const maxCount = Number(count);
   if (maxCount > 0 && maxCount < planned.length) {

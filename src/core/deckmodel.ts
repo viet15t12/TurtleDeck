@@ -538,3 +538,108 @@ export function createHistory(initialDeck: any, limit = 100) {
     },
   };
 }
+
+// ── Đa ngôn ngữ (Multilingual support) ──────────────────────────────────────
+
+export function getDeckLanguages(deckOrMeta: any, items?: any[]): string[] {
+  const meta = deckOrMeta?.meta || (deckOrMeta && !('items' in deckOrMeta) ? deckOrMeta : {});
+  const rawItems = items || deckOrMeta?.items || [];
+  const list: string[] = [];
+
+  if (Array.isArray(meta?.lang)) {
+    for (const l of meta.lang) {
+      const s = String(l || '').trim().toLowerCase();
+      if (s && !list.includes(s)) list.push(s);
+    }
+  } else if (typeof meta?.lang === 'string' && meta.lang.trim() !== '') {
+    list.push(meta.lang.trim().toLowerCase());
+  }
+
+  // Tự suy ra thêm các ngôn ngữ xuất hiện trong translations
+  if (Array.isArray(rawItems)) {
+    for (const it of rawItems) {
+      if (it?.translations && typeof it.translations === 'object') {
+        for (const l of Object.keys(it.translations)) {
+          const s = String(l || '').trim().toLowerCase();
+          if (s && !list.includes(s)) list.push(s);
+        }
+      }
+    }
+  }
+
+  return list.length > 0 ? list : ['vi'];
+}
+
+export function getPrimaryLanguage(deckOrMeta: any, items?: any[]): string {
+  const langs = getDeckLanguages(deckOrMeta, items);
+  return langs[0] || 'vi';
+}
+
+export function hasMultiLanguageFeature(deck: any): boolean {
+  if (!deck || typeof deck !== 'object') return false;
+  const meta = deck.meta || deck;
+  if (Array.isArray(meta?.lang) && meta.lang.length > 1) return true;
+  const items = deck.items || [];
+  if (Array.isArray(items)) {
+    for (const it of items) {
+      if (it?.translations && typeof it.translations === 'object') {
+        const keys = Object.keys(it.translations).filter(k => k && it.translations[k] && typeof it.translations[k] === 'object');
+        if (keys.length > 0) return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function getItemForLanguage(item: any, lang: string, primaryLang?: string): any {
+  if (!item || typeof item !== 'object') return null;
+  const primary = (primaryLang || 'vi').toLowerCase();
+  const targetLang = (lang || primary).toLowerCase();
+
+  // Dạng "translate" vốn đã song ngữ (vi + answers EN): là ngôn ngữ-trung-lập
+  if (item.type === 'translate') {
+    return {
+      ...item,
+      cardId: item.id,
+      rootId: item.id,
+      lang: primary,
+    };
+  }
+
+  if (targetLang === primary) {
+    return {
+      ...item,
+      cardId: item.id,
+      rootId: item.id,
+      lang: primary,
+    };
+  }
+
+  if (!item.translations || typeof item.translations !== 'object' || !item.translations[targetLang]) {
+    return null;
+  }
+
+  const tr = item.translations[targetLang];
+  if (!tr || typeof tr !== 'object') return null;
+
+  const merged = { ...item };
+  // Các trường dịch được: front, back, question, choices, explanation, answerDisplay, answer, term, definition, example, phonetic
+  if (tr.front !== undefined) merged.front = tr.front;
+  if (tr.back !== undefined) merged.back = tr.back;
+  if (tr.question !== undefined) merged.question = tr.question;
+  if (tr.choices !== undefined) merged.choices = tr.choices;
+  if (tr.explanation !== undefined) merged.explanation = tr.explanation;
+  if (tr.answerDisplay !== undefined) merged.answerDisplay = tr.answerDisplay;
+  if (tr.answer !== undefined) merged.answer = tr.answer;
+  if (tr.term !== undefined) merged.term = tr.term;
+  if (tr.definition !== undefined) merged.definition = tr.definition;
+  if (tr.example !== undefined) merged.example = tr.example;
+  if (tr.phonetic !== undefined) merged.phonetic = tr.phonetic;
+
+  merged.cardId = `${item.id}@${targetLang}`;
+  merged.rootId = item.id;
+  merged.lang = targetLang;
+
+  return merged;
+}
+

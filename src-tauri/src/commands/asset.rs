@@ -12,12 +12,17 @@ pub async fn asset_add(
     state: State<'_, AppState>,
     deck_key: String,
 ) -> AppResult<Vec<Value>> {
-    let picked = app
-        .dialog()
-        .file()
-        .set_title("Thêm ảnh vào bộ thẻ")
-        .add_filter("Hình ảnh", &["png", "jpg", "jpeg", "gif", "webp", "svg"])
-        .blocking_pick_files();
+    let app_handle = app.clone();
+    let picked = tokio::task::spawn_blocking(move || {
+        app_handle
+            .dialog()
+            .file()
+            .set_title("Thêm ảnh vào bộ thẻ")
+            .add_filter("Hình ảnh", &["png", "jpg", "jpeg", "gif", "webp", "svg"])
+            .blocking_pick_files()
+    })
+    .await
+    .map_err(|e| crate::error::AppError::Custom(format!("Lỗi hộp thoại: {e}")))?;
 
     let paths: Vec<String> = match picked {
         Some(files) => files.into_iter().map(|f| f.to_string()).collect(),

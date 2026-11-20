@@ -101,7 +101,8 @@ test('validateDeck: lỗi cấp bộ thẻ', () => {
   assert.ok(validateDeck({ meta: { title: 'x' }, items: [] }).errors.some(e => /meta\.id/.test(e)));
   assert.ok(validateDeck({ meta: { id: 'x' } }).errors.some(e => /items/.test(e)));
   assert.ok(validateDeck({ meta: { id: 'x' }, items: {} }).errors.some(e => /items/.test(e)));
-  assert.ok(validateDeck({ meta: { id: 'x', formatVersion: 2 }, items: [] }).errors.some(e => /mới hơn/.test(e)));
+  assert.ok(validateDeck({ meta: { id: 'x', formatVersion: 3 }, items: [] }).errors.some(e => /mới hơn/.test(e)));
+  assert.ok(!validateDeck({ meta: { id: 'x', title: 'T', formatVersion: 2, format: 'studydeck' }, items: [] }).errors.some(e => /mới hơn/.test(e)));
   assert.ok(validateDeck({ meta: { id: 'x', format: 'anki' }, items: [] }).errors.length);
   assert.deepEqual(validateDeck({ meta: { id: 'x', title: 'T', formatVersion: 1, format: 'studydeck' }, items: [single] }).errors, []);
 });

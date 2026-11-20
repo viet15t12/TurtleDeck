@@ -14,7 +14,17 @@ import { renderTopbar as topbarRender } from './ui/topbar.js';
 import { createSplitter, syncResponsiveClasses } from './ui/layout.js';
 import { registerGlobalShortcuts } from './shortcuts.js';
 
+let activeEditorCleanup = null;
+
+export function disposeEditor() {
+  if (activeEditorCleanup) {
+    activeEditorCleanup();
+    activeEditorCleanup = null;
+  }
+}
+
 export function renderEditor(root, { entry, initialItemId }, appActions) {
+  disposeEditor();
   const state = createEditorState({ entry, initialItemId });
   const rich = makeRich(state.deckKey);
   const services = createServices(window.api, state);
@@ -118,8 +128,7 @@ export function renderEditor(root, { entry, initialItemId }, appActions) {
     panes,
     appActions,
     cleanup: () => {
-      if (cleanupShortcuts) cleanupShortcuts();
-      if (draftTimer) clearInterval(draftTimer);
+      disposeEditor();
     },
   });
 
@@ -273,6 +282,17 @@ export function renderEditor(root, { entry, initialItemId }, appActions) {
       }
     }
   }, 30000);
+
+  activeEditorCleanup = () => {
+    if (cleanupShortcuts) {
+      cleanupShortcuts();
+      cleanupShortcuts = null;
+    }
+    if (draftTimer) {
+      clearInterval(draftTimer);
+      draftTimer = null;
+    }
+  };
 
   // 5. Initial Render
   syncLayout();

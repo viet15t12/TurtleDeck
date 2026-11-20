@@ -9,7 +9,7 @@ import type { ValidationIssue } from './types/deck.types.js';
 export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card', 'translate'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
 export const MATCH_MODES = ['normalized', 'exact', 'regex', 'number', 'latex'];
-export const SUPPORTED_FORMAT_VERSION = 1;
+export const SUPPORTED_FORMAT_VERSION = 2;
 
 const IMG_EXT = /\.(png|jpe?g|gif|webp|svg)$/i;
 const MAX_IMG_SIZE = 5 * 1024 * 1024;
@@ -108,9 +108,11 @@ function checkTranslateAnswers(item: any, add: (level: 'error' | 'warn', field: 
 export interface ValidateItemOptions {
   deckKind?: string;
   assets?: any;
+  metaLangs?: string[];
+  primaryLang?: string;
 }
 
-export function validateItem(item: any, { deckKind, assets }: ValidateItemOptions = {}): any[] {
+export function validateItem(item: any, { deckKind, assets, metaLangs, primaryLang }: ValidateItemOptions = {}): any[] {
   const out: any[] = [];
   const add = (level: 'error' | 'warn', field: string, msg: string) => out.push({ level, field, msg });
   if (!isObj(item)) { add('error', '', 'Mục không phải đối tượng JSON.'); return out; }
@@ -157,9 +159,11 @@ export function validateItem(item: any, { deckKind, assets }: ValidateItemOption
 
   const checkTextWarnings = (text: unknown, fieldName: string) => {
     if (typeof text !== 'string') return;
-    for (const m of text.matchAll(MD_IMG_WITH_ALT)) {
-      if (!m[1] || m[1].trim() === '') {
-        add('warn', fieldName, `Thiếu mô tả cho ảnh "${m[2]}" (alt text).`);
+    if (text.includes('![')) {
+      for (const m of text.matchAll(MD_IMG_WITH_ALT)) {
+        if (!m[1] || m[1].trim() === '') {
+          add('warn', fieldName, `Thiếu mô tả cho ảnh "${m[2]}" (alt text).`);
+        }
       }
     }
     if (text.includes('▢')) {
@@ -210,6 +214,48 @@ export function validateItem(item: any, { deckKind, assets }: ValidateItemOption
         add('warn', 'image', `Không tìm thấy ảnh "${ref}" trong gói bộ thẻ.`);
       } else if (data && (data.byteLength > MAX_IMG_SIZE || data.length > MAX_IMG_SIZE)) {
         add('warn', 'image', `Ảnh "${ref}" vượt quá dung lượng cho phép (> 5 MB).`);
+      }
+    }
+  }
+
+  if (item.translations !== undefined) {
+    if (!isObj(item.translations)) {
+      add('error', 'translations', 'translations phải là đối tượng bản dịch theo mã ngôn ngữ.');
+    } else {
+      if (type === 'translate') {
+        add('warn', 'translations', 'Dạng "translate" là ngôn ngữ-trung-lập, không áp dụng translations.');
+      }
+      for (const [langKey, tr] of Object.entries(item.translations)) {
+        const lNorm = langKey.trim().toLowerCase();
+        if (primaryLang && lNorm === primaryLang.toLowerCase()) {
+          add('warn', `translations.${langKey}`, `Mã ngôn ngữ "${langKey}" trùng với ngôn ngữ chính.`);
+        }
+        if (metaLangs && !metaLangs.includes(lNorm)) {
+          add('warn', `translations.${langKey}`, `translations dùng ngôn ngữ "${langKey}" chưa khai báo trong meta.lang.`);
+        }
+        if (!isObj(tr)) {
+          add('error', `translations.${langKey}`, `Bản dịch cho ngôn ngữ "${langKey}" phải là đối tượng.`);
+          continue;
+        }
+        if (type === 'single' || type === 'multi') {
+          if (tr.choices !== undefined) {
+            if (!Array.isArray(tr.choices)) {
+              add('error', `translations.${langKey}.choices`, 'choices phải là danh sách lựa chọn.');
+            } else if (Array.isArray(item.choices) && tr.choices.length !== item.choices.length) {
+              add('error', `translations.${langKey}.choices`, `choices lệch số lượng so với bản chính (${tr.choices.length} so với ${item.choices.length}).`);
+            }
+          }
+        }
+        for (const f of ['question', 'explanation', 'front', 'back', 'answerDisplay', 'term', 'definition', 'example', 'phonetic']) {
+          if (tr[f] !== undefined && !isStr(tr[f])) {
+            add('error', `translations.${langKey}.${f}`, `Trường ${f} phải là chuỗi.`);
+          }
+        }
+        if (type === 'fill' || type === 'command') {
+          if (tr.answer !== undefined && !(Array.isArray(tr.answer) && tr.answer.every(isStr))) {
+            add('error', `translations.${langKey}.answer`, 'answer phải là danh sách chuỗi đáp án chấp nhận.');
+          }
+        }
       }
     }
   }
@@ -290,8 +336,33 @@ export function validateDeck(deck: any, { assets }: { assets?: any } = {}) {
       if (!isStr(meta.description)) warnings.push('meta.description phải là chuỗi.');
       else if (meta.description.length > 200) warnings.push('Mô tả bộ thẻ (meta.description) không nên vượt quá 200 ký tự.');
     }
+    if (meta.lang !== undefined) {
+      if (typeof meta.lang === 'string') {
+        if (!nonEmpty(meta.lang)) warnings.push('meta.lang là chuỗi rỗng.');
+      } else if (Array.isArray(meta.lang)) {
+        if (meta.lang.length === 0) {
+          warnings.push('meta.lang là mảng rỗng.');
+        } else if (!meta.lang.every(nonEmpty)) {
+          errors.push('Mỗi phần tử trong meta.lang phải là chuỗi mã ngôn ngữ khác rỗng.');
+        }
+      } else {
+        errors.push('meta.lang phải là chuỗi hoặc mảng chuỗi mã ngôn ngữ.');
+      }
+    }
   }
   if (!Array.isArray(deck.items)) { errors.push('Thiếu danh sách "items" (các câu hỏi / thẻ).'); return { errors, warnings, items }; }
+
+  const declaredLangs: string[] = [];
+  if (Array.isArray(meta?.lang)) {
+    for (const l of meta.lang) {
+      if (nonEmpty(l)) declaredLangs.push(l.trim().toLowerCase());
+    }
+  } else if (nonEmpty(meta?.lang)) {
+    declaredLangs.push(meta.lang.trim().toLowerCase());
+  }
+  const primaryLang = declaredLangs[0] || 'vi';
+  const declaredLangsSet = new Set(declaredLangs);
+  const undeclaredTranslations = new Set<string>();
 
   const effectiveKind = kindOf(deck);
   const deckKind = (isObj(meta) && DECK_KINDS.includes(meta.kind))
@@ -299,9 +370,18 @@ export function validateDeck(deck: any, { assets }: { assets?: any } = {}) {
     : (effectiveKind === 'vocab' ? 'vocab' : undefined);
   const firstIndex = new Map<string, number>(), dups = new Map<string, number[]>();
   const seenTerms = new Map<string, number>();
+  const itemOpts: ValidateItemOptions = { deckKind, assets, metaLangs: declaredLangs.length > 0 ? declaredLangs : undefined, primaryLang };
   deck.items.forEach((it: any, index: number) => {
     const id = isObj(it) && nonEmpty(it.id) ? it.id : null;
-    const itIssues = validateItem(it, { deckKind, assets });
+    if (it?.translations && isObj(it.translations) && declaredLangsSet.size > 0) {
+      for (const l of Object.keys(it.translations)) {
+        const lNorm = l.trim().toLowerCase();
+        if (!declaredLangsSet.has(lNorm)) {
+          undeclaredTranslations.add(l);
+        }
+      }
+    }
+    const itIssues = validateItem(it, itemOpts);
     items.push({ index, id, issues: itIssues });
     if (id !== null) {
       if (firstIndex.has(id)) dups.set(id, (dups.get(id) ?? [firstIndex.get(id)!]).concat(index));
@@ -322,6 +402,9 @@ export function validateDeck(deck: any, { assets }: { assets?: any } = {}) {
       }
     }
   });
+  for (const l of undeclaredTranslations) {
+    warnings.push(`translations dùng ngôn ngữ "${l}" chưa khai báo trong meta.lang.`);
+  }
   for (const [id, idx] of dups)
     errors.push(`Trùng id "${id}" ở các mục thứ ${idx.map(i => i + 1).join(', ')} — mỗi mục phải có id riêng.`);
   if (deck.items.length === 0) warnings.push('Bộ thẻ chưa có mục nào.');

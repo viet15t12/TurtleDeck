@@ -70,6 +70,41 @@ impl PackageStore {
         self.packages.read().ok()?.get(deck_key).cloned()
     }
 
+    pub fn get_asset(&self, deck_key: &str, asset_path: &str) -> Option<Vec<u8>> {
+        let lock = self.packages.read().ok()?;
+        let pkg = lock.get(deck_key)?;
+        pkg.assets.get(asset_path).cloned()
+    }
+
+    pub fn list_assets(&self, deck_key: &str) -> Vec<String> {
+        let lock = match self.packages.read() {
+            Ok(l) => l,
+            Err(_) => return Vec::new(),
+        };
+        lock.get(deck_key)
+            .map(|pkg| pkg.assets.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    pub fn add_asset(&self, deck_key: &str, key: String, data: Vec<u8>) -> bool {
+        if let Ok(mut lock) = self.packages.write() {
+            if let Some(pkg) = lock.get_mut(deck_key) {
+                pkg.assets.insert(key, data);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn remove_asset(&self, deck_key: &str, asset_path: &str) -> bool {
+        if let Ok(mut lock) = self.packages.write() {
+            if let Some(pkg) = lock.get_mut(deck_key) {
+                return pkg.assets.remove(asset_path).is_some();
+            }
+        }
+        false
+    }
+
     pub fn set(&self, deck_key: String, pkg: OpenPackage) {
         if let Ok(mut lock) = self.packages.write() {
             lock.insert(deck_key, pkg);
@@ -368,13 +403,9 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
         AppError::Custom("Gói không có deck.json — đây không phải bộ thẻ hợp lệ.".into())
     })?;
 
-    let parsed_val: Option<Value> = serde_json::from_str(&text).ok();
-    let is_v2 = parsed_val
-        .as_ref()
-        .map(crate::services::sdeck_v2::is_v2_deck)
-        .unwrap_or(false)
-        || db_data.is_some();
-
+    // DEPRECATED: Định dạng gói SQLite questions.db (v2) không còn sử dụng.
+    // Nếu gói cũ có questions.db thì giải nén tương thích ngược; còn mọi gói hiện tại và tương lai
+    // (kể cả formatVersion 2 đa ngôn ngữ) đều đọc trực tiếp từ deck.json tiêu chuẩn.
     let final_deck_text = if let Some(db_bytes) = db_data {
         let full_deck = crate::services::sdeck_v2::unpack_v2_package(
             &text,
@@ -383,8 +414,6 @@ pub fn read_package(bytes: &[u8]) -> AppResult<ReadPackageResult> {
         )?;
         serde_json::to_string_pretty(&full_deck)
             .map_err(|e| AppError::Custom(format!("Lỗi chuyển đổi deck v2 sang JSON: {e}")))?
-    } else if is_v2 {
-        return Err(AppError::Custom("Gói Version 2 thiếu questions.db.".into()));
     } else {
         text
     };
@@ -449,11 +478,13 @@ pub fn collect_image_refs(deck: &Value) -> HashSet<String> {
                         if let Some(close_paren) =
                             val.as_str().and_then(|t| t[open_paren..].find(')'))
                         {
-                            let url_part =
-                                &val.as_str().unwrap()[open_paren..open_paren + close_paren];
-                            let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
-                            if !img_path.is_empty() {
-                                out.insert(img_path.to_string());
+                            if let Some(raw_s) = val.as_str() {
+                                if let Some(url_part) = raw_s.get(open_paren..open_paren + close_paren) {
+                                    let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
+                                    if !img_path.is_empty() {
+                                        out.insert(img_path.to_string());
+                                    }
+                                }
                             }
                             start = open_paren + close_paren + 1;
                             continue;
@@ -506,11 +537,13 @@ pub fn item_image_refs(item: &Value) -> HashSet<String> {
                         if let Some(close_paren) =
                             val.as_str().and_then(|t| t[open_paren..].find(')'))
                         {
-                            let url_part =
-                                &val.as_str().unwrap()[open_paren..open_paren + close_paren];
-                            let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
-                            if !img_path.is_empty() {
-                                out.insert(img_path.to_string());
+                            if let Some(raw_s) = val.as_str() {
+                                if let Some(url_part) = raw_s.get(open_paren..open_paren + close_paren) {
+                                    let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
+                                    if !img_path.is_empty() {
+                                        out.insert(img_path.to_string());
+                                    }
+                                }
                             }
                             start = open_paren + close_paren + 1;
                             continue;
@@ -569,15 +602,43 @@ pub fn write_package(
         ));
     }
 
-    let is_v2 = crate::services::sdeck_v2::is_v2_deck(&deck);
+    // DEPRECATED: Định dạng v2 (SQLite) không còn sử dụng. Toàn bộ phát triển dựa trên v1 (deck.json).
+    // Ghi nhận formatVersion = 2 cho bộ thẻ dùng tính năng đa ngôn ngữ, formatVersion = 1 cho bộ thẻ thông thường.
+    let is_multilingual = {
+        let meta_obj = deck.get("meta");
+        let has_multi_lang = meta_obj
+            .and_then(|m| m.get("lang"))
+            .and_then(|l| l.as_array())
+            .map(|arr| arr.len() > 1)
+            .unwrap_or(false);
+        let has_translations = deck
+            .get("items")
+            .and_then(|i| i.as_array())
+            .map(|arr| {
+                arr.iter().any(|it| {
+                    it.get("translations")
+                        .and_then(|t| t.as_object())
+                        .map(|m| !m.is_empty())
+                        .unwrap_or(false)
+                })
+            })
+            .unwrap_or(false);
+        has_multi_lang || has_translations
+    };
 
     if let Some(meta) = deck.get_mut("meta").and_then(|m| m.as_object_mut()) {
         meta.insert("format".into(), Value::String(FORMAT.into()));
-        if is_v2 {
-            meta.insert("version".into(), Value::from(2));
+        if is_multilingual {
             meta.insert("formatVersion".into(), Value::from(2));
         } else {
-            meta.insert("formatVersion".into(), Value::from(FORMAT_VERSION));
+            let existing_fv = meta.get("formatVersion").and_then(|v| v.as_u64()).unwrap_or(1);
+            meta.insert("formatVersion".into(), Value::from(existing_fv));
+            if let Some(l_arr) = meta.get("lang").and_then(|l| l.as_array()) {
+                if l_arr.len() <= 1 {
+                    let first_lang = l_arr.first().and_then(|v| v.as_str()).unwrap_or("vi");
+                    meta.insert("lang".into(), Value::String(first_lang.into()));
+                }
+            }
         }
     }
 
@@ -615,9 +676,7 @@ pub fn write_package(
         ));
     }
 
-    let buf = if is_v2 {
-        crate::services::sdeck_v2::build_v2_package(&deck, &kept_assets)?
-    } else {
+    let buf = {
         let mut buf = Vec::new();
         {
             let cursor = Cursor::new(&mut buf);
@@ -650,11 +709,11 @@ pub fn write_package(
     })
 }
 
-// Đóng gói bộ thẻ theo chuẩn Version 2 (.sdeck v2)
+// Đóng gói bộ thẻ theo chuẩn Version 2 cũ (.sdeck v2 SQLite) - DEPRECATED: chỉ dùng để test tương thích ngược
 pub fn write_package_v2(
     deck_text: &str,
     assets: &HashMap<String, Vec<u8>>,
-    prune: bool,
+    _prune: bool,
 ) -> AppResult<WritePackageResult> {
     let mut deck: Value = serde_json::from_str(deck_text)
         .map_err(|e| AppError::Custom(format!("deck.json không hợp lệ: {e}")))?;
@@ -665,10 +724,11 @@ pub fn write_package_v2(
         meta.insert("formatVersion".into(), Value::from(2));
     }
 
-    let modified_deck_text = serde_json::to_string(&deck)
-        .map_err(|e| AppError::Custom(format!("Lỗi serialize deck: {e}")))?;
-
-    write_package(&modified_deck_text, assets, prune)
+    let buf = crate::services::sdeck_v2::build_v2_package(&deck, assets)?;
+    Ok(WritePackageResult {
+        bytes: buf,
+        kept_assets: assets.clone(),
+    })
 }
 
 // Chuyển chuỗi tiếng Việt có dấu thành slug an toàn cho tên file

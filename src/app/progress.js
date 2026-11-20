@@ -32,14 +32,6 @@ export function handleRecordReview(args) {
         console.warn('Lỗi gọi Rust recordReview:', e);
       });
     }
-
-    if (api?.saveProgress) {
-      api.saveProgress(state.progress).then(r => {
-        if (r && r.ok === false) notify('Không lưu được tiến độ: ' + r.error, 'error');
-      }).catch(e => {
-        notify('Lỗi lưu tiến độ: ' + (e?.message || e), 'error');
-      });
-    }
   }
   return res;
 }

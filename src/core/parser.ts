@@ -96,6 +96,27 @@ export function parseDeck(deckText: string, { assets }: any = {}): any {
   if (!meta.created) meta.created = Date.now();
   if (!meta.updated) meta.updated = Date.now();
 
+  // Tự suy ra từ dữ liệu khi nạp: meta.lang phải bao gồm mọi ngôn ngữ trong translations
+  const foundTranslationLangs = new Set<string>();
+  for (const it of items) {
+    if (it?.translations && typeof it.translations === 'object') {
+      for (const l of Object.keys(it.translations)) {
+        if (typeof l === 'string' && l.trim()) foundTranslationLangs.add(l.trim().toLowerCase());
+      }
+    }
+  }
+  if (foundTranslationLangs.size > 0) {
+    const currentLangs: string[] = Array.isArray(meta.lang)
+      ? meta.lang.map((s: any) => String(s).trim().toLowerCase()).filter(Boolean)
+      : (typeof meta.lang === 'string' && meta.lang.trim() ? [meta.lang.trim().toLowerCase()] : ['vi']);
+    for (const tl of foundTranslationLangs) {
+      if (!currentLangs.includes(tl)) {
+        currentLangs.push(tl);
+      }
+    }
+    meta.lang = currentLangs;
+  }
+
   // Xác định loại bộ thẻ (meta.kind) theo quy tắc GĐ3B:
   // Nếu có khai báo và hợp lệ ('qa' | 'quiz' | 'vocab') thì giữ nguyên, ngược lại tự suy từ các item hợp lệ
   if (!isValidKind(meta.kind)) {
