@@ -8,9 +8,9 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
 
-const coreDir = fsSync.existsSync(new URL('../dist/core/sdeck.js', import.meta.url)) ? '../dist/core' : '../src/core';
-const { readPackage, writePackage, collectAssetsFromDir } = await import(`${coreDir}/sdeck.js`);
-const { parseDeck } = await import(`${coreDir}/parser.js`);
+const coreBase = fsSync.existsSync(new URL('../dist/core/sdeck.js', import.meta.url)) ? '../dist/core' : '../src/core';
+const { readPackage, writePackage, collectAssetsFromDir } = await import(new URL(`${coreBase}/sdeck.js`, import.meta.url).href);
+const { parseDeck } = await import(new URL(`${coreBase}/parser.js`, import.meta.url).href);
 import { atomicWrite } from '../src/core/fsutil.js';
 
 const USAGE = `Cách dùng:

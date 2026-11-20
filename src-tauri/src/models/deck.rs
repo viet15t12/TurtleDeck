@@ -40,7 +40,10 @@ impl DeckLang {
     }
 
     pub fn primary_lang(&self) -> String {
-        self.to_vec().into_iter().next().unwrap_or_else(|| "vi".to_string())
+        self.to_vec()
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| "vi".to_string())
     }
 }
 
@@ -126,4 +129,3 @@ impl DeckModel {
         false
     }
 }
-

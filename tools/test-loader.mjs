@@ -11,12 +11,16 @@ function replaceLast(filePath, fromDir, toDir) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
+  let targetSpecifier = specifier;
+  if (/^[a-zA-Z]:[\\/]/.test(specifier)) {
+    targetSpecifier = pathToFileURL(specifier).href;
+  }
   try {
-    return await nextResolve(specifier, context);
+    return await nextResolve(targetSpecifier, context);
   } catch (err) {
-    if (err.code === 'ERR_MODULE_NOT_FOUND' && context.parentURL) {
+    if ((err.code === 'ERR_MODULE_NOT_FOUND' || err.code === 'ERR_UNSUPPORTED_ESM_URL_SCHEME') && (context.parentURL || targetSpecifier.startsWith('file:'))) {
       try {
-        const resolvedUrl = new URL(specifier, context.parentURL);
+        const resolvedUrl = new URL(targetSpecifier, context.parentURL);
         if (resolvedUrl.protocol === 'file:') {
           const filePath = fileURLToPath(resolvedUrl);
 

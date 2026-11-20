@@ -479,8 +479,11 @@ pub fn collect_image_refs(deck: &Value) -> HashSet<String> {
                             val.as_str().and_then(|t| t[open_paren..].find(')'))
                         {
                             if let Some(raw_s) = val.as_str() {
-                                if let Some(url_part) = raw_s.get(open_paren..open_paren + close_paren) {
-                                    let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
+                                if let Some(url_part) =
+                                    raw_s.get(open_paren..open_paren + close_paren)
+                                {
+                                    let img_path =
+                                        url_part.split_whitespace().next().unwrap_or("").trim();
                                     if !img_path.is_empty() {
                                         out.insert(img_path.to_string());
                                     }
@@ -538,8 +541,11 @@ pub fn item_image_refs(item: &Value) -> HashSet<String> {
                             val.as_str().and_then(|t| t[open_paren..].find(')'))
                         {
                             if let Some(raw_s) = val.as_str() {
-                                if let Some(url_part) = raw_s.get(open_paren..open_paren + close_paren) {
-                                    let img_path = url_part.split_whitespace().next().unwrap_or("").trim();
+                                if let Some(url_part) =
+                                    raw_s.get(open_paren..open_paren + close_paren)
+                                {
+                                    let img_path =
+                                        url_part.split_whitespace().next().unwrap_or("").trim();
                                     if !img_path.is_empty() {
                                         out.insert(img_path.to_string());
                                     }
@@ -631,7 +637,10 @@ pub fn write_package(
         if is_multilingual {
             meta.insert("formatVersion".into(), Value::from(2));
         } else {
-            let existing_fv = meta.get("formatVersion").and_then(|v| v.as_u64()).unwrap_or(1);
+            let existing_fv = meta
+                .get("formatVersion")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1);
             meta.insert("formatVersion".into(), Value::from(existing_fv));
             if let Some(l_arr) = meta.get("lang").and_then(|l| l.as_array()) {
                 if l_arr.len() <= 1 {
