@@ -33,3 +33,9 @@ keyword: prevent (v)
 pattern: prevent\s+\w+\s+from\s+\w+ing
 answer: I prevented him from giving up. | I prevented him from quitting.
 > Cấu trúc: prevent someone from doing something. Thì quá khứ đơn chia 'prevented'.
+
+## Q q6 | word-order | topic=Tiếng Anh | tags=grammar,word-order
+Anh ấy đã mua bốn ổ bánh mì.
+answer: He | bought | four | loaves | of | bread.
+distractors: breads. | loaf
+> "bread" là danh từ không đếm được nên không thêm "s"; dùng "four loaves of bread".

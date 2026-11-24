@@ -105,7 +105,7 @@ export function resetForQuestion(session: SessionState, q: Question): void {
     error: null,
     forIndex: -1,
   };
-  if (q.kind === 'multi') {
+  if (q.kind === 'multi' || q.kind === 'word-order') {
     session.userAnswer = [];
   } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
     session.userAnswer = '';

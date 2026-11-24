@@ -20,7 +20,7 @@ test('KINDS: đủ 3 loại bộ thẻ chuẩn và thông số đúng', () => {
   assert.equal(KINDS.qa.defaultType, 'card');
   assert.equal(KINDS.qa.available, true);
 
-  assert.deepEqual(KINDS.quiz.allowedTypes, ['single', 'multi', 'fill', 'command']);
+  assert.deepEqual(KINDS.quiz.allowedTypes, ['single', 'multi', 'fill', 'command', 'word-order']);
   assert.equal(KINDS.quiz.defaultType, 'single');
   assert.equal(KINDS.quiz.available, true);
 
@@ -55,9 +55,9 @@ test('kindOf: dùng meta.kind hợp lệ, hoặc tự suy ra khi thiếu/lạ', 
 
 test('allowedTypes, defaultTypeFor, modesFor theo loại bộ thẻ', () => {
   assert.deepEqual(allowedTypes('qa'), ['card']);
-  assert.deepEqual(allowedTypes('quiz'), ['single', 'multi', 'fill', 'command']);
+  assert.deepEqual(allowedTypes('quiz'), ['single', 'multi', 'fill', 'command', 'word-order']);
   assert.deepEqual(allowedTypes('vocab'), ['vocab']);
-  assert.deepEqual(allowedTypes('invalid'), ['single', 'multi', 'fill', 'command']);
+  assert.deepEqual(allowedTypes('invalid'), ['single', 'multi', 'fill', 'command', 'word-order']);
 
   assert.equal(defaultTypeFor('qa'), 'card');
   assert.equal(defaultTypeFor('quiz'), 'single');

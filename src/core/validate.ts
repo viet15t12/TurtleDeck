@@ -6,7 +6,7 @@ import { kindOf, mismatchedItems, formatMismatchWarning } from './deckkinds.js';
 import { normalizeTerm } from './hash.js';
 import type { ValidationIssue } from './types/deck.types.js';
 
-export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card', 'translate'];
+export const ITEM_TYPES = ['single', 'multi', 'fill', 'command', 'card', 'translate', 'word-order'];
 export const DECK_KINDS = ['vocab', 'qa', 'quiz'];
 export const MATCH_MODES = ['normalized', 'exact', 'regex', 'number', 'latex'];
 export const SUPPORTED_FORMAT_VERSION = 2;
@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
   single: 'Trắc nghiệm', multi: 'Trắc nghiệm',
   fill: 'Điền', command: 'Lệnh', card: 'Thẻ', vocab: 'Từ vựng',
   translate: 'Dịch câu',
+  'word-order': 'Sắp xếp từ',
 };
 
 const isStr = (v: unknown): v is string => typeof v === 'string';
@@ -105,6 +106,30 @@ function checkTranslateAnswers(item: any, add: (level: 'error' | 'warn', field: 
   }
 }
 
+function checkWordOrder(item: any, add: (level: 'error' | 'warn', field: string, msg: string) => void) {
+  const { answer, distractors, alt_answers, caseSensitive } = item;
+  if (!Array.isArray(answer) || answer.length === 0) {
+    add('error', 'answer', 'Cần ít nhất 1 từ trong đáp án (answer là danh sách chuỗi).');
+  } else {
+    answer.forEach((w, i) => {
+      if (!nonEmpty(w)) add('error', `answer[${i}]`, `Từ thứ ${i + 1} trong đáp án rỗng hoặc không phải chuỗi.`);
+    });
+  }
+  if (distractors !== undefined) {
+    if (!Array.isArray(distractors) || distractors.some(d => !nonEmpty(d))) {
+      add('error', 'distractors', 'Từ gây nhiễu (distractors) phải là danh sách chuỗi khác rỗng.');
+    }
+  }
+  if (alt_answers !== undefined) {
+    if (!Array.isArray(alt_answers) || alt_answers.some(alt => !Array.isArray(alt) || alt.length === 0 || alt.some(w => !nonEmpty(w)))) {
+      add('error', 'alt_answers', 'Đáp án thay thế (alt_answers) phải là mảng các câu (mỗi câu là mảng từ khác rỗng).');
+    }
+  }
+  if (caseSensitive !== undefined && typeof caseSensitive !== 'boolean') {
+    add('error', 'caseSensitive', 'Trường caseSensitive phải là boolean (true/false).');
+  }
+}
+
 export interface ValidateItemOptions {
   deckKind?: string;
   assets?: any;
@@ -131,9 +156,10 @@ export function validateItem(item: any, { deckKind, assets, metaLangs, primaryLa
     case 'card': need('front', 'mặt trước'); need('back', 'mặt sau'); break;
     case 'vocab': need('term', 'từ'); need('definition', 'nghĩa'); break;
     case 'translate': need('vi', 'câu tiếng Việt'); need('keyword', 'từ gợi ý'); checkTranslateAnswers(item, add); break;
+    case 'word-order': checkWordOrder(item, add); break;
   }
 
-  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'imageAlt', 'answerImageAlt', 'answerDisplay', 'phonetic', 'pos', 'example', 'vi', 'keyword', 'pattern'])
+  for (const f of ['topic', 'explanation', 'image', 'answerImage', 'imageAlt', 'answerImageAlt', 'answerDisplay', 'phonetic', 'pos', 'example', 'vi', 'keyword', 'pattern', 'prompt_vi', 'audio'])
     if (item[f] !== undefined && !isStr(item[f])) add('error', f, `Trường ${f} phải là chuỗi.`);
   for (const f of ['tags', 'forms', 'synonyms', 'acceptableForms'])
     if (item[f] !== undefined && !(Array.isArray(item[f]) && item[f].every(isStr))) add('error', f, `Trường ${f} phải là danh sách chuỗi.`);

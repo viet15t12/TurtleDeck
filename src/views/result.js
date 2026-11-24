@@ -3,6 +3,7 @@
 import { h } from './dom.js';
 import { cardKey, DAY, MINUTE, RATING } from '../core/srs.js';
 import { makeRich } from '../core/richtext.js';
+import { buildPlacedText } from '../core/word-order.js';
 import { attachImageHandlers } from './components/lightbox.js';
 import { applyCardOverride } from '../core/progressio.js';
 
@@ -119,6 +120,7 @@ function itemTypeLabel(kind) {
     case 'multi': return 'Nhiều đáp án';
     case 'fill': return 'Điền';
     case 'command': return 'Lệnh';
+    case 'word-order': return 'Sắp xếp từ';
     case 'vocab': return 'Từ vựng';
     default: return 'Mục';
   }
@@ -231,11 +233,13 @@ export function renderResult(root, { entry, config, history = [], progress, sett
             ? choiceText(q.choices[item.userAnswer])
             : q.kind === 'multi'
               ? (item.userAnswer || []).map(i => choiceText(q.choices[i])).join(' · ') || '(để trống)'
-              : q.kind === 'card'
-                ? 'Chưa nhớ'
-                : String(item.userAnswer || '(để trống)');
+              : q.kind === 'word-order'
+                ? (buildPlacedText(q.bank || [], Array.isArray(item.userAnswer) ? item.userAnswer : []) || '(để trống)')
+                : q.kind === 'card'
+                  ? 'Chưa nhớ'
+                  : String(item.userAnswer || '(để trống)');
 
-          const acceptedChips = (q.kind === 'fill' || q.kind === 'command')
+          const acceptedChips = (q.kind === 'fill' || q.kind === 'command' || q.kind === 'word-order')
             ? buildAcceptedAnswerChips(q, rich)
             : (q.kind === 'single' || q.kind === 'multi')
               ? q.answers.map(i => richEl('span', { class: 'answer-chip correct-chip' }, rich.inline(choiceText(q.choices[i]))))

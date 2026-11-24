@@ -2,7 +2,7 @@
 
 export type Rating = 1 | 2 | 3 | 4; // RATING.AGAIN | HARD | GOOD | EASY
 export type DeckKind = 'qa' | 'quiz' | 'vocab';
-export type QuestionKind = 'single' | 'multi' | 'fill' | 'command' | 'listen' | 'card';
+export type QuestionKind = 'single' | 'multi' | 'fill' | 'command' | 'listen' | 'card' | 'translate' | 'word-order';
 export type Direction = 'fwd' | 'rev' | string;
 
 export interface DeckMeta {

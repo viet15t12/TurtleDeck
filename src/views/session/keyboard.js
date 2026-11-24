@@ -48,6 +48,34 @@ export function createKeyHandler(ctx) {
     }
   }
 
+  function handleWordOrder(ev, q) {
+    const bank = Array.isArray(q.bank) ? q.bank : [];
+    const placed = Array.isArray(session.userAnswer) ? session.userAnswer : [];
+    const num = parseInt(ev.key, 10);
+    if (num >= 1 && num <= bank.length && num <= 9) {
+      ev.preventDefault();
+      const token = bank[num - 1];
+      if (token && !placed.includes(token.id)) {
+        session.userAnswer = [...placed, token.id];
+        render();
+      }
+      return;
+    }
+    if (ev.key === 'Backspace') {
+      if (placed.length > 0) {
+        ev.preventDefault();
+        session.userAnswer = placed.slice(0, -1);
+        render();
+      }
+      return;
+    }
+    if (ev.key === 'Enter') {
+      if (placed.length === 0) return;
+      ev.preventDefault();
+      submitCurrent();
+    }
+  }
+
   function handleCard(ev) {
     if (!session.cardFlipped) {
       if (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Enter') {
@@ -146,6 +174,8 @@ export function createKeyHandler(ctx) {
       handleMulti(ev, q);
     } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
       handleText(ev);
+    } else if (q.kind === 'word-order') {
+      handleWordOrder(ev, q);
     } else if (q.kind === 'card') {
       handleCard(ev);
     }

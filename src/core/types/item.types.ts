@@ -1,4 +1,4 @@
-export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab' | 'translate';
+export type ItemType = 'single' | 'multi' | 'fill' | 'command' | 'card' | 'vocab' | 'translate' | 'word-order';
 
 export type TextMatchMode = 'exact' | 'normalized' | 'regex' | 'number';
 
@@ -96,6 +96,17 @@ export interface TranslateItem extends BaseItem {
   acceptableForms?: string[];
 }
 
+export interface WordOrderItem extends BaseItem {
+  type: 'word-order';
+  prompt_vi?: string;
+  question?: string;
+  answer: string[];
+  distractors?: string[];
+  alt_answers?: string[][];
+  audio?: string;
+  caseSensitive?: boolean;
+}
+
 export type DeckItem =
   | SingleChoiceItem
   | MultiChoiceItem
@@ -103,5 +114,6 @@ export type DeckItem =
   | CommandItem
   | FlashcardItem
   | VocabItem
-  | TranslateItem;
+  | TranslateItem
+  | WordOrderItem;
 

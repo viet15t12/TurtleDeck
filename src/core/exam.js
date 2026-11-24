@@ -3,6 +3,7 @@
 
 import { buildQuestion } from './builder.js';
 import { gradeChoices, gradeText } from './grader.js';
+import { buildPlacedText, gradeWordOrder } from './word-order.js';
 import { cardKey, newCard, schedule } from './srs.js';
 
 function shuffleItems(arr, rand = Math.random) {
@@ -90,6 +91,12 @@ export function gradeExam(exam, { now = Date.now() } = {}) {
       const text = typeof userAns === 'string' ? userAns : '';
       const mode = q.match || (type === 'command' ? 'exact' : 'normalized');
       isCorrect = gradeText(text, q.answers || [], mode).ok;
+    } else if (type === 'word-order') {
+      const placedIds = Array.isArray(userAns) ? userAns : [];
+      const userText = typeof userAns === 'string' ? userAns : buildPlacedText(q.bank || [], placedIds);
+      isCorrect = gradeWordOrder(userText, q.answerTokens || q.item?.answer || [], q.altAnswers || [], {
+        caseSensitive: q.caseSensitive !== false,
+      }).ok;
     } else if (type === 'card' || type === 'vocab') {
       isCorrect = Boolean(userAns);
     }

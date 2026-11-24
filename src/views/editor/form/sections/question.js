@@ -4,9 +4,78 @@ import { createMarkdownField } from '../../fields/mdfield.js';
 import { createImageSlot } from '../../fields/imageslot.js';
 import { createChoicesSection } from '../../fields/choices.js';
 import { createFillCommandSection } from '../../fields/graderbox.js';
+import { createChipListField } from '../../fields/chips.js';
 
 export function renderQuestionSection({ item, isMC, ctx }) {
   const nodes = [];
+
+  if (item.type === 'word-order') {
+    nodes.push(
+      createMarkdownField({
+        label: 'Gợi ý / Câu tiếng Việt (prompt_vi)',
+        path: 'prompt_vi',
+        validateGroup: 'prompt_vi',
+        value: item.prompt_vi || '',
+        placeholder: 'Ví dụ: Anh ấy đã mua bốn ổ bánh mì.',
+        minRows: 2,
+        ...ctx.mdFieldProps,
+        onBlurValidate: grp => {
+          ctx.markFieldTouched(grp);
+          ctx.updateValidationUI();
+        },
+      })
+    );
+
+    nodes.push(
+      h('div', { class: 'form-field' },
+        h('div', { class: 'form-label-row' },
+          h('label', { class: 'form-label' }, 'Câu đáp án đúng (tách từng từ bằng khoảng trắng hoặc |)'),
+        ),
+        h('input', {
+          type: 'text',
+          class: 'ux-input',
+          placeholder: 'Ví dụ: He bought four loaves of bread.',
+          value: Array.isArray(item.answer) ? item.answer.join(' ') : '',
+          'data-path': 'answer',
+          'data-validate-input': 'answer',
+          oninput: ev => {
+            const raw = ev.target.value;
+            const tokens = raw.includes('|')
+              ? raw.split('|').map(s => s.trim()).filter(Boolean)
+              : raw.trim().split(/\s+/).filter(Boolean);
+            ctx.onPatchItem(
+              { answer: tokens.length ? tokens : [''] },
+              { mergeKey: 'wo-answer', cursor: ctx.captureCursor(ev.target, 'answer') }
+            );
+            ctx.updateValidationUI();
+          },
+          onblur: () => {
+            ctx.markFieldTouched('answer');
+            ctx.updateValidationUI();
+          },
+        }),
+        h('div', { 'data-validate-group': 'answer' })
+      )
+    );
+
+    nodes.push(
+      createChipListField({
+        label: 'Từ gây nhiễu (distractors)',
+        hint: 'Nhấn Enter để thêm từng từ gây nhiễu',
+        path: 'distractors',
+        values: Array.isArray(item.distractors) ? item.distractors : [],
+        suggestions: [],
+        placeholder: 'Ví dụ: breads., loaf…',
+        splitComma: false,
+        onChangeValues: nextDist => {
+          ctx.onPatchItem({ distractors: nextDist });
+          ctx.rerender();
+        },
+        onFocusPath: ctx.focusFieldByPath,
+      })
+    );
+    return nodes;
+  }
 
   // Ô soạn câu hỏi
   nodes.push(

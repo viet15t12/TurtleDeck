@@ -664,6 +664,8 @@ function parseMarkdownQuizImport(text: string, { hasSourceDir = false }: any = {
     const choices: string[] = [];
     const answerIndices: number[] = [];
     let textAnswers: string[] = [];
+    let distractors: string[] = [];
+    let altAnswers: string[][] = [];
     let match = 'normalized';
     let tolerance: number | undefined = undefined;
     let answerDisplay = '';
@@ -695,12 +697,26 @@ function parseMarkdownQuizImport(text: string, { hasSourceDir = false }: any = {
         continue;
       }
 
-      const propMatch = trimmed.match(/^(answer|match|tolerance|answerDisplay)\s*:\s*(.*)$/i);
+      const propMatch = trimmed.match(/^(answer|distractors|alt_answers?|match|tolerance|answerDisplay)\s*:\s*(.*)$/i);
       if (propMatch) {
         const key = propMatch[1].toLowerCase();
         const val = propMatch[2].trim();
         if (key === 'answer') {
-          textAnswers = val.split('|').map((s: string) => s.trim()).filter(Boolean);
+          if (type === 'word-order' && !val.includes('|')) {
+            textAnswers = val.split(/\s+/).filter(Boolean);
+          } else {
+            textAnswers = val.split('|').map((s: string) => s.trim()).filter(Boolean);
+          }
+        } else if (key === 'distractors') {
+          distractors = val.includes('|')
+            ? val.split('|').map((s: string) => s.trim()).filter(Boolean)
+            : val.split(/\s+/).filter(Boolean);
+        } else if (key === 'alt_answer' || key === 'alt_answers') {
+          const alts = val.split('|').map((s: string) => s.trim()).filter(Boolean);
+          for (const a of alts) {
+            const tokens = a.split(/\s+/).filter(Boolean);
+            if (tokens.length > 0) altAnswers.push(tokens);
+          }
         } else if (key === 'match') {
           match = val.toLowerCase();
         } else if (key === 'tolerance') {
@@ -741,6 +757,12 @@ function parseMarkdownQuizImport(text: string, { hasSourceDir = false }: any = {
       item.match = match;
       if (tolerance !== undefined) item.tolerance = tolerance;
       if (answerDisplay) item.answerDisplay = answerDisplay;
+    } else if (resolvedType === 'word-order') {
+      delete item.question;
+      if (question) item.prompt_vi = question;
+      item.answer = textAnswers.length ? textAnswers : [];
+      if (distractors.length) item.distractors = distractors;
+      if (altAnswers.length) item.alt_answers = altAnswers;
     }
 
     if (explanation) item.explanation = explanation;

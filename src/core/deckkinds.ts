@@ -60,7 +60,7 @@ export const KINDS: Record<DeckKind, KindInfo> = {
     label: 'Đề luyện thi',
     description: 'Câu hỏi trắc nghiệm, điền đáp án và gõ lệnh để luyện thi',
     icon: '📝',
-    allowedTypes: ['single', 'multi', 'fill', 'command'],
+    allowedTypes: ['single', 'multi', 'fill', 'command', 'word-order'],
     defaultType: 'single',
     available: true,
     comingSoon: null,
@@ -145,6 +145,7 @@ export const ITEM_TYPE_LABELS: Record<string, string> = {
   vocab: 'Từ vựng',
   listen: 'Nghe–Gõ',
   translate: 'Dịch câu',
+  'word-order': 'Sắp xếp từ',
 };
 
 export function isValidKind(kind: unknown): kind is DeckKind {
@@ -159,6 +160,7 @@ export function detectItemType(item: any, deckKind?: string): string | null {
   }
   if ('term' in item || 'definition' in item) return 'vocab';
   if ('keyword' in item || 'vi' in item) return 'translate';
+  if (Array.isArray(item.answer) && ('distractors' in item || 'prompt_vi' in item)) return 'word-order';
   if ('question' in item || 'choices' in item) return 'single';
   if ('front' in item || 'back' in item) return 'card';
   if (deckKind === 'vocab') return 'vocab';

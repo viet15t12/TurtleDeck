@@ -150,6 +150,22 @@ export function createPreviewPane({ container, deckKey, rich, getAssets, onToggl
                     : text ? richEl('span', { class: 'choice-text' }, rich.inline(text)) : null));
             }))
         );
+      } else if (q.kind === 'word-order') {
+        const bank = Array.isArray(q.bank) ? q.bank : [];
+        nodes.push(
+          h('div', { class: 'wo-container' },
+            q.prompt_vi
+              ? h('div', { class: 'wo-mascot-row' },
+                  h('div', { class: 'wo-mascot', 'aria-hidden': 'true' }, '🐢'),
+                  h('div', { class: 'wo-bubble' }, richEl('div', { class: 'wo-bubble-text' }, rich.inline(q.prompt_vi))))
+              : null,
+            h('div', { class: 'wo-answer-area' },
+              tabMode === 'answer'
+                ? (q.answerTokens || []).map(w => h('span', { class: 'wo-tile wo-tile-placed wo-tile-correct' }, w))
+                : h('span', { class: 'wo-answer-placeholder' }, 'Vùng trả lời (xem trước)…')),
+            h('div', { class: 'wo-bank' },
+              bank.map(t => h('span', { class: 'wo-tile wo-tile-bank' }, t.text))))
+        );
       } else if (q.kind === 'fill' || q.kind === 'command') {
         const isCmd = q.kind === 'command';
         let inputClass = 'ux-input answer-input';

@@ -91,6 +91,16 @@
       "explanation": "Cấu trúc: prevent someone from doing something (quá khứ đơn: prevented).",
       "topic": "Tiếng Anh",
       "tags": ["writing", "collocations"]
+    },
+    {
+      "id": "wo_bread",
+      "type": "word-order",
+      "prompt_vi": "Anh ấy đã mua bốn ổ bánh mì.",
+      "answer": ["He", "bought", "four", "loaves", "of", "bread."],
+      "distractors": ["breads.", "loaf"],
+      "explanation": "\"bread\" là danh từ không đếm được nên không thêm \"s\"; đơn vị đếm là \"four loaves of bread\".",
+      "topic": "Tiếng Anh",
+      "tags": ["grammar", "word-order"]
     }
   ]
 }

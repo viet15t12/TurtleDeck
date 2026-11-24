@@ -4,6 +4,7 @@ import { renderChoicesQuestion } from './choices.js';
 import { renderTextInputQuestion } from './text-input.js';
 import { renderListenQuestion } from './listen.js';
 import { renderFlashcardQuestion } from './flashcard.js';
+import { renderWordOrderQuestion } from './word-order.js';
 
 export function renderQuestionBody(ctx, q) {
   if (q.kind === 'single' || q.kind === 'multi') {
@@ -17,6 +18,9 @@ export function renderQuestionBody(ctx, q) {
   }
   if (q.kind === 'card') {
     return renderFlashcardQuestion(ctx, q);
+  }
+  if (q.kind === 'word-order') {
+    return renderWordOrderQuestion(ctx, q);
   }
   return null;
 }

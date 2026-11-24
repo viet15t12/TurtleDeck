@@ -95,6 +95,12 @@ function summarize(it, deckKind) {
         main: toPlain(it.front),
         answer: toPlain(it.back),
       };
+    case 'word-order':
+      return {
+        type,
+        main: toPlain(it.prompt_vi || it.question || 'Sắp xếp từ'),
+        answer: toPlain((it.answer || []).join(' ')),
+      };
     default:
       return {
         type: 'vocab',

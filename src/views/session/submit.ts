@@ -2,6 +2,7 @@
 
 import type { Progress, Rating } from '../../core/types.js';
 import { gradeChoices, gradeText } from '../../core/grader.js';
+import { buildPlacedText, gradeWordOrder } from '../../core/word-order.js';
 import { RATING, cardKey, newCard, previewIntervalLabel, ratingFromGrade } from '../../core/srs.js';
 import { reinsertWrong } from '../../core/planner.js';
 import { applyCardOverride, applyOverrideToProgress } from '../../core/progressio.js';
@@ -41,6 +42,12 @@ export function gradeAnswer(
   } else if (q.kind === 'fill' || q.kind === 'command' || q.kind === 'listen') {
     const inputVal = typeof userAnswer === 'string' ? userAnswer : '';
     grade = gradeText(inputVal, q.answers || [], q.match || 'text', { tolerance: q.tolerance });
+  } else if (q.kind === 'word-order') {
+    const placedIds = Array.isArray(userAnswer) ? (userAnswer as unknown as string[]) : [];
+    const userText = buildPlacedText((q.bank as any[]) || [], placedIds);
+    grade = gradeWordOrder(userText, (q.answerTokens as string[]) || [], (q.altAnswers as string[][]) || [], {
+      caseSensitive: q.caseSensitive !== false,
+    });
   } else if (q.kind === 'card') {
     const r = explicitRating ?? (userAnswer ? RATING.GOOD : RATING.AGAIN);
     finalAnswer = r !== RATING.AGAIN;
@@ -55,7 +62,7 @@ export function gradeAnswer(
 }
 
 export function canSubmit(q: Question, userAnswer: UserAnswer): boolean {
-  if (q.kind === 'multi') {
+  if (q.kind === 'multi' || q.kind === 'word-order') {
     return Array.isArray(userAnswer) && userAnswer.length > 0;
   }
   if (q.kind === 'single') {

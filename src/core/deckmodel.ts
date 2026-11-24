@@ -72,6 +72,8 @@ export function newItem(typeOrKind: any = 'single', id: string | null = null): a
       return { ...base, type: 'vocab', term: '', definition: '', tags: [] };
     case 'translate':
       return { ...base, type: 'translate', vi: '', keyword: '', answers: [''], pattern: '', explanation: '' };
+    case 'word-order':
+      return { ...base, type: 'word-order', prompt_vi: '', answer: [''], distractors: [], explanation: '' };
     default:
       return { ...base, type: 'single', question: '', choices: ['', ''], answer: [0] };
   }
@@ -231,6 +233,23 @@ export function changeType(item: any, newType: string): any {
       };
     }
 
+    case 'word-order': {
+      const promptVi = (typeof item.prompt_vi === 'string' && item.prompt_vi) ? item.prompt_vi : qText;
+      const firstSentence = textAnswers[0] || '';
+      const words = Array.isArray(item.answer) && item.type === 'word-order'
+        ? item.answer.map(String).filter(Boolean)
+        : (firstSentence ? firstSentence.trim().split(/\s+/).filter(Boolean) : ['']);
+      const res: any = {
+        ...common,
+        type: 'word-order',
+        prompt_vi: promptVi,
+        answer: words.length ? words : [''],
+        distractors: Array.isArray(item.distractors) ? item.distractors.map(String).filter(Boolean) : [],
+      };
+      if (Array.isArray(item.alt_answers)) res.alt_answers = item.alt_answers;
+      return res;
+    }
+
     case 'vocab': {
       const definition = textAnswers[0] || item.definition || item.back || '';
       const res: any = {
@@ -315,7 +334,7 @@ export function newItemLike(deck: any, refItem: any = null): any {
 
 export function isBlankNewItem(item: any): boolean {
   if (!item || typeof item !== 'object') return false;
-  const main = (item.question ?? item.front ?? item.term ?? '').trim();
+  const main = (item.question ?? item.front ?? item.term ?? item.prompt_vi ?? '').trim();
   if (main) return false;
   if ((item.explanation ?? '').trim() || (item.image ?? '').trim() || (item.answerImage ?? '').trim()) return false;
   if ((item.back ?? '').trim() || (item.definition ?? '').trim()) return false;
@@ -328,7 +347,7 @@ export function isBlankNewItem(item: any): boolean {
     );
     if (anyChoice) return false;
   }
-  if ((item.type === 'fill' || item.type === 'command') && Array.isArray(item.answer)) {
+  if ((item.type === 'fill' || item.type === 'command' || item.type === 'word-order') && Array.isArray(item.answer)) {
     if (item.answer.some((a: any) => String(a ?? '').trim() !== '')) return false;
   }
   return true;
@@ -419,10 +438,13 @@ export function normalizeOnLeave(item: any): any {
       out.answer = out.answer.filter((i: any) => Number.isInteger(i) && i >= 0 && i < out.choices.length);
       out.type = out.answer.length >= 2 ? 'multi' : 'single';
     }
-  } else if ((out.type === 'fill' || out.type === 'command') && Array.isArray(out.answer)) {
+  } else if ((out.type === 'fill' || out.type === 'command' || out.type === 'word-order') && Array.isArray(out.answer)) {
     const trimmed = out.answer.map((a: any) => String(a ?? '').trim());
     const nonEmpty = trimmed.filter(Boolean);
     out.answer = nonEmpty.length > 0 ? nonEmpty : [''];
+    if (out.type === 'word-order' && Array.isArray(out.distractors)) {
+      out.distractors = out.distractors.map((d: any) => String(d ?? '').trim()).filter(Boolean);
+    }
   }
 
   return out;

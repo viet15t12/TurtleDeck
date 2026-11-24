@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "id": "sample-word-order",
+    "title": "Mẫu bài tập Sắp xếp từ (Word Order)",
+    "kind": "quiz",
+    "lang": "en",
+    "format": "studydeck",
+    "formatVersion": 1,
+    "description": "Bộ thẻ mẫu cho dạng bài Sắp xếp lại các từ để tạo thành câu đúng (word-order), kèm từ gây nhiễu (distractors) và đáp án thay thế (alt_answers)."
+  },
+  "items": [
+    {
+      "id": "wo_001",
+      "type": "word-order",
+      "prompt_vi": "Anh ấy đã mua bốn ổ bánh mì.",
+      "answer": ["He", "bought", "four", "loaves", "of", "bread."],
+      "distractors": ["breads.", "loaf"],
+      "explanation": "\"bread\" là danh từ không đếm được nên không thêm \"s\"; đơn vị đếm là \"four loaves of bread\".",
+      "topic": "Danh từ đếm được",
+      "tags": ["grammar", "nouns"]
+    },
+    {
+      "id": "wo_002",
+      "type": "word-order",
+      "prompt_vi": "Cô ấy thường đi làm bằng xe buýt.",
+      "answer": ["She", "usually", "goes", "to", "work", "by", "bus."],
+      "distractors": ["go", "going", "buses."],
+      "explanation": "Chủ ngữ ngôi thứ 3 số ít \"She\" ở thì hiện tại đơn đi với động từ chia \"goes\".",
+      "topic": "Hiện tại đơn",
+      "tags": ["grammar", "tenses"]
+    },
+    {
+      "id": "wo_003",
+      "type": "word-order",
+      "prompt_vi": "Tôi đã đưa cuốn sách cho anh ấy.",
+      "answer": ["I", "gave", "the", "book", "to", "him."],
+      "alt_answers": [
+        ["I", "gave", "him", "the", "book."]
+      ],
+      "distractors": ["gives", "her"],
+      "explanation": "Cả hai cấu trúc \"give something to someone\" và \"give someone something\" đều đúng.",
+      "topic": "Cấu trúc câu",
+      "tags": ["grammar", "verbs"]
+    }
+  ]
+}
+

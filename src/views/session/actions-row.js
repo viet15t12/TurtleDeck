@@ -59,8 +59,8 @@ export function renderActionsRow(ctx, q) {
       }
     } else {
       const canSubmit =
-        q.kind === 'multi'
-          ? session.userAnswer && session.userAnswer.length > 0
+        q.kind === 'multi' || q.kind === 'word-order'
+          ? Array.isArray(session.userAnswer) && session.userAnswer.length > 0
           : q.kind === 'single'
             ? session.userAnswer !== null
             : (session.userAnswer || '').trim().length > 0;
@@ -76,7 +76,7 @@ export function renderActionsRow(ctx, q) {
             disabled: !canSubmit,
             onclick: () => submitCurrent(),
           },
-          'Nộp bài (Enter)'
+          q.kind === 'word-order' ? 'Kiểm tra (Enter)' : 'Nộp bài (Enter)'
         )
       );
       shortcutFooter = h(
@@ -84,7 +84,9 @@ export function renderActionsRow(ctx, q) {
         { class: 'session-key-hints' },
         q.kind === 'single' || q.kind === 'multi'
           ? 'Phím tắt: 1–9 chọn đáp án · T dịch · Enter nộp bài · Esc thoát'
-          : 'Phím tắt: Alt+T dịch · Enter nộp bài · Esc thoát'
+          : q.kind === 'word-order'
+            ? 'Phím tắt: 1–9 chọn từ · Backspace bỏ từ cuối · Enter kiểm tra · Esc thoát'
+            : 'Phím tắt: Alt+T dịch · Enter nộp bài · Esc thoát'
       );
     }
   } else {

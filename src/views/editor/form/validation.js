@@ -11,6 +11,7 @@ export function mapIssueFieldToPath(field, item) {
   if (field === 'question') return item?.type === 'card' ? 'front' : (item?.term ? 'term' : 'question');
   if (field === 'choices') return 'choices.0';
   if (field === 'answer' || field === 'answers') {
+    if (item?.type === 'word-order') return 'answer';
     return (item?.type === 'single' || item?.type === 'multi') ? 'choices.0' : 'answers.0';
   }
   return field;

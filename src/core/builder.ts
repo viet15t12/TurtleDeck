@@ -5,6 +5,7 @@ import { validateItem, hasError } from './validate.js';
 import { lev } from './grader.js';
 import { toPlain } from './richtext.js';
 import { getItemForLanguage, getPrimaryLanguage } from './deckmodel.js';
+import { shuffleWordBank } from './word-order.js';
 
 const norm = (s: unknown): string => String(s ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -422,6 +423,37 @@ export function buildQuestion(item: any, opts: any = {}): any {
         tags: item.tags,
         rawItem: item,
       };
+
+    case 'word-order': {
+      const answerTokens = Array.isArray(item.answer) ? item.answer.map((w: any) => String(w)) : [];
+      const distractors = Array.isArray(item.distractors) ? item.distractors.map((w: any) => String(w)) : [];
+      const altAnswers = Array.isArray(item.alt_answers)
+        ? item.alt_answers.map((arr: any) => (Array.isArray(arr) ? arr.map((w: any) => String(w)) : []))
+        : [];
+      const bank = shuffleWordBank(answerTokens, distractors, opts.rand);
+      return {
+        id: cardId,
+        itemId: rootId,
+        rootId,
+        lang,
+        kind: 'word-order',
+        prompt: item.question || 'Hãy sắp xếp lại các từ sau để tạo thành câu đúng.',
+        prompt_vi: item.prompt_vi ?? '',
+        audio: item.audio,
+        bank,
+        answerTokens,
+        distractors,
+        answers: [answerTokens.join(' '), ...altAnswers.map((a: string[]) => a.join(' '))],
+        altAnswers,
+        caseSensitive: item.caseSensitive !== false,
+        image: item.image,
+        answerImage: item.answerImage,
+        explanation: item.explanation ?? '',
+        topic: item.topic,
+        tags: item.tags,
+        rawItem: item,
+      };
+    }
 
     case 'vocab': {
       const mode = opts.mode;
