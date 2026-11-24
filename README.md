@@ -50,31 +50,59 @@ Quản lý tập trung mọi bộ thẻ theo cấu trúc cây thư mục phân c
 
 ---
 
-### 2. Phiên học Lặp lại ngắt quãng (Session & SRS)
+### 2. Chi tiết Bộ thẻ & Chế độ học (Deck View)
+Bố cục Split View chuẩn Apple macOS HIG: chọn nhanh chế độ học (Ôn hôm nay, Học thích ứng, Flashcards, Trắc nghiệm, Gõ đáp án, Ghép thẻ, Điền chỗ trống, Nghe–Gõ), lọc theo trạng thái và xem bảng toàn bộ thẻ.
+
+![Chi tiết bộ thẻ Deck View](docs/screenshots/02-deck.png)
+
+---
+
+### 3. Phiên học Lặp lại ngắt quãng (Session & SRS)
 Hỗ trợ đầy đủ công thức Toán học KaTeX ($\int_0^1 x^2\,dx$), phản hồi tức thì đúng/sai, thanh tiến độ phân đoạn, dịch nhanh câu hỏi (`Alt+T`) và chấm điểm theo thuật toán SM-2.
 
-![Phiên học Flashcard SRS với KaTeX](docs/screenshots/02-session.png)
+![Phiên học Flashcard SRS với KaTeX](docs/screenshots/03-session.png)
 
 ---
 
-### 3. Trình soạn thảo bộ thẻ (Deck Editor)
-Tích hợp thanh công cụ ký hiệu toán học trực quan (phân số, căn, tích phân, ma trận…), xem trước theo thời gian thực, hỗ trợ mọi dạng câu hỏi (`single`, `multi`, `fill`, `command`, `card`, `vocab`, `translate`, `word-order`) và tự động lưu nháp an toàn.
+### 4. Bài tập Sắp xếp từ thành câu đúng (Word Order)
+Hiển thị gợi ý tiếng Việt qua linh vật rùa `🐢` + bong bóng thoại, vùng trả lời 2 dòng kẻ và ngân hàng từ kèm từ gây nhiễu (`distractors`) với ô xám giữ nguyên vị trí.
 
-![Trình soạn thảo bộ thẻ Deck Editor](docs/screenshots/03-editor.png)
-
----
-
-### 4. Báo cáo Thống kê & Phân tích tiến độ (Analytics)
-Theo dõi chuỗi ngày học liên tục (Streak 🔥), biểu đồ số lượt ôn tập hàng ngày bằng Chart.js, Heatmap 90 ngày và danh sách các thẻ khó cần ôn tập lại.
-
-![Thống kê học tập và Heatmap](docs/screenshots/04-stats.png)
+![Bài tập sắp xếp từ Word Order](docs/screenshots/04-word-order.png)
 
 ---
 
-### 5. Trò chơi Ghép thẻ phản xạ tính giờ (Match Game)
+### 5. Học thích ứng (Learn Mode)
+Chu trình học thích ứng thông minh qua 5 bậc thành thạo nâng dần, kết hợp xem trước, trắc nghiệm và gõ đáp án.
+
+![Chế độ Học thích ứng Learn Mode](docs/screenshots/05-learn.png)
+
+---
+
+### 6. Thi thử bấm giờ (Exam Mode)
+Mô phỏng phòng thi thật với đồng hồ đếm ngược, trộn đề ngẫu nhiên, chấm điểm tổng kết và tự động đưa câu sai vào SRS.
+
+![Chế độ Thi thử bấm giờ Exam Mode](docs/screenshots/06-exam.png)
+
+---
+
+### 7. Trò chơi Ghép thẻ phản xạ tính giờ (Match Game)
 Thử thách trí nhớ và tốc độ với chế độ ghép đôi từ vựng hoặc thuật ngữ - định nghĩa tính thời gian kỷ lục cá nhân.
 
-![Chế độ trò chơi ghép thẻ Match Game](docs/screenshots/05-match.png)
+![Chế độ trò chơi ghép thẻ Match Game](docs/screenshots/07-match.png)
+
+---
+
+### 8. Trình soạn thảo bộ thẻ (Deck Editor)
+Tích hợp thanh công cụ ký hiệu toán học trực quan (phân số, căn, tích phân, ma trận…), xem trước theo thời gian thực, hỗ trợ mọi dạng câu hỏi và tự động lưu nháp an toàn.
+
+![Trình soạn thảo bộ thẻ Deck Editor](docs/screenshots/08-editor.png)
+
+---
+
+### 9. Báo cáo Thống kê & Phân tích tiến độ (Analytics)
+Theo dõi chuỗi ngày học liên tục (Streak 🔥), biểu đồ số lượt ôn tập hàng ngày bằng Chart.js, Heatmap 90 ngày và danh sách các thẻ khó cần ôn tập lại.
+
+![Thống kê học tập và Heatmap](docs/screenshots/09-stats.png)
 
 ---
 

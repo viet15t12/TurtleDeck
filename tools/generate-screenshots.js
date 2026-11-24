@@ -128,7 +128,7 @@ const progress = {
 
 const settings = {
   decks: entries.map((e) => e.path),
-  theme: 'dark',
+  theme: 'light',
   newPerDay: 20,
   maxReviewsPerDay: 100,
   learnSteps: [1, 10],
@@ -213,7 +213,7 @@ const harnessBundle = fs.readFileSync('/tmp/harness-bundle.js', 'utf8');
 
 function renderAndCapture(viewName, renderCode, outFile, width = 1600, height = 1000) {
   const html = `<!DOCTYPE html>
-<html data-theme="dark">
+<html data-theme="light">
 <head>
   <meta charset="utf-8">
   <title>Turtle Deck — ${viewName}</title>
@@ -298,6 +298,7 @@ function renderAndCapture(viewName, renderCode, outFile, width = 1600, height = 
   console.log(`[Capture] Chụp ${viewName} -> ${outFile}...`);
 
   const cmd = `MOZ_DISABLE_CONTENT_SANDBOX=1 MOZ_DISABLE_GMP_SANDBOX=1 XDG_RUNTIME_DIR=/tmp/runtime-vfedora firefox --headless --no-remote --profile /tmp/ff-profile --window-size=${width},${height} --screenshot="${outPath}" file://${htmlPath}`;
+  execSync('mkdir -p /tmp/runtime-vfedora /tmp/ff-profile', { stdio: 'pipe' });
   execSync(cmd, { stdio: 'pipe' });
 
   const stat = fs.statSync(outPath);
@@ -318,7 +319,20 @@ renderAndCapture(
   '01-home.png'
 );
 
-// 2. Màn hình Session (Flashcard SRS với công thức Toán KaTeX)
+// 2. Màn hình Deck View (Chi tiết bộ thẻ & Chế độ học)
+renderAndCapture(
+  'deck',
+  `
+  const vocabEntry = entries.find(e => e.deck.meta.id === 'vocab-sample');
+  window.__VIEWS__.renderDeck(root, vocabEntry, actions, {
+    progress,
+    settings
+  });
+`,
+  '02-deck.png'
+);
+
+// 3. Màn hình Session (Trắc nghiệm SRS với công thức Toán KaTeX)
 renderAndCapture(
   'session',
   `
@@ -330,44 +344,84 @@ renderAndCapture(
     settings,
     onRecordReview: () => {}
   }, actions);
-  const choices = document.querySelectorAll('.choice-btn, .choice-item, input[type="radio"]');
+  const choices = document.querySelectorAll('.choice-label, .choice-btn, .choice-item, input[type="radio"]');
   if (choices.length > 1) {
     choices[1].click();
-    const submitBtn = document.querySelector('.submit-btn, button[class*="primary"]');
+    const submitBtn = document.querySelector('.session-actions button.primary, button[class*="primary"]');
     if (submitBtn) submitBtn.click();
   }
 `,
-  '02-session.png'
+  '03-session.png'
 );
 
-// 3. Màn hình Editor (Trình soạn thảo thẻ KaTeX)
+// 4. Màn hình Word Order (Sắp xếp từ thành câu đúng)
 renderAndCapture(
-  'editor',
+  'word-order',
   `
-  const mathEntry = entries.find(e => e.deck.meta.id === 'math-sample');
-  document.body.classList.add('in-editor');
-  window.__VIEWS__.renderEditor(root, {
-    entry: mathEntry,
-    initialItemId: 'm-001'
-  }, actions);
-`,
-  '03-editor.png'
-);
-
-// 4. Màn hình Stats (Thống kê, Heatmap & Streak)
-renderAndCapture(
-  'stats',
-  `
-  window.__VIEWS__.renderStats(root, {
+  const woDeck = {
+    meta: { id: 'wo-sample', title: 'English Grammar — Word Order', kind: 'quiz', lang: 'en' },
+    items: [
+      {
+        id: 'wo-001',
+        type: 'word-order',
+        prompt_vi: 'Anh ấy đã mua bốn ổ bánh mì.',
+        answer: ['He', 'bought', 'four', 'loaves', 'of', 'bread.'],
+        distractors: ['breads.', 'loaf'],
+        topic: 'Danh từ không đếm được',
+        tags: ['grammar', 'nouns'],
+        explanation: '"bread" là danh từ không đếm được nên không thêm "s"; dùng "four loaves of bread".'
+      }
+    ]
+  };
+  window.__VIEWS__.renderSession(root, {
+    entry: { uid: 'u-wo', deckKey: 'wo-sample', status: 'ok', deck: woDeck, issues: [] },
+    config: { mode: 'practice', persist: false },
     progress,
-    entries,
-    settings
+    settings,
+    onRecordReview: () => {}
   }, actions);
+  // Bấm chọn sẵn vài từ để minh hoạ trạng thái đã chọn + ô xám placeholder
+  const pickOrder = ['He', 'bought', 'four', 'loaves', 'of'];
+  for (const word of pickOrder) {
+    const btn = [...document.querySelectorAll('.wo-tile-bank')].find(b => b.querySelector('.wo-tile-text')?.textContent === word);
+    if (btn) btn.click();
+  }
 `,
-  '04-stats.png'
+  '04-word-order.png'
 );
 
-// 5. Màn hình Match Game (Trò chơi ghép thẻ)
+// 5. Màn hình Learn Mode (Học thích ứng)
+renderAndCapture(
+  'learn',
+  `
+  const vocabEntry = entries.find(e => e.deck.meta.id === 'vocab-sample');
+  window.__VIEWS__.renderLearn(root, {
+    entry: vocabEntry,
+    progress,
+    settings,
+    onRecordReview: () => {}
+  }, actions);
+`,
+  '05-learn.png'
+);
+
+// 6. Màn hình Exam Mode (Thi thử bấm giờ)
+renderAndCapture(
+  'exam',
+  `
+  const lpicEntry = entries.find(e => e.deck.meta.id === 'lpic-sample');
+  window.__VIEWS__.renderExam(root, {
+    entry: lpicEntry,
+    config: { topic: 'all', count: 5, durationMinutes: 15, shuffle: false },
+    progress,
+    settings,
+    onApplyExamResults: () => {}
+  }, actions);
+`,
+  '06-exam.png'
+);
+
+// 7. Màn hình Match Game (Trò chơi ghép thẻ)
 renderAndCapture(
   'match',
   `
@@ -389,7 +443,6 @@ renderAndCapture(
     onRecordMatch: () => {}
   }, actions);
 
-  // Cập nhật kỷ lục và đồng hồ thời gian để ảnh trông sinh động
   const badge = document.querySelector('.match-record-badge span');
   if (badge) badge.textContent = '14.8s';
   const timer = document.querySelector('.match-header-stats span[style*="font-family"]');
@@ -400,7 +453,34 @@ renderAndCapture(
     tiles[0].classList.add('selected');
   }
 `,
-  '05-match.png'
+  '07-match.png'
+);
+
+// 8. Màn hình Editor (Trình soạn thảo thẻ KaTeX)
+renderAndCapture(
+  'editor',
+  `
+  const mathEntry = entries.find(e => e.deck.meta.id === 'math-sample');
+  document.body.classList.add('in-editor');
+  window.__VIEWS__.renderEditor(root, {
+    entry: mathEntry,
+    initialItemId: 'm-001'
+  }, actions);
+`,
+  '08-editor.png'
+);
+
+// 9. Màn hình Stats (Thống kê, Heatmap & Streak)
+renderAndCapture(
+  'stats',
+  `
+  window.__VIEWS__.renderStats(root, {
+    progress,
+    entries,
+    settings
+  }, actions);
+`,
+  '09-stats.png'
 );
 
 console.log('\n[Done] Đã hoàn thành chụp toàn bộ 5 màn hình siêu nét!');
