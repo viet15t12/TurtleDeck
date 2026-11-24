@@ -203,16 +203,27 @@ test('collectAssetsFromDir: chỉ nhận ảnh thật trong thư mục nguồn',
     const big = new Uint8Array(LIMITS.image + 1); big.set(PNG);
     await fs.writeFile(path.join(dir, 'img', 'big.png'), big);
     await fs.writeFile(path.join(outside, 'secret.png'), PNG);
-    await fs.symlink(path.join(outside, 'secret.png'), path.join(dir, 'img', 'link.png'));
+    let symlinkCreated = true;
+    try {
+      await fs.symlink(path.join(outside, 'secret.png'), path.join(dir, 'img', 'link.png'));
+    } catch (err) {
+      if (err && (err.code === 'EPERM' || err.code === 'EACCES')) {
+        symlinkCreated = false;
+      } else {
+        throw err;
+      }
+    }
     await fs.writeFile(path.join(tmp, 'up.png'), PNG);
     const d = {
       meta: { id: 'x' },
       items: [{ id: '1', type: 'card', front: '![a](img/a.png) ![f](img/fake.png) ![m](img/missing.png)', back: '![u](../up.png)',
-        image: 'img/link.png', answerImage: 'img/big.png', explanation: '![w](https://example.com/x.png) ![d](deck.json)' }],
+        image: symlinkCreated ? 'img/link.png' : 'img/missing.png', answerImage: 'img/big.png', explanation: '![w](https://example.com/x.png) ![d](deck.json)' }],
     };
     const { assets: got, issues } = await collectAssetsFromDir(dir, JSON.stringify(d));
     assert.deepEqual([...got.keys()], ['img/a.png']);
-    for (const s of ['img/fake.png', 'img/missing.png', '../up.png', 'img/link.png', 'img/big.png', 'https://example.com/x.png', 'deck.json'])
+    const expectedIssues = ['img/fake.png', 'img/missing.png', '../up.png', 'img/big.png', 'https://example.com/x.png', 'deck.json'];
+    if (symlinkCreated) expectedIssues.push('img/link.png');
+    for (const s of expectedIssues)
       assert.ok(issues.some(i => i.includes(s)), s);
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
