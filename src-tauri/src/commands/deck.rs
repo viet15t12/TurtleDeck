@@ -296,8 +296,6 @@ pub async fn deck_show_in_folder(
         None => return Ok(false),
     };
 
-    let target_dir = valid.parent().unwrap_or(&valid);
-
     #[cfg(target_os = "windows")]
     {
         let _ = std::process::Command::new("explorer")
@@ -307,6 +305,7 @@ pub async fn deck_show_in_folder(
 
     #[cfg(target_os = "linux")]
     {
+        let target_dir = valid.parent().unwrap_or(&valid);
         let _ = std::process::Command::new("xdg-open")
             .arg(target_dir)
             .spawn();

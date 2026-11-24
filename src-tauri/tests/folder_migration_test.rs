@@ -116,7 +116,7 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
     assert_eq!(f_101.depth, 1);
     assert_eq!(f_101.parent_id.as_deref(), Some(&f_lpic.id[..]));
 
-    let f_jap = FolderRepository::get_folder_by_path(&conn, "Languages/Japanese")
+    let _f_jap = FolderRepository::get_folder_by_path(&conn, "Languages/Japanese")
         .unwrap()
         .unwrap();
 
@@ -128,7 +128,7 @@ fn test_folder_migration_from_disk_and_srs_preservation() {
         let primary = loc_lpic.iter().find(|l| !l.is_link).unwrap();
         assert_eq!(primary.folder_id.as_deref(), Some(&f_101.id[..]));
         let link = loc_lpic.iter().find(|l| l.is_link).unwrap();
-        assert_eq!(link.folder_id.as_deref(), Some(&f_jap.id[..]));
+        assert_eq!(link.folder_id.as_deref(), Some(&_f_jap.id[..]));
     }
     #[cfg(not(unix))]
     {
